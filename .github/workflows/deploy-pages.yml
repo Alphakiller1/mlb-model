@@ -40,11 +40,25 @@ jobs:
           mkdir -p _deploy_data
           cp deployment_data/game_results.csv _deploy_data/
           python -m mlbmodel.sources.sync_mlbma --out _deploy_data
+      - name: Fetch live pitcher-prop odds
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          # Caches live prop lines into _deploy_data so the static build can show
+          # over/under leans + edges. Non-fatal: a missing key or fetch error just leaves
+          # props as NO MARKET rather than failing the deploy.
+          if [ -n "$ODDS_API_KEY" ]; then
+            python -m mlbmodel.market.props --cache _deploy_data/prop_odds_latest.json \
+              || echo "WARNING: prop odds fetch failed; props stay NO MARKET"
+          else
+            echo "ODDS_API_KEY not set; skipping odds fetch (props stay NO MARKET)"
+          fi
       - name: Build static research dashboard
         env:
+          MLBMODEL_CACHE_DIR: _deploy_data
           MLB_MODEL_DEPLOYMENT_NOTICE: >-
-            Synchronized MLBMA research build. Live odds and betting-warehouse credentials
-            are not connected; no displayed state is a wager instruction.
+            Synchronized MLBMA research build with live pitcher-prop lines.
+            No displayed state is a wager instruction.
         run: |
           mkdir -p _site
           python -m mlbmodel.report.app \
