@@ -68,6 +68,33 @@ def _live_odds(away, home, fetch=True):
     return om, line
 
 
+# ── visual identity: official MLB team logos + pitcher headshots (CDN) ───────
+_MLB_ID = {"ARI": 109, "ATL": 144, "BAL": 110, "BOS": 111, "CHC": 112, "CHW": 145,
+           "CIN": 113, "CLE": 114, "COL": 115, "DET": 116, "HOU": 117, "KCR": 118,
+           "LAA": 108, "LAD": 119, "MIA": 146, "MIL": 158, "MIN": 142, "NYM": 121,
+           "NYY": 147, "ATH": 133, "PHI": 143, "PIT": 134, "SDP": 135, "SFG": 137,
+           "SEA": 136, "STL": 138, "TBR": 139, "TEX": 140, "TOR": 141, "WSN": 120}
+
+
+def _logo(abbr, cls="tlogo"):
+    a = str(abbr).upper().strip()
+    i = _MLB_ID.get(a)
+    if not i:
+        return f'<span class="tlf {cls}">{html.escape(a)}</span>'
+    return (f'<img class="{cls}" src="https://www.mlbstatic.com/team-logos/{i}.svg" '
+            f'alt="{html.escape(a)}" loading="lazy" '
+            f'onerror="this.outerHTML=&quot;<span class=\'tlf {cls}\'>{html.escape(a)}</span>&quot;">')
+
+
+def _headshot(pid):
+    if not pid:
+        return '<span class="phead phead-na"></span>'
+    return (f'<img class=phead loading="lazy" alt="" '
+            f'src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/'
+            f'w_120,q_auto:best/v1/people/{int(pid)}/headshot/67/current" '
+            f'onerror="this.classList.add(&quot;phead-na&quot;)">')
+
+
 # ── stat helpers (raw -> percentile -> semantic chip) ────────────────────────
 def _cdf(z: float) -> float:
     return 0.5 * (1 + math.erf(z / math.sqrt(2)))
@@ -103,6 +130,25 @@ def _chip(pct: float | None) -> tuple[str, str]:
 
 def _f(v, nd=2):
     return f"{v:.{nd}f}" if isinstance(v, (int, float)) else "—"
+
+
+_DEF = {
+    "FIP": "Fielding-Independent Pitching — ERA from what a pitcher controls (K/BB/HR). Lower is better.",
+    "K%": "Strikeout rate. Higher = more swings-and-misses, fewer balls in play.",
+    "HR/9": "Home runs allowed per 9 innings. Lower is better.",
+    "OSI": "Offense Strength Index (50 = league average). Higher = stronger lineup.",
+    "wOBA": "Weighted On-Base Average — overall offensive value. Higher is better (~.320 avg).",
+    "OBR": "Baserunning index (50 = average). Higher = better baserunning.",
+    "Bullpen": "Relief run-prevention. Lower factor / ERA is better.",
+    "Park": "Park run environment (1.00 = neutral; >1 boosts scoring).",
+}
+
+
+def _cat_def(cat):
+    for k, v in _DEF.items():
+        if k in cat:
+            return v
+    return ""
 
 
 # ── factor decomposition (drivers) ───────────────────────────────────────────
@@ -260,6 +306,17 @@ def _extras(away, home, gd, probs, anchors):
                  "whiff": _numf(x.get("whiff_rate"))} for _, x in sub.iterrows()]
         return sorted([z for z in rows if z["pct"]], key=lambda z: -z["pct"])[:6]
     out["arsenal_a"], out["arsenal_h"] = arsenal(gd.away_sp), arsenal(gd.home_sp)
+    spp = BE.load("sp_profiles.csv")
+
+    def spid(name):
+        if spp is None or "pitcher_name" not in spp.columns or "pitcher_id" not in spp.columns:
+            return None
+        m = spp[spp["pitcher_name"].astype(str).map(_norm) == _norm(name)]
+        if not m.empty:
+            v = _numf(m.iloc[0]["pitcher_id"])
+            return int(v) if v else None
+        return None
+    out["a_id"], out["h_id"] = spid(gd.away_sp), spid(gd.home_sp)
     for d in (-1.5, -1, -0.5, 0, 0.5, 1, 1.5):
         line = round((probs.exp_total + d) * 2) / 2
         po = 1 - BE.normal_cdf((line - probs.exp_total) / anchors["total_sd"])
@@ -433,12 +490,41 @@ background:radial-gradient(ellipse 90% 60% at 78% -8%,rgba(124,77,255,.14),trans
 .hd h1{font-family:var(--display);font-weight:800;font-size:34px;letter-spacing:-.02em;margin:0;line-height:1}
 .hd .sp{color:var(--ink2);font-size:13px;margin-top:6px}.hd .sp b{color:var(--ink)}
 .hd .meta{color:var(--muted-2);font-size:11px;text-align:right;line-height:1.5}.fresh{color:var(--green);font-weight:700}
+/* logos + headshots (Chase Analytics blueprint) */
+.tlogo{height:26px;width:26px;object-fit:contain;vertical-align:middle;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5))}
+.tlogo.lg{height:40px;width:40px}.tlogo.sm{height:18px;width:18px}
+.tlf{display:inline-flex;align-items:center;justify-content:center;height:26px;width:26px;border-radius:50%;
+background:var(--raised);border:1px solid var(--border-2);color:var(--ink2);font:800 9px/1 var(--display);vertical-align:middle}
+.tlf.lg{height:40px;width:40px;font-size:12px}.tlf.sm{height:18px;width:18px;font-size:7px}
+.teams{display:flex;align-items:center;gap:11px}
+.pitchers{display:flex;align-items:center;gap:14px;margin:11px 0 4px;flex-wrap:wrap}
+.pcell{display:flex;align-items:center;gap:9px}
+.phead{width:42px;height:42px;border-radius:50%;object-fit:cover;object-position:center top;background:var(--raised);
+border:2px solid #454B61;box-shadow:0 5px 14px rgba(0,0,0,.45),0 0 0 2px rgba(154,107,255,.12)}
+.phead-na{background:linear-gradient(160deg,var(--raised),var(--card))}.phead-na::after{content:"";display:block}
+.pmeta{line-height:1.3}.pmeta b{color:var(--ink);font-size:14px}.pmeta span{display:block;color:var(--muted);font-size:11.5px}
+.vsx{color:var(--muted-2);font:700 11px var(--display);text-transform:uppercase}
 /* strip chips */
 .strip{display:grid;grid-template-columns:repeat(8,1fr);gap:9px}
 @media(max-width:880px){.strip{grid-template-columns:repeat(4,1fr)}}
 .chipc{background:var(--raised);border:1px solid var(--border);border-radius:11px;padding:9px 10px;text-align:center}
 .chipc .k{color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
 .chipc .v{color:var(--ink);font-family:var(--display);font-weight:800;font-size:19px;margin-top:3px}
+.vbar{display:flex;align-items:center;gap:14px;padding:11px 16px;border-radius:12px;border:1px solid var(--border-2);font-size:13.5px;background:var(--card)}
+.vbar b{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.03em}.vbar span{color:var(--ink2)}
+.vbar.pos{border-color:rgba(60,203,127,.3);background:rgba(60,203,127,.10)}.vbar.pos b{color:#7BDC5A}
+.vbar.warnc{border-color:rgba(232,194,74,.3);background:rgba(232,194,74,.10)}.vbar.warnc b{color:var(--gold)}
+.vbar.neg{border-color:rgba(242,84,91,.3);background:rgba(242,84,91,.10)}.vbar.neg b{color:#FCA5A5}
+.vbar.mut b{color:var(--muted)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-top:14px}@media(max-width:760px){.cols{grid-template-columns:1fr}}
+.note{color:var(--muted);font-size:11.5px;margin-top:8px}
+.rti{position:absolute;width:0;height:0;opacity:0}.rtabs{margin-top:20px}
+.rtabbar{display:flex;gap:2px;border-bottom:1px solid var(--border);flex-wrap:wrap;margin-bottom:14px}
+.rtabbar label{padding:9px 16px;font:700 13.5px var(--sans);color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1px}
+.rtabbar label:hover{color:var(--ink2)}.pn{display:none}
+#rt-markets:checked~.rpanels #pn-markets,#rt-charts:checked~.rpanels #pn-charts,#rt-matchup:checked~.rpanels #pn-matchup,#rt-drivers:checked~.rpanels #pn-drivers,#rt-sharp:checked~.rpanels #pn-sharp{display:block}
+#rt-markets:checked~.rtabbar label[for=rt-markets],#rt-charts:checked~.rtabbar label[for=rt-charts],#rt-matchup:checked~.rtabbar label[for=rt-matchup],#rt-drivers:checked~.rtabbar label[for=rt-drivers],#rt-sharp:checked~.rtabbar label[for=rt-sharp]{color:var(--ink);border-bottom-color:var(--accent)}
+th[title],td[title]{cursor:help;text-decoration:underline dotted rgba(148,163,184,.4);text-underline-offset:3px}
 /* section */
 .sec{border:1px solid var(--border-2);border-radius:14px;background:var(--card);overflow:hidden;position:relative}
 .sec::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--v-grad);opacity:.6}
@@ -492,11 +578,14 @@ def _td_signed(v, suffix="", good_pos=True):
     return f'<td class="{tone}">{v:+g}{suffix}</td>'
 
 
-def render_html(r):
+def report_body(r):
+    """Inner report content (no <html>/<style> wrapper) so the app shell can embed it."""
     gd, p, e = r["gd"], r["probs"], html.escape
     sd_t = r["anchors"]["team_sd"]
     w = gd.weather or {}
-    wx = "Dome" if w.get("dome") else f"{w.get('temp_f','?')}°F · {w.get('wind_mph','?')}mph"
+    wx = ("Dome" if w.get("dome")
+          else f"{w['temp_f']:.0f}°F · {w.get('wind_mph', 0):.0f}mph" if w.get("temp_f") is not None
+          else "weather n/a")
 
     # projection strip
     best_edge = max((m["edge"] for m in r["markets"] if m["edge"] is not None), default=None)
@@ -545,7 +634,7 @@ def render_html(r):
         av = f'{_f(a["a_val"])}{u}{_delta(a["a_d"], lb)} <span class="chip {ac}">{al}</span>{ar}'
         hv = f'{_f(a["h_val"])}{u}{_delta(a["h_d"], lb)} <span class="chip {hc}">{hl}</span>{hr}'
         n = f' <span class=n>n={a["n"]}</span>' if a.get("n") else ''
-        return (f'<tr><td>{e(a["cat"])}{n}</td>'
+        return (f'<tr><td title="{e(_cat_def(a["cat"]))}">{e(a["cat"])}{n}</td>'
                 f'<td class=side>{av}</td><td class=pos>{hv}</td>'
                 f'<td class=mut>{_f(a["base"])}{u}</td>'
                 f'<td>{e(str(a["edge"]))}</td><td class=mut>{e(str(a["impact"]))}</td></tr>')
@@ -577,50 +666,104 @@ def render_html(r):
     rrows = "".join(f'<tr><td>{e(x)}</td><td><span class="pill {t[1]}">{t[0]}</span></td></tr>'
                     for x in r["risks"] for t in [_risk_kind(x)]) or '<tr><td class=mut colspan=2>None flagged.</td></tr>'
 
-    return f"""<!DOCTYPE html><html lang=en><head><meta charset=utf-8>
-<meta name=viewport content="width=device-width,initial-scale=1">
-<title>{e(r['away'])}@{e(r['home'])} — MLB Model</title><style>{_CSS}</style></head><body><div class=wrap>
- <div class=hd>
-   <div><h1>{e(r['away'])} <span class=mut style="font:inherit">@</span> {e(r['home'])}</h1>
-     <div class=sp><b>{e(gd.away_sp)}</b> {e(gd.away_hand)}HP · FIP {gd.away_fip} &nbsp;vs&nbsp;
-       <b>{e(gd.home_sp)}</b> {e(gd.home_hand)}HP · FIP {gd.home_fip} &nbsp;·&nbsp;
-       {e(r['extras']['start'] or 'TBD')} · {e(gd.home)} park {gd.park_factor} · {e(wx)} · {e(r['extras']['lineup'])}</div></div>
+    # top verdict bar — the single most decision-relevant line, above the fold
+    op = max((m for m in r["markets"] if m["edge"] is not None), key=lambda m: m["edge"], default=None)
+    if op and op["edge"] > 0 and op["state"] in ("BET", "MONITOR"):
+        vb = (f'<div class="vbar {op["tone"]}"><b>{op["state"]}</b>'
+              f'<span>{e(op["label"])}</span><span>edge {op["edge"]:+.1f}pt</span>'
+              f'<span>EV {op["ev"]:+.3f}</span><span>max {op["max"]:+d}</span></div>')
+    else:
+        vb = '<div class="vbar mut"><b>NO EDGE</b><span>abstain — no market clears the threshold</span></div>'
+
+    # ── Decision layer: the 3 clearest team edges + the 2 biggest risks ──
+    adv_edges = [a for a in r["advantage"]
+                 if a.get("edge") in (r["away"], r["home"]) and a["a_pct"] is not None and a["h_pct"] is not None]
+    adv_edges.sort(key=lambda a: -abs((a["a_pct"] or 0) - (a["h_pct"] or 0)))
+    why = "".join(
+        f'<tr><td>{e(a["cat"])}</td><td class=side>{e(str(a["edge"]))}</td>'
+        f'<td class=mut>{e(str(a["impact"]))}</td></tr>' for a in adv_edges[:3]) \
+        or '<tr><td class=mut colspan=3>No decisive edge.</td></tr>'
+    rtop = "".join(f'<tr><td>{e(x)}</td></tr>' for x in r["risks"][:2]) or '<tr><td class=mut>None flagged.</td></tr>'
+    # incomplete-data flag
+    miss = [n for n, v in (("weather", (gd.weather or {}).get("temp_f")),
+                           ("lineups", "posted" in r["extras"]["lineup"])) if not v]
+    dq = f'<span class="pill warnc" title="default view omits unavailable inputs">incomplete: {", ".join(miss)}</span>' if miss else ''
+
+    return f"""<div class=hd>
+   <div style="min-width:0">
+     <div class=teams>{_logo(r['away'],'tlogo lg')}<h1>{e(r['away'])} <span class=mut style="font:inherit">@</span> {e(r['home'])}</h1>{_logo(r['home'],'tlogo lg')}</div>
+     <div class=pitchers>
+       <div class=pcell>{_headshot(r['extras'].get('a_id'))}<div class=pmeta><b>{e(gd.away_sp)}</b><span>{e(gd.away_hand)}HP · FIP {gd.away_fip}</span></div></div>
+       <span class=vsx>vs</span>
+       <div class=pcell>{_headshot(r['extras'].get('h_id'))}<div class=pmeta><b>{e(gd.home_sp)}</b><span>{e(gd.home_hand)}HP · FIP {gd.home_fip}</span></div></div>
+     </div>
+     <div class=sp>{e(r['extras']['start'] or 'TBD')} · {e(gd.home)} park {gd.park_factor} · {e(wx)} · {e(r['extras']['lineup'])}</div></div>
    <div class=meta><span class=fresh>● live model</span><br>model {e(r['model_version'])} · metrics {e(r['metric_version'])}<br>{e(r['generated'][:16])}Z · pk {r['game_pk']}</div>
  </div>
 
+ {vb}
  <div class=strip>{strip_html}</div>
 
- <div class=charts>
-   <div class=sec><h2>Win probability</h2><div class=body>{_svg_winprob(p.p_home_win,p.p_away_win,e(r['home']),e(r['away']))}</div></div>
-   <div class=sec><h2>Expected-run distribution</h2><div class=body>{_svg_rundist(p.exp_away_runs,p.exp_home_runs,sd_t,e(r['away']),e(r['home']))}</div></div>
-   <div class=sec><h2>Model vs market</h2><div class=body>{_svg_mktmodel(r['markets'])}</div></div>
-   <div class=sec><h2>Total sensitivity</h2><div class=body>{_svg_scenario(r['extras']['scenario'], r.get('posted_total'))}</div></div>
-   <div class=sec><h2>SP arsenals · usage · whiff</h2><div class=body>{_svg_arsenal(r['extras']['arsenal_a'], e(gd.away_sp))}<div style="height:8px"></div>{_svg_arsenal(r['extras']['arsenal_h'], e(gd.home_sp))}</div></div>
-   <div class=sec><h2>Line movement</h2><div class=body>{_svg_movement(r['movement'])}</div></div>
+ <!-- DECISION LAYER: clearest edges + biggest risks, always visible -->
+ <div class=cols>
+   <div class=sec><h2>Why {e(r['home'] if p.exp_margin > 0 else r['away'])} <span class=mut>· clearest edges</span></h2><div class=body>
+     <table><tr><th>Factor</th><th>Edge</th><th>Affects</th></tr>{why}</table></div></div>
+   <div class=sec><h2>Top risks {dq}</h2><div class=body>
+     <table><tr><th>Signal</th></tr>{rtop}</table>
+     <div class=note>Full evidence in the tabs below; definitions on hover.</div></div></div>
  </div>
 
- <div class=sec><h2>Market grid · fair vs available (net of vig) · max entry = break-even</h2><div class=body>
-   <table><tr><th>Market</th><th>Mkt</th><th>Fair</th><th>Impl</th><th>Model</th><th>Edge</th><th>EV/u</th><th>Max</th><th>State</th></tr>{mrows}</table>
- </div></div>
+ <!-- ANALYSIS LAYER: one tab at a time (not a wall of data) -->
+ <div class=rtabs>
+   <input class=rti type=radio name=rt id=rt-markets checked>
+   <input class=rti type=radio name=rt id=rt-charts>
+   <input class=rti type=radio name=rt id=rt-matchup>
+   <input class=rti type=radio name=rt id=rt-drivers>
+   <input class=rti type=radio name=rt id=rt-sharp>
+   <div class=rtabbar>
+     <label for=rt-markets>Markets</label><label for=rt-charts>Charts</label>
+     <label for=rt-matchup>Matchup</label><label for=rt-drivers>Drivers</label><label for=rt-sharp>Sharp</label>
+   </div>
+   <div class=rpanels>
+     <div id=pn-markets class=pn><div class=sec><div class=body>
+       <table><tr><th>Market</th><th title="best available American price">Mkt</th><th title="model fair price">Fair</th><th title="vig-free implied probability">Impl</th><th title="model probability">Model</th><th title="model% minus implied%">Edge</th><th title="expected value per unit, net of vig">EV/u</th><th title="break-even price">Max</th><th>State</th></tr>{mrows}</table>
+       <div class=note>Edge = model − implied. Max = worst price still +EV. State: BET / MONITOR / AVOID / NO-EDGE.</div></div></div></div>
+     <div id=pn-charts class=pn><div class=charts>
+       <div class=sec><h2>Win prob</h2><div class=body>{_svg_winprob(p.p_home_win,p.p_away_win,e(r['home']),e(r['away']))}</div></div>
+       <div class=sec><h2>Run distribution</h2><div class=body>{_svg_rundist(p.exp_away_runs,p.exp_home_runs,sd_t,e(r['away']),e(r['home']))}</div></div>
+       <div class=sec><h2>Model vs market</h2><div class=body>{_svg_mktmodel(r['markets'])}</div></div>
+       <div class=sec><h2>Total sensitivity</h2><div class=body>{_svg_scenario(r['extras']['scenario'], r.get('posted_total'))}</div></div>
+       <div class=sec><h2>SP arsenals</h2><div class=body>{_svg_arsenal(r['extras']['arsenal_a'], e(gd.away_sp))}<div style="height:8px"></div>{_svg_arsenal(r['extras']['arsenal_h'], e(gd.home_sp))}</div></div>
+       <div class=sec><h2>Line movement</h2><div class=body>{_svg_movement(r['movement'])}</div></div>
+     </div></div>
+     <div id=pn-matchup class=pn><div class=sec><div class=body>
+       <table><tr><th>Category</th><th>{e(r['away'])}</th><th>{e(r['home'])}</th><th title="MLB league average">MLB</th><th>Edge</th><th>Impact</th></tr>{arows}</table>
+       <div class=note>raw · Δ vs MLB · percentile chip (elite→poor) · #rank. Hover a category for its definition.</div></div></div></div>
+     <div id=pn-drivers class=pn><div class=sec><div class=body>
+       <table><tr><th>Factor</th><th title="% change to expected runs">Effect</th><th>Side</th><th>Conf</th><th>Markets</th><th title="already in the market price?">Priced?</th></tr>{drows}</table></div></div></div>
+     <div id=pn-sharp class=pn>
+       <div class=sec><h2>Sharp money</h2><div class=body>
+         <table><tr><th>Market</th><th>Side</th><th title="sharp minus soft de-vig probability">Divergence</th><th>Steam</th></tr>{sharp}</table></div></div>
+       <div class=sec><h2>Risks</h2><div class=body>
+         <table><tr><th>Signal</th><th>Type</th></tr>{rrows}</table></div></div>
+     </div>
+   </div>
+ </div>
 
- <div class=sec><h2>Matchup advantage matrix · raw · Δ vs MLB · percentile · modeled impact</h2><div class=body>
-   <table><tr><th>Category</th><th>{e(r['away'])} (raw Δ pct)</th><th>{e(r['home'])} (raw Δ pct)</th><th>MLB base</th><th>Edge</th><th>Impact</th></tr>{arows}</table>
- </div></div>
+ <div class=sec><details><summary>Methodology &amp; definitions</summary><ul>
+   <li><b>Model</b> = expected-runs prior (offense OSI × opposing SP FIP × park × bullpen, regressed to mean); anchors from settled finals. <b>Fair</b> price from that probability; <b>Edge</b> = model − vig-free market; <b>EV</b> net of vig.</li>
+   <li><b>OSI</b> offense strength index (50 = avg). <b>FIP</b> fielding-independent ERA. <b>wOBA</b> weighted on-base. <b>OBR</b> baserunning index. Percentiles empirical vs the league.</li>
+   <li>Uncalibrated prior — no OOS edge clears the promotion gate; OSI is a team proxy; weather not yet modeled. Observed stats vs model estimates vs market prices are kept distinct.</li></ul></details></div>
+"""
 
- <div class=sec><h2>Key drivers · ranked contribution to expected runs</h2><div class=body>
-   <table><tr><th>Factor</th><th>Effect</th><th>Axis</th><th>Conf</th><th>Markets</th><th>Priced?</th></tr>{drows}</table>
- </div></div>
 
- <div class=sec><h2>Sharp money &amp; line movement</h2><div class=body>
-   <table><tr><th>Market</th><th>Side</th><th>Divergence</th><th>Steam</th></tr>{sharp}</table></div></div>
-
- <div class=sec><h2>Risks &amp; counter-signals</h2><div class=body>
-   <table><tr><th>Signal</th><th>Type</th></tr>{rrows}</table></div>
-   <details><summary>Methodology &amp; audit</summary><ul>
-     <li>Expected-runs model (OSI·FIP·park·bullpen, regressed); anchors from settled finals: league {r['anchors']['league_runs']}, home-win {r['anchors']['home_winp']}, margin SD {r['anchors']['margin_sd']}.</li>
-     <li>Percentiles empirical from MLBMA pipeline sp_profiles / team_profiles. Sharp from warehouse sharp_signals (de-vig + steam).</li>
-     <li>Uncalibrated prior; no validated OOS edge clears the promotion gate; OSI is a team proxy; weather not yet in the runs model.</li></ul></details></div>
-</div></body></html>"""
+def render_html(r):
+    """Full standalone document (wraps report_body with the design-system stylesheet)."""
+    e = html.escape
+    return (f'<!DOCTYPE html><html lang=en><head><meta charset=utf-8>'
+            f'<meta name=viewport content="width=device-width,initial-scale=1">'
+            f'<title>{e(r["away"])}@{e(r["home"])} — MLB Model</title>'
+            f'<style>{_CSS}</style></head><body><div class=wrap>{report_body(r)}</div></body></html>')
 
 
 def main():  # pragma: no cover

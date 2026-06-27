@@ -11,3 +11,7 @@ pipeline_data/
 # generated reports
 *_report.html
 sample_matchup_report.html
+
+# working screenshots (keep docs/screenshots/ only)
+/shot-*.png
+mlb_model_app.html
