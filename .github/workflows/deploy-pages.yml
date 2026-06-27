@@ -30,6 +30,8 @@ jobs:
           cache: pip
       - name: Install model
         run: pip install .
+      - name: Restore snapshot capture time
+        run: touch -d "$(cat deployment_data/source_updated_at.txt)" deployment_data/today_matchups.csv
       - name: Build static research dashboard
         env:
           MLB_MODEL_DEPLOYMENT_NOTICE: >-
