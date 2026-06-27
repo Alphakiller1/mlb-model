@@ -131,6 +131,22 @@ def _display(value, suffix="", digits=1):
         return "—"
 
 
+def _edge_grade(edge_fraction):
+    """chase-style 5-tier color for a prop value edge (stored as a fraction; *100 = pts)."""
+    if edge_fraction is None:
+        return "c-na"
+    pts = edge_fraction * 100
+    if pts >= 6:
+        return "c-elite"
+    if pts >= 3:
+        return "c-good"
+    if pts >= 1:
+        return "c-mid"
+    if pts >= 0:
+        return "c-weak"
+    return "c-poor"
+
+
 def _props(pitchers, prop_board):
     def projection_cell(row, prop):
         value = (row.get("projections") or {}).get(prop) or {}
@@ -143,7 +159,7 @@ def _props(pitchers, prop_board):
         # Untrusted (thin-data) projections still show the line, but the edge is greyed —
         # the model's edge there is not reliable enough to act on.
         trusted = row.get("projection_trust") == "trusted"
-        edge_cls = "pos" if (trusted and report and (report.get("edge") or 0) > 0) else "mut"
+        edge_cls = _edge_grade(report.get("edge")) if (trusted and report) else "mut"
         market = (
             f'<span class="prop-mkt">{report["side"][0].upper()} {report["line"]:g} '
             f'{report["best_odds"]:+d} · '
@@ -214,8 +230,8 @@ def _props(pitchers, prop_board):
             f'<td>{report["best_odds"]:+d} · {e(report["best_book"])}</td>'
             f'<td>{report["model_probability"] * 100:.1f}%</td>'
             f'<td>{report["market_probability"] * 100:.1f}%</td>'
-            f'<td class={"pos" if (report.get("edge") or 0) > 0 else "neg"}>'
-            f'{(report.get("edge") or 0) * 100:+.1f}pt</td>'
+            f'<td><b class={_edge_grade(report.get("edge"))}>'
+            f'{(report.get("edge") or 0) * 100:+.1f}pt</b></td>'
             f'<td class={"pos" if (report.get("ev") or 0) > 0 else "neg"}>'
             f'{(report.get("ev") or 0) * 100:+.1f}%</td>'
             f'<td><span class="pill {"pos" if report["state"] == "MONITOR" else "mut"}">{e(report["state"])}</span></td></tr>'
@@ -258,8 +274,8 @@ def _props(pitchers, prop_board):
         f'<td>{item["best_odds"]:+d} · {e(item["best_book"])}</td>'
         f'<td>{item["model_probability"] * 100:.1f}%</td>'
         f'<td>{item["market_probability"] * 100:.1f}%</td>'
-        f'<td class={"pos" if (item.get("edge") or 0) > 0 else "neg"}>'
-        f'{(item.get("edge") or 0) * 100:+.1f}pt</td>'
+        f'<td><b class={_edge_grade(item.get("edge"))}>'
+        f'{(item.get("edge") or 0) * 100:+.1f}pt</b></td>'
         f'<td><span class="pill {"pos" if item["state"] == "MONITOR" else "mut"}">{e(item["state"])}</span></td></tr>'
         for item in all_markets[:12]
     ) or (
