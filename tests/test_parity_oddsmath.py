@@ -28,7 +28,7 @@ def _legacy():
     if _LEGACY not in sys.path:
         sys.path.insert(0, _LEGACY)
     try:
-        import bet_evaluator  # noqa: requires legacy deps (pandas/config)
+        import bet_evaluator
         return bet_evaluator
     except Exception as exc:  # pragma: no cover
         pytest.skip(f"legacy bet_evaluator not importable here ({exc}) — parity skipped")

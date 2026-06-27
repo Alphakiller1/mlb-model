@@ -11,6 +11,10 @@ jobs:
       - name: install
         run: pip install -e ".[dev]"
       - name: ruff
-        run: ruff check mlbmodel
+        run: ruff check mlbmodel tests
+      - name: shell syntax
+        run: bash -n refresh.sh
+      - name: self-contained imports
+        run: python -c "import mlbmodel.report.app; import mlbmodel.market.collect"
       - name: pytest (Constitution invariants)
         run: pytest -q

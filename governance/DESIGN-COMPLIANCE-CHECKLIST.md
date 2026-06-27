@@ -1,5 +1,10 @@
 # Design & Copy Compliance Checklist (consolidated from every prior prompt)
 
+> **Updated 2026-06-27:** the current report uses a decision layer, model-driver layer,
+> context-only matchup matrix, responsive table containers, matchup selection, visible
+> freshness, and explicit no-price/no-promotion states. Browser verification covered
+> desktop and 390px mobile layouts.
+
 Binding requirements distilled from all conversation prompts. Each is audited against the current
 Matchup Report + Command Center. Status: ✅ met · ◐ partial · ❌ not met · ⛔ blocked (no data).
 

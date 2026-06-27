@@ -5,7 +5,7 @@ model code requires, from the FREE MLB Stats API (probable pitchers) joined to t
 pipeline's SP/team profiles already materialized in MLBMA_DATA_DIR.
 
 This fills the one gap hub_dataset does not carry: the same-day slate. Output columns
-match what bet_evaluator.load_game / sharp_tracker expect.
+are the unified MLB Model's governed slate contract.
 
     python3 build_today_matchups.py --out /path/to/pipeline_data [--date YYYY-MM-DD]
 
@@ -19,6 +19,7 @@ import csv
 import datetime as dt
 import json
 import urllib.request
+import zlib
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -41,6 +42,11 @@ NAME_TO_ABBR = {
 
 def abbr(name: str) -> str:
     return NAME_TO_ABBR.get(name.strip(), name.strip().upper()[:3])
+
+
+def game_pk(game_date: str, away: str, home: str, game_number: int = 1) -> int:
+    suffix = "" if game_number == 1 else f"|{game_number}"
+    return zlib.crc32(f"{game_date}|{away}|{home}{suffix}".encode())
 
 
 def read_csv(path: Path) -> list[dict]:
@@ -107,7 +113,11 @@ def main() -> None:
         hp = g["teams"]["home"].get("probablePitcher", {}) or {}
         asp = sp.get(str(ap.get("id", "")), {})
         hsp = sp.get(str(hp.get("id", "")), {})
+        game_number = int(g.get("gameNumber") or 1)
         rows.append({
+            "Game_PK": game_pk(args.date, aa, ha, game_number),
+            "MLB_Game_PK": g.get("gamePk"),
+            "Game_Number": game_number,
             "Slate_Date": args.date,
             "Time": et_time(g["gameDate"]),
             "Away": aa, "Home": ha,
@@ -120,7 +130,8 @@ def main() -> None:
         })
 
     dest = out / "today_matchups.csv"
-    cols = ["Slate_Date", "Time", "Away", "Home", "Away_SP", "Home_SP", "Away_Hand",
+    cols = ["Game_PK", "MLB_Game_PK", "Game_Number", "Slate_Date", "Time",
+            "Away", "Home", "Away_SP", "Home_SP", "Away_Hand",
             "Home_Hand", "Away_OSI", "Home_OSI", "Away_FIP", "Home_FIP", "Away_HR9",
             "Home_HR9", "Away_K%", "Home_K%"]
     with dest.open("w", newline="", encoding="utf-8") as f:

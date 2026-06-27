@@ -1,5 +1,11 @@
 # Matchup Intelligence Report — Specification & Audit
 
+> **Implementation update 2026-06-27:** the report is now self-contained, switches across
+> every slate matchup, uses paired de-vigged market probabilities, separates contextual
+> MLBMA statistics from true model drivers, and cannot display BET unless the relevant
+> strategy is promoted. Remaining analytical gaps are tracked in
+> `IMPLEMENTATION-STATUS-2026-06-27.md`.
+
 Version 1.0.0 · 2026-06-27. The canonical output of the unified MLB Model. Covers the charter's 12
 deliverables. **Status: a working v1 exists** (`mlbmodel/report/matchup.py`, generated live for
 NYY@BOS, action ABSTAIN) — analytically real and design-compliant, but **not yet complete**: many

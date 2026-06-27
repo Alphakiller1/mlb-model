@@ -1,37 +1,77 @@
 # MLB MODEL
 
-Unified MLB betting-**intelligence** research platform. Decision-support + paper-trading only —
-**not** auto-betting. Governed by a version-controlled **Model Constitution**; advancements must pass
-scientific validation, point-in-time testing, uncertainty measurement, and monitoring before they get
-production authority.
+Unified MLB research and betting decision-support platform. It is paper-trading and
+research software, not an auto-betting system and not a promise of profit.
 
-> This repo is **not a greenfield rebuild.** The verified production logic lives in `bet-evaluator`
-> and `sharp-money-tracker`; it is preserved and folded in module-by-module per the governance docs.
-> This package is the governed home for new, **tested** modules and the data glue.
+## Current Authority
 
-## Governance (read first)
-The charter and standards live in `governance/`:
-- `MODEL-CONSTITUTION.md` — 18 enforceable standards + how each is enforced (test/gate/schema/registry/human)
-- `CURRENT-STATE-AUDIT.md` — evidence-based audit (implemented/verified vs documented/absent)
-- `ADVANCEMENT-FRAMEWORK.md` — traceability, extensibility, research lifecycle, MLBMA governance, promotion gates
-- `ROADMAP-AND-RISK.md` — classified recommendations, migration/rollback, risk register, open questions
+The active runtime now lives in this repository:
 
-## Package
+- MLBMA dataset materialization and slate/results ingestion
+- transparent expected-runs baseline with exact factor lineage
+- paired, book-level de-vigged market consensus
+- sharp-versus-soft market observations
+- value and risk assessment
+- executable-entry walk-forward validation
+- DSR/PBO/OOS promotion gate
+- slate, matchup, market, pitcher-prop research, paper portfolio, results, and research
+  interface
+
+Bet Evaluator and Sharp Money Tracker remain read-only parity references until the
+remaining historical-reconciliation and parallel-run gates are complete.
+
+## Safety Invariants
+
+- A descriptive statistic is never presented as a model driver.
+- A movement strategy needs a point-in-time signal and executable entry price.
+- Opposite contracts from the same game remain in the same validation partition.
+- Raw implied probabilities are never labeled vig-free.
+- An unpromoted strategy cannot produce a `BET` action.
+- Missing prices and failed data reads produce visible no-action states.
+
+## Run
+
+```bash
+python -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+cp env.template .env
+
+.venv/bin/python -m mlbmodel.report.app \
+  --game NYY@BOS \
+  --data-dir /path/to/mlbma/data \
+  --out mlb_model_app.html
 ```
-mlbmodel/
-  market/oddsmath.py     # canonical odds math (STD-11) — consolidates duplicated copies
-  quant/selection.py     # Deflated Sharpe Ratio + PBO selection-bias controls (STD-7)
-  sources/               # data glue: hub_to_csv, build_today_matchups, build_game_results, seed_warehouse
-tests/                   # Constitution invariants as automated tests (STD-7, STD-11)
+
+The generated HTML is self-contained except for MLB image/font assets. Open it directly or
+serve the directory with a static server.
+
+## Hosted Research Preview
+
+GitHub Pages builds `deployment_data/` into a static research dashboard through
+`.github/workflows/deploy-pages.yml`. The hosted preview deliberately disables live odds and
+warehouse access, displays that limitation in the interface, and cannot issue a wager action.
+
+## Verify
+
+```bash
+ruff check mlbmodel tests
+pytest -q
 ```
 
-## Dev
-```
-pip install -e ".[dev]"
-pytest -q          # enforces the invariants
-ruff check mlbmodel
-```
+## Daily Pipeline
 
-## Daily pipeline
-`refresh.sh` (repo root) runs the verified end-to-end chain (features → slate → finals →
-seed → sharp tracker → settle) against the unified Supabase warehouse.
+`refresh.sh` materializes MLBMA data, creates the slate, ingests finals, seeds the
+warehouse, collects paired odds, publishes sharp observations, settles outcomes, and runs
+the blocking promotion gate. It no longer shells into either legacy repository.
+
+Before enabling executable-entry research, apply
+`migrations/0001_executable_market_signals.sql`. Historical rows without a signal-time
+entry price remain intentionally ineligible.
+
+Apply `migrations/0002_paper_portfolio.sql` to enable the Portfolio view. It tracks paper
+positions and correlated exposure only; sizing remains zero until the promotion gate passes.
+
+## Governance
+
+The versioned charter and migration evidence live in `governance/`. Governance documents
+describe standards; tests and pipeline gates determine what is actually enforced.

@@ -7,7 +7,13 @@ name = "mlbmodel"
 version = "0.1.0"
 description = "Unified MLB betting-intelligence research platform (governed by the Model Constitution)."
 requires-python = ">=3.11"
-dependencies = ["pandas>=2.2", "requests>=2.31"]
+dependencies = ["numpy>=1.26", "pandas>=2.2", "requests>=2.31"]
+
+[project.scripts]
+mlb-model = "mlbmodel.report.app:main"
+mlb-model-refresh-results = "mlbmodel.sources.build_game_results:main"
+mlb-model-sharp = "mlbmodel.market.collect:main"
+mlb-model-settle = "mlbmodel.market.settle:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
