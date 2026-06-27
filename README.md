@@ -10,7 +10,7 @@ production authority.
 > This package is the governed home for new, **tested** modules and the data glue.
 
 ## Governance (read first)
-The charter and standards live in `mlb-model-planning/governance/`:
+The charter and standards live in `governance/`:
 - `MODEL-CONSTITUTION.md` — 18 enforceable standards + how each is enforced (test/gate/schema/registry/human)
 - `CURRENT-STATE-AUDIT.md` — evidence-based audit (implemented/verified vs documented/absent)
 - `ADVANCEMENT-FRAMEWORK.md` — traceability, extensibility, research lifecycle, MLBMA governance, promotion gates
@@ -33,5 +33,5 @@ ruff check mlbmodel
 ```
 
 ## Daily pipeline
-`mlb-model-planning/refresh.sh` runs the verified end-to-end chain (features → slate → finals →
+`refresh.sh` (repo root) runs the verified end-to-end chain (features → slate → finals →
 seed → sharp tracker → settle) against the unified Supabase warehouse.
