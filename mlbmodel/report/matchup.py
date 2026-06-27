@@ -129,25 +129,38 @@ def _advantage(gd, anchors):
     hr_s = sp["HR9"] if sp is not None and "HR9" in sp.columns else None
     osi_s = tp["osi"] if tp is not None and "osi" in tp.columns else None
 
+    def _mean(series, default):
+        try:
+            import pandas as pd
+            s = pd.to_numeric(series, errors="coerce").dropna()
+            return (round(float(s.mean()), 2), int(s.shape[0])) if len(s) else (default, 0)
+        except Exception:
+            return (default, 0)
+
     rows = []
 
-    def row(cat, a_val, h_val, series, lower_better, impact):
+    def row(cat, a_val, h_val, series, lower_better, base_default, impact, unit=""):
         ap = _emp_pctile(series, a_val, lower_better) if series is not None else None
         hp = _emp_pctile(series, h_val, lower_better) if series is not None else None
-        # edge side: who is better (higher pctile = better)
+        base, n = _mean(series, base_default) if series is not None else (base_default, None)
         edge = "—"
         if ap is not None and hp is not None:
             edge = gd.away if ap > hp else (gd.home if hp > ap else "even")
+        # stat-presentation standard: raw + baseline + delta + percentile + sample
+        ad = (round(a_val - base, 2) if isinstance(a_val, (int, float)) and base is not None else None)
+        hd = (round(h_val - base, 2) if isinstance(h_val, (int, float)) and base is not None else None)
         rows.append({"cat": cat, "a_val": a_val, "h_val": h_val, "a_pct": ap, "h_pct": hp,
-                     "edge": edge, "impact": impact})
+                     "base": base, "a_d": ad, "h_d": hd, "n": n, "edge": edge,
+                     "impact": impact, "unit": unit, "lower_better": lower_better})
 
-    row("Starting pitching (FIP)", gd.away_fip, gd.home_fip, fip_s, True,
+    row("Starting pitching (FIP)", gd.away_fip, gd.home_fip, fip_s, True, config.LEAGUE_FIP,
         f"{(BE.pitch_factor(gd.home_fip, gd.home_pen_factor) - BE.pitch_factor(gd.away_fip, gd.away_pen_factor)) * anchors['league_runs']:+.2f} R")
-    row("SP strikeout (K%)", gd.away_k, gd.home_k, k_s, False, "K props · Total")
-    row("SP home-run risk (HR/9)", gd.away_hr9, gd.home_hr9, hr_s, True, "Total · TT")
-    row("Offense (OSI)", gd.away_osi, gd.home_osi, osi_s, False,
+    row("SP strikeout (K%)", gd.away_k, gd.home_k, k_s, False, 22.0, "K props · Total", "%")
+    row("SP home-run risk (HR/9)", gd.away_hr9, gd.home_hr9, hr_s, True, 1.25, "Total · TT")
+    row("Offense (OSI)", gd.away_osi, gd.home_osi, osi_s, False, 50.0,
         f"{(BE.offense_factor(gd.away_osi) - BE.offense_factor(gd.home_osi)) * anchors['league_runs']:+.2f} R")
-    row("Bullpen (factor)", gd.away_pen_factor, gd.home_pen_factor, None, True, "Late ML · Total")
+    row("Bullpen (factor)", gd.away_pen_factor, gd.home_pen_factor, None, True, 1.00, "Late ML · Total")
+    row("Park run env", gd.park_factor, gd.park_factor, None, False, 1.00, "Total · TT")
     return rows
 
 
@@ -289,6 +302,7 @@ td:first-child{text-align:left;font-weight:600}tbody tr:last-child td{border-bot
 /* comparison + driver bars */
 .dbar{display:inline-block;width:64px;height:7px;border-radius:4px;background:rgba(255,255,255,.07);vertical-align:middle;overflow:hidden}
 .dbar i{display:block;height:100%;border-radius:4px}
+.delta{font-size:11px;font-weight:700}.n{color:var(--muted-2);font-size:10px;font-weight:600}
 .advbar{display:flex;align-items:center;gap:8px;justify-content:flex-end}
 .advbar .seg{height:8px;border-radius:3px}.advbar .a{background:#9A6BFF}.advbar .h{background:#2dd4bf}
 /* charts */
@@ -344,17 +358,24 @@ def render_html(r):
     mrows = "".join(mrow(m) for m in r["markets"])
 
     # advantage matrix
+    def _delta(d, lower_better):
+        if d is None:
+            return ""
+        good = (d < 0) if lower_better else (d > 0)
+        tone = "pos" if good else ("neg" if d != 0 else "mut")
+        return f' <span class="delta {tone}">{d:+g}</span>'
+
     def arow(a):
         ac, al = _chip(a["a_pct"]); hc, hl = _chip(a["h_pct"])
-        aw = (a["a_pct"] or 0); hw = (a["h_pct"] or 0)
-        bar = (f'<div class=advbar><span class="seg a" style="width:{aw*0.6:.0f}px"></span>'
-               f'<span class="seg h" style="width:{hw*0.6:.0f}px"></span></div>')
-        edge = e(str(a["edge"]))
-        return (f'<tr><td>{e(a["cat"])}</td>'
-                f'<td class=side>{_f(a["a_val"])} <span class="chip {ac}">{al}</span></td>'
-                f'<td>{bar}</td>'
-                f'<td class=pos>{_f(a["h_val"])} <span class="chip {hc}">{hl}</span></td>'
-                f'<td>{edge}</td><td class=mut>{e(str(a["impact"]))}</td></tr>')
+        u, lb = a["unit"], a["lower_better"]
+        # stat-presentation standard: raw + Δ-vs-baseline + percentile chip, per team
+        av = f'{_f(a["a_val"])}{u}{_delta(a["a_d"], lb)} <span class="chip {ac}">{al}</span>'
+        hv = f'{_f(a["h_val"])}{u}{_delta(a["h_d"], lb)} <span class="chip {hc}">{hl}</span>'
+        n = f' <span class=n>n={a["n"]}</span>' if a.get("n") else ''
+        return (f'<tr><td>{e(a["cat"])}{n}</td>'
+                f'<td class=side>{av}</td><td class=pos>{hv}</td>'
+                f'<td class=mut>{_f(a["base"])}{u}</td>'
+                f'<td>{e(str(a["edge"]))}</td><td class=mut>{e(str(a["impact"]))}</td></tr>')
     arows = "".join(arow(a) for a in r["advantage"])
 
     # key drivers (ranked contribution bars)
@@ -394,8 +415,8 @@ def render_html(r):
    <table><tr><th>Market</th><th>Mkt</th><th>Fair</th><th>Impl</th><th>Model</th><th>Edge</th><th>EV/u</th><th>Max</th><th>State</th></tr>{mrows}</table>
  </div></div>
 
- <div class=sec><h2>Matchup advantage matrix · raw · percentile · modeled impact</h2><div class=body>
-   <table><tr><th>Category</th><th>{e(r['away'])}</th><th>vs</th><th>{e(r['home'])}</th><th>Edge</th><th>Impact</th></tr>{arows}</table>
+ <div class=sec><h2>Matchup advantage matrix · raw · Δ vs MLB · percentile · modeled impact</h2><div class=body>
+   <table><tr><th>Category</th><th>{e(r['away'])} (raw Δ pct)</th><th>{e(r['home'])} (raw Δ pct)</th><th>MLB base</th><th>Edge</th><th>Impact</th></tr>{arows}</table>
  </div></div>
 
  <div class=sec><h2>Key drivers · ranked contribution to expected runs</h2><div class=body>
