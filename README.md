@@ -50,7 +50,7 @@ serve the directory with a static server.
 GitHub Pages builds `deployment_data/` into a static research dashboard through
 `.github/workflows/deploy-pages.yml`. The hosted preview deliberately disables live odds and
 warehouse access, displays that limitation in the interface, and cannot issue a wager action.
-Set the repository variable `GITHUB_PAGES_ENABLED=true` after Pages is available for the
+Set the repository variable `PAGES_ENABLED=true` after Pages is available for the
 repository; the workflow remains safely skipped until then.
 
 ## Verify
