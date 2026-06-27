@@ -8,13 +8,15 @@ research software, not an auto-betting system and not a promise of profit.
 The active runtime now lives in this repository:
 
 - MLBMA dataset materialization and slate/results ingestion
-- transparent expected-runs baseline with exact factor lineage
+- context-aware expected-runs model with exact sequential factor lineage
 - paired, book-level de-vigged market consensus
 - sharp-versus-soft market observations
 - value and risk assessment
 - executable-entry walk-forward validation
 - DSR/PBO/OOS promotion gate
-- slate, matchup, market, pitcher-prop research, paper portfolio, results, and research
+- official lineup, first-pitch weather, umpire, injury, travel/rest, and probable-pitcher inputs
+- 30,000-draw pitcher-prop distributions with pitch-by-pitch opponent response
+- slate, matchup, market, pitcher-prop, paper portfolio, results, and research
   interface
 
 Bet Evaluator and Sharp Money Tracker remain read-only parity references until the
@@ -50,8 +52,9 @@ serve the directory with a static server.
 ## Hosted Research Preview
 
 GitHub Pages runs `mlbmodel.sources.sync_mlbma` before every build. It refreshes team,
-starter, and pitch-mix inputs from MLBMA's public Supabase mirror, then reconciles
-`Today_Matchups` against the live MLB schedule.
+starter, batter, bullpen, workload, and pitch-mix inputs from MLBMA's public Supabase
+mirror, reconciles `Today_Matchups` against the live MLB schedule, and collects the
+point-in-time MLB/Open-Meteo game context.
 
 - A current, exact pipeline slate is used directly.
 - A stale or mismatched pipeline slate activates Chase Analytics' live-schedule fallback.
@@ -59,8 +62,9 @@ starter, and pitch-mix inputs from MLBMA's public Supabase mirror, then reconcil
   displayed in the interface.
 
 The workflow accepts an `mlbma-pipeline-complete` repository dispatch and runs hourly as a
-fallback after it is merged to the default branch. Live odds and the betting warehouse
-remain disabled in the public preview, so it cannot issue a wager action.
+fallback after it is merged to the default branch. The public preview has no prop-price
+snapshot or betting warehouse credentials, so market reports show `NO MARKET` and cannot
+issue a wager action.
 
 ## Verify
 

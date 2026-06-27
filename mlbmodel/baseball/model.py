@@ -5,6 +5,12 @@ import math
 from dataclasses import dataclass, field
 
 from mlbmodel import settings
+from mlbmodel.baseball.context import (
+    confidence_from_coverage,
+    travel_offense_factor,
+    umpire_run_factor,
+    weather_run_factor,
+)
 from mlbmodel.market.oddsmath import prob_to_american
 
 
@@ -60,6 +66,18 @@ class GameData:
     away_context: TeamContext = field(default_factory=TeamContext)
     home_context: TeamContext = field(default_factory=TeamContext)
     source_updated_at: str | None = None
+    mlb_game_pk: int | None = None
+    live_context: dict = field(default_factory=dict)
+    away_starter_features: dict = field(default_factory=dict)
+    home_starter_features: dict = field(default_factory=dict)
+    away_bullpen_features: dict = field(default_factory=dict)
+    home_bullpen_features: dict = field(default_factory=dict)
+    away_lineup_features: dict = field(default_factory=dict)
+    home_lineup_features: dict = field(default_factory=dict)
+    away_injury_features: dict = field(default_factory=dict)
+    home_injury_features: dict = field(default_factory=dict)
+    context_coverage_pct: int = 0
+    missing_context: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -82,6 +100,9 @@ class Probabilities:
     p_home_win: float
     p_away_win: float
     factors: list[FactorContribution]
+    data_coverage_pct: int = 0
+    missing_context: list[str] = field(default_factory=list)
+    confidence: str = "low"
 
 
 def _regress(factor: float) -> float:
@@ -109,54 +130,209 @@ def pitch_factor(opp_sp_fip: float | None, opp_pen_factor: float = 1.0) -> float
     return _regress(blended)
 
 
+def staff_factor(
+    starter: dict,
+    bullpen: dict,
+    *,
+    fallback_fip: float | None,
+    fallback_pen_factor: float,
+) -> float:
+    if not starter and not bullpen:
+        return pitch_factor(fallback_fip, fallback_pen_factor)
+    starter_skill = float(starter.get("skill_fip") or fallback_fip or settings.LEAGUE_FIP)
+    starter_innings = clip(float(starter.get("expected_ip") or 5.2), 3.0, 7.3)
+    bullpen_skill = float(
+        bullpen.get("skill_fip") or settings.LEAGUE_BULLPEN_ERA
+    )
+    workload = float(bullpen.get("workload_factor") or 1.0)
+    starter_component = starter_skill / settings.LEAGUE_FIP
+    bullpen_component = bullpen_skill / settings.LEAGUE_BULLPEN_ERA * workload
+    starter_share = clip(starter_innings / 9, 0.38, 0.81)
+    raw = starter_component * starter_share + bullpen_component * (1 - starter_share)
+    return _regress(clip(raw, *settings.PITCH_FACTOR_CLIP))
+
+
+def platoon_factor(context: TeamContext, baseline_osi: float | None) -> float:
+    if context.platoon_osi is None or baseline_osi is None:
+        return 1.0
+    return clip(1 + (context.platoon_osi - baseline_osi) * 0.003, 0.94, 1.06)
+
+
 def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilities:
     league = anchors["league_runs"]
     away_off = offense_factor(gd.away_osi)
     home_off = offense_factor(gd.home_osi)
-    away_pitch = pitch_factor(gd.home_fip, gd.home_pen_factor)
-    home_pitch = pitch_factor(gd.away_fip, gd.away_pen_factor)
+    away_platoon = platoon_factor(gd.away_context, gd.away_osi)
+    home_platoon = platoon_factor(gd.home_context, gd.home_osi)
+    away_lineup = float(gd.away_lineup_features.get("factor") or 1.0)
+    home_lineup = float(gd.home_lineup_features.get("factor") or 1.0)
+    away_injury = float(gd.away_injury_features.get("factor") or 1.0)
+    home_injury = float(gd.home_injury_features.get("factor") or 1.0)
+    travel = gd.live_context.get("travel") or {}
+    away_travel = travel_offense_factor(travel.get("away"))
+    home_travel = travel_offense_factor(travel.get("home"))
+    away_pitch = staff_factor(
+        gd.home_starter_features,
+        gd.home_bullpen_features,
+        fallback_fip=gd.home_fip,
+        fallback_pen_factor=gd.home_pen_factor,
+    )
+    home_pitch = staff_factor(
+        gd.away_starter_features,
+        gd.away_bullpen_features,
+        fallback_fip=gd.away_fip,
+        fallback_pen_factor=gd.away_pen_factor,
+    )
+    weather = weather_run_factor(gd.weather)
+    umpire = umpire_run_factor(gd.live_context.get("umpire"))
 
-    exp_away = league * away_off * away_pitch * gd.park_factor
-    exp_home_pre_hfa = league * home_off * home_pitch * gd.park_factor
+    factors: list[FactorContribution] = []
+
+    def apply_side(
+        current: float,
+        factor: float,
+        *,
+        name: str,
+        side: str,
+        markets: str,
+        confidence: str,
+        source: str,
+        include: bool = True,
+    ) -> float:
+        updated = current * factor
+        if include:
+            factors.append(
+                FactorContribution(
+                    name, side, factor, updated - current, markets, confidence, source
+                )
+            )
+        return updated
+
+    exp_away = apply_side(
+        league, away_off, name=f"{gd.away} season offense", side=gd.away,
+        markets="Away runs / Total / ML", confidence="medium",
+        source="MLBMA team offense strength",
+    )
+    exp_home_pre_hfa = apply_side(
+        league, home_off, name=f"{gd.home} season offense", side=gd.home,
+        markets="Home runs / Total / ML", confidence="medium",
+        source="MLBMA team offense strength",
+    )
+    exp_away = apply_side(
+        exp_away, away_platoon, name=f"{gd.away} offense vs {gd.home_hand}HP",
+        side=gd.away, markets="Away runs / pitcher props", confidence="medium",
+        source="MLBMA team handedness split", include=away_platoon != 1.0,
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, home_platoon, name=f"{gd.home} offense vs {gd.away_hand}HP",
+        side=gd.home, markets="Home runs / pitcher props", confidence="medium",
+        source="MLBMA team handedness split", include=home_platoon != 1.0,
+    )
+    exp_away = apply_side(
+        exp_away, away_lineup, name=f"{gd.away} posted lineup vs {gd.home_hand}HP",
+        side=gd.away, markets="Away runs / pitcher props", confidence="high",
+        source="MLB lineup + MLBMA batter split value",
+        include=gd.away_lineup_features.get("status") in {"confirmed", "projected"},
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, home_lineup, name=f"{gd.home} posted lineup vs {gd.away_hand}HP",
+        side=gd.home, markets="Home runs / pitcher props", confidence="high",
+        source="MLB lineup + MLBMA batter split value",
+        include=gd.home_lineup_features.get("status") in {"confirmed", "projected"},
+    )
+    exp_away = apply_side(
+        exp_away, away_injury, name=f"{gd.away} unavailable hitters",
+        side=gd.away, markets="Away runs / Total / ML", confidence="medium",
+        source="Official MLB injured list + MLBMA batter value",
+        include=away_injury != 1.0,
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, home_injury, name=f"{gd.home} unavailable hitters",
+        side=gd.home, markets="Home runs / Total / ML", confidence="medium",
+        source="Official MLB injured list + MLBMA batter value",
+        include=home_injury != 1.0,
+    )
+    exp_away = apply_side(
+        exp_away, away_travel, name=f"{gd.away} rest and travel",
+        side=gd.away, markets="Away runs / Total / ML", confidence="low",
+        source="MLB schedule + venue distance/timezone", include=away_travel != 1.0,
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, home_travel, name=f"{gd.home} rest and travel",
+        side=gd.home, markets="Home runs / Total / ML", confidence="low",
+        source="MLB schedule + venue distance/timezone", include=home_travel != 1.0,
+    )
+    exp_away = apply_side(
+        exp_away, away_pitch, name=f"{gd.home} starter and bullpen",
+        side=gd.away, markets="Away runs / Total / ML", confidence="medium",
+        source="MLBMA starter season/L14 + bullpen quality/workload",
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, home_pitch, name=f"{gd.away} starter and bullpen",
+        side=gd.home, markets="Home runs / Total / ML", confidence="medium",
+        source="MLBMA starter season/L14 + bullpen quality/workload",
+    )
+
+    def apply_shared(
+        away_runs: float,
+        home_runs: float,
+        factor: float,
+        *,
+        name: str,
+        confidence: str,
+        source: str,
+        include: bool = True,
+    ) -> tuple[float, float]:
+        updated_away = away_runs * factor
+        updated_home = home_runs * factor
+        if include:
+            factors.append(
+                FactorContribution(
+                    name,
+                    "Both",
+                    factor,
+                    (updated_away - away_runs) + (updated_home - home_runs),
+                    "Total / Team totals",
+                    confidence,
+                    source,
+                )
+            )
+        return updated_away, updated_home
+
+    exp_away, exp_home_pre_hfa = apply_shared(
+        exp_away, exp_home_pre_hfa, gd.park_factor,
+        name="Ballpark run environment", confidence="medium",
+        source="MLBMA park factors",
+    )
+    exp_away, exp_home_pre_hfa = apply_shared(
+        exp_away, exp_home_pre_hfa, weather,
+        name="First-pitch weather", confidence="medium",
+        source="Open-Meteo forecast + MLB field orientation",
+        include=weather != 1.0 or bool(gd.weather.get("dome")),
+    )
+    exp_away, exp_home_pre_hfa = apply_shared(
+        exp_away, exp_home_pre_hfa, umpire,
+        name="Home-plate umpire run environment", confidence="low",
+        source="MLB official assignment + shrunk prior game totals",
+        include=(gd.live_context.get("umpire") or {}).get("status") == "announced",
+    )
     exp_home = exp_home_pre_hfa + settings.HFA_RUNS
-
-    factors = [
+    factors.append(
         FactorContribution(
-            f"{gd.away} offense (OSI)", gd.away, away_off,
-            league * (away_off - 1), "Away TT / Total / ML", "medium",
-            "MLBMA team_profiles.osi",
-        ),
-        FactorContribution(
-            f"{gd.home} offense (OSI)", gd.home, home_off,
-            league * (home_off - 1), "Home TT / Total / ML", "medium",
-            "MLBMA team_profiles.osi",
-        ),
-        FactorContribution(
-            f"{gd.home} staff run allowance", gd.away, away_pitch,
-            league * away_off * (away_pitch - 1), "Away TT / Total / ML", "medium",
-            "MLBMA sp_profiles.FIP + team_profiles bullpen",
-        ),
-        FactorContribution(
-            f"{gd.away} staff run allowance", gd.home, home_pitch,
-            league * home_off * (home_pitch - 1), "Home TT / Total / ML", "medium",
-            "MLBMA sp_profiles.FIP + team_profiles bullpen",
-        ),
-        FactorContribution(
-            "Park environment", "Both", gd.park_factor,
-            (exp_away + exp_home_pre_hfa) * (gd.park_factor - 1) / gd.park_factor,
-            "Total / Team totals", "medium", "MLBMA park factors",
-        ),
-        FactorContribution(
-            "Home field", gd.home, 1.0,
-            settings.HFA_RUNS, "ML", "medium", "empirical home-field anchor",
-        ),
-    ]
+            "Home field", gd.home, 1.0, settings.HFA_RUNS,
+            "ML", "medium", "empirical home-field anchor",
+        )
+    )
 
     exp_total = exp_away + exp_home
     exp_margin = exp_home - exp_away
     p_home_model = normal_cdf(exp_margin / anchors["margin_sd"])
     base = anchors["home_winp"] / (anchors["home_winp"] + anchors["away_winp"])
     p_home = clip(0.85 * p_home_model + 0.15 * base, 0.05, 0.95)
+    starts = min(
+        int(gd.away_starter_features.get("starts") or 0),
+        int(gd.home_starter_features.get("starts") or 0),
+    )
     return Probabilities(
         exp_away_runs=round(exp_away, 2),
         exp_home_runs=round(exp_home, 2),
@@ -165,6 +341,9 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         p_home_win=round(p_home, 4),
         p_away_win=round(1 - p_home, 4),
         factors=factors,
+        data_coverage_pct=gd.context_coverage_pct,
+        missing_context=list(gd.missing_context),
+        confidence=confidence_from_coverage(gd.context_coverage_pct, starts),
     )
 
 

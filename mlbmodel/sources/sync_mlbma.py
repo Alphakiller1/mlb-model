@@ -23,12 +23,29 @@ from mlbmodel.sources.build_today_matchups import (
     write_rows,
 )
 from mlbmodel.sources.hub_to_csv import write_csv
+from mlbmodel.sources.live_context import collect as collect_live_context
 
 ET = ZoneInfo("America/New_York")
 HUB_DATASETS = {
     "Team_Profiles": "team_profiles.csv",
     "SP_Profiles": "sp_profiles.csv",
+    "SP_L14": "sp_l14.csv",
+    "SP_Game_Log": "sp_game_log.csv",
+    "SP_Metric_Splits": "sp_metric_splits.csv",
+    "Batter_Profiles": "batter_profiles.csv",
+    "Batter_Splits_RHP": "batter_splits_rhp.csv",
+    "Batter_Splits_LHP": "batter_splits_lhp.csv",
+    "Bullpen_Unit": "bullpen_unit.csv",
+    "Reliever_Log": "reliever_log.csv",
+    "Player_Registry": "player_registry.csv",
     "Pitch_Mix_Pitcher": "pitch_mix_pitcher.csv",
+    "Pitch_Mix_Pitcher_L14": "pitch_mix_pitcher_l14.csv",
+    "Pitch_Mix_Batter": "pitch_mix_batter.csv",
+    "Pitch_Mix_Batter_L14": "pitch_mix_batter_l14.csv",
+    "Pitch_Mix_Team_Batting": "pitch_mix_team_batting.csv",
+    "Pitch_Mix_Team_Batting_L14": "pitch_mix_team_batting_l14.csv",
+    "Team_L10_SP_Hand": "team_l10_sp_hand.csv",
+    "Signals_Today": "signals_today.csv",
 }
 IDENTITY_COLUMNS = {"Game_PK", "MLB_Game_PK", "Game_Number", "Slate_Date"}
 
@@ -132,6 +149,13 @@ def current_pipeline_rows(rows: list[dict], slate_date: str) -> list[dict]:
     ]
 
 
+def current_lineup_rows(rows: list[dict], slate_date: str) -> list[dict]:
+    return [
+        row for row in rows
+        if str(row.get("Slate_Date") or "")[:10] == slate_date
+    ]
+
+
 def merge_pipeline_slate(
     schedule_rows: list[dict],
     pipeline_rows: list[dict],
@@ -175,12 +199,14 @@ def sync(out: Path, slate_date: str | None = None) -> dict:
     games = fetch_schedule(slate_date)
     schedule_rows = build_rows(out, slate_date, games)
     all_pipeline_rows = fetch_sheet_rows("Today_Matchups")
+    all_lineup_rows = fetch_sheet_rows("Today_Lineups")
     metadata = pipeline_metadata(fetch_sheet_matrix("Last_Updated"))
     pipeline_rows = current_pipeline_rows(all_pipeline_rows, slate_date)
     pipeline_slate_date = metadata.get("Slate_Date_ET")
     merged_rows, game_set_exact = merge_pipeline_slate(schedule_rows, pipeline_rows)
     exact = game_set_exact and pipeline_slate_date == slate_date
     rows = merged_rows if exact else schedule_rows
+    pipeline_lineups = current_lineup_rows(all_lineup_rows, slate_date) if exact else []
     source = "mlbma_pipeline" if exact else "mlb_live_schedule_fallback"
     if exact:
         message = (
@@ -194,6 +220,17 @@ def sync(out: Path, slate_date: str | None = None) -> dict:
 
     write_rows(rows, out / "today_matchups.csv")
     os.utime(out / "today_matchups.csv", (fetched_at.timestamp(), fetched_at.timestamp()))
+    context_error = None
+    try:
+        live_context = collect_live_context(
+            out,
+            slate_date,
+            games,
+            pipeline_lineups=pipeline_lineups,
+        )
+    except Exception as exc:  # context is additive; the slate must still deploy
+        live_context = {}
+        context_error = f"{type(exc).__name__}: {exc}"
     keys = matchup_keys(rows)
     digest = hashlib.sha256(
         json.dumps({
@@ -215,6 +252,9 @@ def sync(out: Path, slate_date: str | None = None) -> dict:
         "pipeline_slate_date": pipeline_slate_date,
         "pipeline_updated_at": _pipeline_updated_at(metadata),
         "hub_updated_at": hub_updated,
+        "live_context_fetched_at": live_context.get("fetched_at"),
+        "live_context_games": len(live_context.get("games") or {}),
+        "live_context_error": context_error,
         "fetched_at": fetched_at.isoformat(timespec="seconds"),
     }
     (out / "mlbma_sync.json").write_text(

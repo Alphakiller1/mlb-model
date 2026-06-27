@@ -33,10 +33,15 @@ def test_probability_reports_only_actual_model_factors():
     )
     names = {factor.name for factor in probabilities.factors}
     assert names == {
-        "NYY offense (OSI)",
-        "BOS offense (OSI)",
-        "BOS staff run allowance",
-        "NYY staff run allowance",
-        "Park environment",
+        "NYY season offense",
+        "BOS season offense",
+        "BOS starter and bullpen",
+        "NYY starter and bullpen",
+        "Ballpark run environment",
         "Home field",
     }
+    assert not any(
+        term in name
+        for name in names
+        for term in ("lineup", "weather", "umpire", "travel")
+    )

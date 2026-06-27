@@ -17,10 +17,13 @@ import os
 
 from mlbmodel.baseball.model import model_probabilities
 from mlbmodel.baseball.repository import DataRepository
+from mlbmodel.market.props import load_prop_board, market_report
 from mlbmodel.market.quotes import load_board
 from mlbmodel.portfolio.risk import summarize_positions
+from mlbmodel.props.model import build_pitcher_board
 from mlbmodel.report.matchup import (
     _CSS,
+    _headshot,
     _logo,
     _promotion,
     build_report,
@@ -128,42 +131,147 @@ def _display(value, suffix="", digits=1):
         return "—"
 
 
-def _props(slate):
+def _props(pitchers, prop_board):
+    def projection_cell(row, prop):
+        value = (row.get("projections") or {}).get(prop) or {}
+        if not value:
+            return '<td class=mut>—</td>'
+        report = next(
+            (item for item in row.get("market_report", []) if item["prop"] == prop),
+            None,
+        )
+        market = (
+            f'<span class="prop-mkt">{report["side"][0].upper()} {report["line"]:g} '
+            f'{report["best_odds"]:+d} · '
+            f'<b class="{"pos" if (report.get("edge") or 0) > 0 else "mut"}">'
+            f'{(report.get("edge") or 0) * 100:+.1f}pt</b></span>'
+            if report else '<span class="prop-mkt mut">no line</span>'
+        )
+        return (
+            f'<td class=prop-cell><b>{value["mean"]:.1f}</b>'
+            f'<span class=prop-range>range {value["p10"]:.0f}–{value["p90"]:.0f}</span>'
+            f'{market}</td>'
+        )
+
     rows = ""
-    starters = 0
-    for game in slate:
-        if game.get("err"):
-            continue
-        for side, pitcher, opponent, k_rate, fip, hr9 in (
-            (game["away"], game.get("asp"), game["home"], game.get("ak"),
-             game.get("afip"), game.get("ahr9")),
-            (game["home"], game.get("hsp"), game["away"], game.get("hk"),
-             game.get("hfip"), game.get("hhr9")),
-        ):
-            if pitcher and str(pitcher).strip().upper() not in {"TBD", "NONE", "NAN"}:
-                starters += 1
-            rows += (
-                f'<tr><td><span class=gcell>{_logo(side, "tlogo sm")}'
-                f'<b>{e(str(pitcher or "TBD"))}</b></span></td>'
-                f'<td>{e(side)}</td><td class=mut>vs {e(opponent)}</td>'
-                f'<td>{_display(k_rate, "%")}</td><td>{_display(fip, digits=2)}</td>'
-                f'<td>{_display(hr9, digits=2)}</td>'
-                '<td><span class="pill warnc">RESEARCH</span></td></tr>'
-            )
-    return f"""<h2>Props</h2>
- <div class=ctx>Starting-pitcher research from the same inputs used by each matchup model.</div>
+    all_markets = []
+    for index, row in enumerate(pitchers):
+        reports = row.get("market_report") or []
+        all_markets.extend(
+            [{"pitcher": row.get("pitcher"), **report} for report in reports]
+        )
+        state = row.get("state", "DATA GAP")
+        state_tone = "neg" if state == "REGRESSION" else (
+            "pos" if state == "PROGRESSION" else "side" if state == "STABLE" else "warnc"
+        )
+        best = reports[0] if reports else None
+        market_state = best.get("state") if best else row.get("market_state", "NO MARKET")
+        market_tone = "pos" if market_state in {"BET", "MONITOR"} else "mut"
+        rows += (
+            f'<tr class=prop-main onclick="togglePitcher({index})">'
+            f'<td><div class=pitcher-cell>{_headshot(row.get("pitcher_id"))}'
+            f'<div><b>{e(str(row.get("pitcher") or "TBD"))}</b>'
+            f'<span>{_logo(row.get("team"), "tlogo sm")}{e(str(row.get("team") or ""))}</span>'
+            f'</div></div></td>'
+            f'<td><span class=gcell>{_logo(row.get("opponent"), "tlogo sm")}'
+            f'{e(str(row.get("opponent") or ""))}</span></td>'
+            f'<td><span class="pill {state_tone}" title="Performance state from results versus underlying pitching skill">{e(state)}</span>'
+            f'<span class=prop-sub>{float(row.get("luck_runs") or 0):+.2f} runs</span></td>'
+            f'<td class=starter-base><b>{_display(row.get("expected_ip"), digits=1)} IP</b>'
+            f'<span>{_display(row.get("skill_era"), digits=2)} runs/9</span></td>'
+            f'{projection_cell(row, "K")}{projection_cell(row, "BB")}'
+            f'{projection_cell(row, "ER")}{projection_cell(row, "Outs")}'
+            f'<td><span class="pill {market_tone}">{e(str(market_state))}</span>'
+            f'<span class=prop-sub>{e(str(row.get("confidence") or "low"))} confidence</span></td></tr>'
+        )
+        pitch_rows = "".join(
+            f'<tr><td>{e(str(pitch.get("pitch") or ""))}</td>'
+            f'<td>{_display(pitch.get("usage_pct"), "%")}</td>'
+            f'<td>{_display(pitch.get("pitcher_whiff_pct"), "%")}</td>'
+            f'<td>{_display(pitch.get("lineup_whiff_pct"), "%")}</td>'
+            f'<td>{_display(pitch.get("pitcher_xwoba"), digits=3)}</td>'
+            f'<td>{_display(pitch.get("lineup_xwoba"), digits=3)}</td>'
+            f'<td class={"pos" if (pitch.get("k_delta") or 0) > 0 else "neg"}>'
+            f'{float(pitch.get("k_delta") or 0):+.2f} K%</td>'
+            f'<td class={"pos" if (pitch.get("er_factor_delta") or 0) < 0 else "neg"}>'
+            f'{float(pitch.get("er_factor_delta") or 0) * 100:+.1f}% runs</td>'
+            f'<td>{e(str(pitch.get("edge") or "neutral"))}</td></tr>'
+            for pitch in (row.get("pitch_matchup") or {}).get("pitches", [])[:6]
+        ) or '<tr><td class=mut colspan=9>No reliable pitch-overlap sample.</td></tr>'
+        market_rows = "".join(
+            f'<tr><td>{e(report["prop"])}</td><td>{e(report["side"].title())} {report["line"]:g}</td>'
+            f'<td>{report["best_odds"]:+d} · {e(report["best_book"])}</td>'
+            f'<td>{report["model_probability"] * 100:.1f}%</td>'
+            f'<td>{report["market_probability"] * 100:.1f}%</td>'
+            f'<td class={"pos" if (report.get("edge") or 0) > 0 else "neg"}>'
+            f'{(report.get("edge") or 0) * 100:+.1f}pt</td>'
+            f'<td class={"pos" if (report.get("ev") or 0) > 0 else "neg"}>'
+            f'{(report.get("ev") or 0) * 100:+.1f}%</td>'
+            f'<td><span class="pill {"pos" if report["state"] == "MONITOR" else "mut"}">{e(report["state"])}</span></td></tr>'
+            for report in reports
+        ) or '<tr><td class=mut colspan=8>No paired prop price for this pitcher.</td></tr>'
+        pitch_matchup = row.get("pitch_matchup") or {}
+        lineup = row.get("lineup") or {}
+        rows += f"""<tr class=prop-detail id=prop-detail-{index}><td colspan=9>
+          <div class=prop-detail-grid>
+            <div class=sec><h2>Arsenal vs opponent production</h2><div class=body>
+              <div class=detail-strip>
+                <span><b>{e(str(row.get("lineup_status") or "unavailable"))}</b> lineup</span>
+                <span>{e(str(pitch_matchup.get("response_source") or "no response source"))}</span>
+                <span>{pitch_matchup.get("coverage_pct", 0)}% arsenal covered</span>
+                <span>{pitch_matchup.get("lineup_batters_matched", 0)}/9 batters matched</span>
+              </div>
+              <div class=table-scroll><table><tr><th>Pitch</th><th>Usage</th>
+                <th>Pitcher whiff</th><th>Opponent whiff</th>
+                <th title="Pitcher's expected weighted on-base average allowed">Pitcher contact</th>
+                <th title="Opponent expected weighted on-base average against this pitch">Opponent contact</th>
+                <th>K effect</th><th>Run effect</th><th>Who benefits</th></tr>{pitch_rows}</table></div>
+              <div class=note>Opponent values switch from team results to batting-order-weighted player results when at least six posted hitters match.</div>
+            </div></div>
+            <div class=sec><h2>Market report</h2><div class=body>
+              <div class=table-scroll><table><tr><th>Prop</th><th>Bet</th><th>Best price</th>
+                <th>Model</th><th>Market</th><th>Edge</th><th>EV</th><th>State</th></tr>{market_rows}</table></div>
+              <div class=detail-strip>
+                <span>Projected innings <b>{_display(row.get("expected_ip"), digits=1)}</b></span>
+                <span>Lineup score <b>{_display(lineup.get("score"), digits=1)}</b></span>
+                <span>Coverage <b>{row.get("data_coverage_pct", 0)}%</b></span>
+              </div>
+            </div></div>
+          </div>
+        </td></tr>"""
+
+    all_markets.sort(key=lambda row: -(row.get("edge") or -1))
+    report_rows = "".join(
+        f'<tr><td>{e(str(item["pitcher"]))}</td><td>{e(item["prop"])}</td>'
+        f'<td>{e(item["side"].title())} {item["line"]:g}</td>'
+        f'<td>{item["best_odds"]:+d} · {e(item["best_book"])}</td>'
+        f'<td>{item["model_probability"] * 100:.1f}%</td>'
+        f'<td>{item["market_probability"] * 100:.1f}%</td>'
+        f'<td class={"pos" if (item.get("edge") or 0) > 0 else "neg"}>'
+        f'{(item.get("edge") or 0) * 100:+.1f}pt</td>'
+        f'<td><span class="pill {"pos" if item["state"] == "MONITOR" else "mut"}">{e(item["state"])}</span></td></tr>'
+        for item in all_markets[:12]
+    ) or (
+        '<tr><td class=mut colspan=8>No paired pitcher-prop snapshot is loaded. '
+        'Projections remain visible; price decisions remain NO MARKET.</td></tr>'
+    )
+    confirmed = sum(1 for row in pitchers if row.get("lineup_status") == "confirmed")
+    return f"""<h2>Pitcher Props</h2>
+ <div class=ctx>Projection distributions, opponent pitch response, and executable price comparison.</div>
  <div class=cards>
-   <div class=card><div class=k>Starters named</div><div class=v>{starters}</div></div>
-   <div class=card><div class=k>Slate pitchers</div><div class=v>{len(slate) * 2}</div></div>
-   <div class=card><div class=k>Prop prices</div><div class=v style="font-size:16px">Not connected</div></div>
-   <div class=card><div class=k>Action state</div><div class=v style="font-size:16px">Research only</div></div>
+   <div class=card><div class=k>Probable starters</div><div class=v>{len(pitchers)}</div></div>
+   <div class=card><div class=k>Confirmed lineups</div><div class=v>{confirmed}/30</div></div>
+   <div class=card><div class=k>Priced prop sides</div><div class=v>{len(all_markets)}</div></div>
+   <div class=card><div class=k>Price feed</div><div class=v style="font-size:16px">{"LIVE" if all_markets else "NO SNAPSHOT"}</div></div>
  </div>
+ <div class=sec><h2>Prop market report</h2><div class=body>
+   <div class=table-scroll><table><tr><th>Pitcher</th><th>Prop</th><th>Bet</th>
+   <th>Best price</th><th>Model</th><th>Market</th><th>Edge</th><th>State</th></tr>
+   {report_rows}</table></div></div></div>
  <div class=sec><h2>Pitcher board</h2><div class=body>
-   <div class=table-scroll><table><tr><th>Starter</th><th>Team</th><th>Opponent</th>
-   <th title="season strikeout rate">K%</th><th title="fielding independent pitching">FIP</th>
-   <th title="home runs allowed per nine innings">HR/9</th><th>State</th></tr>
-   {rows or '<tr><td class=mut colspan=7>No pitcher inputs loaded.</td></tr>'}</table></div>
-   <div class=note>K%, FIP, and HR/9 are research inputs, not prop projections. No play can be issued until player lines, limits, and an independently validated prop model are available.</div>
+   <div class=table-scroll><table class=prop-table><tr><th>Starter</th><th>vs</th>
+   <th>Performance</th><th title="Projected innings and expected runs allowed per nine">Starter baseline</th><th>K</th><th>BB</th>
+   <th>ER</th><th>Outs</th><th>Market</th></tr>{rows or '<tr><td class=mut colspan=9>No pitcher inputs loaded.</td></tr>'}</table></div>
  </div></div>"""
 
 
@@ -323,6 +431,19 @@ color:var(--muted);font:600 13.5px var(--sans);padding:9px 11px;margin:3px 0;cur
 background:rgba(124,77,255,.08);color:var(--ink2);font-size:12px;margin-bottom:16px}
 .empty{color:var(--muted);font-size:13px;padding:18px;border:1px dashed var(--border-2);border-radius:8px}
 .empty ul{margin:8px 0 0;padding-left:18px}.empty li{margin:3px 0}
+.prop-table{min-width:960px}.prop-main{cursor:pointer}.prop-main:hover{background:rgba(124,77,255,.06)}
+.prop-table th:first-child,.prop-table td:first-child{position:sticky;left:0;z-index:2;background:var(--card)}
+.prop-table th:first-child{z-index:3}.prop-main:hover td:first-child{background:#181A27}
+.pitcher-cell{display:flex;align-items:center;gap:9px;min-width:190px}.pitcher-cell .phead{width:40px;height:40px;flex:0 0 40px}
+.pitcher-cell>div>span{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;margin-top:3px}
+.starter-base{min-width:88px}.starter-base b{display:block}.starter-base span{display:block;color:var(--muted);font-size:10px;margin-top:2px;white-space:nowrap}
+.prop-cell{min-width:82px}.prop-cell>b{display:block;font:800 17px var(--display)}
+.prop-range{display:block;font-size:10px;color:var(--muted);white-space:nowrap}.prop-mkt{display:block;font-size:10px;margin-top:3px;white-space:nowrap}
+.prop-sub{display:block;color:var(--muted);font-size:10px;margin-top:4px}
+.prop-detail{display:none;background:rgba(6,10,18,.6)}.prop-detail.on{display:table-row}
+.prop-detail>td{padding:14px!important}.prop-detail-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.detail-strip{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin:0 0 10px}
+.detail-strip b{color:var(--ink)}
 @media(max-width:760px){body{flex-direction:column}#nav{width:100%;height:auto;position:static;display:flex;flex-wrap:wrap;gap:4px}
 #nav .brand,#nav .tagline{width:100%}.navb{width:auto}.cards{grid-template-columns:repeat(2,1fr)}}
 """
@@ -332,7 +453,18 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     repo = DataRepository(data_dir)
     reader = SupabaseReader()
     board = load_board(fetch=fetch)
+    prop_prices = load_prop_board(fetch=fetch)
     gate = _promotion(reader)
+    pitchers = build_pitcher_board(repo)
+    promotion_status = (
+        "PROMOTE" if gate.get("verdict") == "PROMOTE" else "HOLD/ABSTAIN"
+    )
+    for pitcher in pitchers:
+        pitcher["market_report"] = market_report(
+            pitcher,
+            prop_prices,
+            promotion_status=promotion_status,
+        )
     slate, sd = _slate(repo)
     sync = repo.sync_manifest()
     games = [f'{g["away"]}@{g["home"]}' for g in slate if not g.get("err")]
@@ -356,6 +488,10 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 build_report(
                     game["away"], game["home"], fetch=False, data_dir=data_dir,
                     board=board, reader=reader, gate=gate,
+                    pitcher_rows=[
+                        pitcher for pitcher in pitchers
+                        if pitcher.get("team") in {game["away"], game["home"]}
+                    ],
                 )
             )
         except Exception as exc:
@@ -375,7 +511,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     options = "".join(option_rows)
     matchups = (
         f'<div class=pagehead><div><h2>Matchups</h2>'
-        f'<div class=ctx>Decision first; evidence and methodology on demand.</div></div>'
+        f'<div class=ctx>Projected runs, fair prices, and matchup impacts.</div></div>'
         f'<select id=gameSelect aria-label="Matchup" onchange="switchGame(this.value)">{options}</select></div>'
         f'{"".join(matchup_reports)}'
     )
@@ -384,7 +520,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "today": _today(slate, sd, sharp_by_pk, sync),
         "matchups": matchups,
         "markets": _markets(slate, sharp_by_pk),
-        "props": _props(slate),
+        "props": _props(pitchers, prop_prices),
         "portfolio": _portfolio(reader, gate, slate),
         "results": _results(reader),
         "research": _research(reader, gate),
@@ -409,6 +545,8 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
           "x.classList.toggle('on',x.dataset.game===g));const s=document.getElementById('gameSelect');"
           "if(s)s.value=g;}"
           "function openGame(g){switchGame(g);show('matchups');}"
+          "function togglePitcher(i){const r=document.getElementById('prop-detail-'+i);"
+          "if(r)r.classList.toggle('on');}"
           "function showReportTab(b,k){const r=b.closest('.rtabs');"
           "r.querySelectorAll('.rtabbar button').forEach(x=>x.classList.remove('on'));"
           "r.querySelectorAll('.pn').forEach(x=>x.classList.remove('on'));"

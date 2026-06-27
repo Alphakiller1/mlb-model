@@ -369,6 +369,7 @@ def build_report(
     board=None,
     reader=None,
     gate=None,
+    pitcher_rows=None,
 ):
     repo = DataRepository(data_dir)
     anchors = repo.anchors()
@@ -409,13 +410,13 @@ def build_report(
                     "mkt": None, "impl": None, "edge": None, "ev": None, "max": f5["fair"],
                     "state": "NO EDGE", "tone": "mut", "reason": "No F5 market price",
                     "book": None, "books": 0, "market_time": None})
-    have = sum(1 for v in (gd.away_osi, gd.home_osi, gd.away_fip, gd.home_fip) if v is not None)
-    conf = "low" if have < 4 else "provisional"
+    conf = probs.confidence
     freshness = repo.freshness_hours("today_matchups.csv")
     return {"away": away, "home": home, "gd": gd, "probs": probs, "anchors": anchors,
             "posted_total": posted_total, "extras": ex, "movement": None, "confidence": conf,
             "markets": markets, "factors": _factors(probs),
             "advantage": _advantage(gd, anchors, repo), "simulation": simulation,
+            "pitchers": pitcher_rows or [],
             "risks": risk_signals(gd), "sharp": _sharp_for(gd.game_pk, reader),
             "game_pk": gd.game_pk, "promotion": gate, "freshness_hours": freshness,
             "model_version": settings.MODEL_VERSION, "metric_version": settings.METRIC_VERSION,
@@ -554,10 +555,10 @@ border:2px solid #454B61;box-shadow:0 5px 14px rgba(0,0,0,.45),0 0 0 2px rgba(15
 /* strip chips */
 .strip{display:grid;grid-template-columns:repeat(8,1fr);gap:9px}
 @media(max-width:880px){.strip{grid-template-columns:repeat(4,1fr)}}
-.chipc{background:var(--raised);border:1px solid var(--border);border-radius:11px;padding:9px 10px;text-align:center}
+.chipc{background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:9px 10px;text-align:center}
 .chipc .k{color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
 .chipc .v{color:var(--ink);font-family:var(--display);font-weight:800;font-size:19px;margin-top:3px}
-.vbar{display:flex;align-items:center;gap:14px;padding:11px 16px;border-radius:12px;border:1px solid var(--border-2);font-size:13.5px;background:var(--card)}
+.vbar{display:flex;align-items:center;gap:14px;padding:11px 16px;border-radius:8px;border:1px solid var(--border-2);font-size:13.5px;background:var(--card)}
 .vbar b{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.03em}.vbar span{color:var(--ink2)}
 .vbar.pos{border-color:rgba(60,203,127,.3);background:rgba(60,203,127,.10)}.vbar.pos b{color:#7BDC5A}
 .vbar.warnc{border-color:rgba(232,194,74,.3);background:rgba(232,194,74,.10)}.vbar.warnc b{color:var(--gold)}
@@ -571,7 +572,7 @@ border:2px solid #454B61;box-shadow:0 5px 14px rgba(0,0,0,.45),0 0 0 2px rgba(15
 .rtabbar button:hover{color:var(--ink2)}.rtabbar button.on{color:var(--ink);border-bottom-color:var(--accent)}.pn{display:none}.pn.on{display:block}
 th[title],td[title]{cursor:help;text-decoration:underline dotted rgba(148,163,184,.4);text-underline-offset:3px}
 /* section */
-.sec{border:1px solid var(--border-2);border-radius:14px;background:var(--card);overflow:hidden;position:relative}
+.sec{border:1px solid var(--border-2);border-radius:8px;background:var(--card);overflow:hidden;position:relative}
 .sec::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--v-grad);opacity:.6}
 .sec h2{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--v-light);margin:0;padding:13px 16px 0}
 .sec .body{padding:12px 16px 16px}
@@ -612,6 +613,30 @@ td:first-child{text-align:left;font-weight:600}tbody tr:last-child td{border-bot
 details{border-top:1px solid var(--border);padding:12px 16px}summary{cursor:pointer;color:var(--ink2);font-weight:700;font-size:13px;list-style:none}
 summary::before{content:"▸ ";color:var(--accent)}details[open] summary::before{content:"▾ "}
 details ul{margin:8px 0 0;padding-left:18px}details li{font-size:12.5px;color:var(--muted);margin:4px 0}
+/* decision-first matchup */
+.matchup-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;padding:4px 0 14px;border-bottom:1px solid var(--border)}
+.matchup-team{display:flex;align-items:center;gap:10px}.matchup-team.home{justify-content:flex-end;text-align:right}
+.matchup-team b{display:block;font:800 26px var(--display)}.matchup-team span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.score-projection{text-align:center}.score-projection span,.score-projection i{display:block;color:var(--muted);font-size:10px;font-style:normal;text-transform:uppercase}
+.score-projection b{display:block;font:800 25px var(--display);margin:3px 0}
+.decision-strip{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--border-2);border-radius:8px;margin:10px 0;overflow:hidden}
+.decision-strip span{padding:10px 12px;border-right:1px solid var(--border);color:var(--muted);font-size:10px;text-transform:uppercase}
+.decision-strip span:last-child{border-right:0}.decision-strip b{display:block;color:var(--ink);font:800 17px var(--display);text-transform:none;margin-bottom:2px}
+.availability{display:flex;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.availability span{flex:1;background:var(--card);padding:9px 11px;color:var(--ink2);font-size:11px}
+.availability b{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;margin-bottom:2px}.availability i{font-style:normal;font-weight:800}
+.decision-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:12px;margin:12px 0}.missing-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
+.missing-row>b{color:var(--muted);font-size:10px;text-transform:uppercase;margin-right:3px}
+.pitcher-grid{display:grid;grid-template-columns:1fr;gap:12px;margin:12px 0}
+.pitch-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:9px}
+.pitch-summary span{background:var(--raised);padding:8px;color:var(--muted);font-size:10px;text-transform:uppercase}
+.pitch-summary b,.pitch-summary em{display:block;color:var(--ink);font:800 17px var(--display);font-style:normal}
+.pitch-summary i{display:block;color:var(--muted);font-size:9px;font-style:normal;text-transform:none}
+.pitch-source{color:var(--muted);font-size:10px;margin-bottom:7px}.model-details{border:1px solid var(--border);border-radius:8px;margin-top:12px}
+.pitch-name-meta{display:block;font-size:10px;margin-top:2px}
+.model-details p{color:var(--muted);font-size:12px;line-height:1.5;max-width:1000px}
+@media(max-width:980px){.decision-strip{grid-template-columns:repeat(3,1fr)}.decision-grid,.pitcher-grid{grid-template-columns:1fr}}
+@media(max-width:680px){.matchup-head{grid-template-columns:1fr auto 1fr}.matchup-team b{font-size:20px}.matchup-team span{display:none}.score-projection b{font-size:18px}.decision-strip{grid-template-columns:repeat(2,1fr)}.availability{display:grid;grid-template-columns:1fr 1fr}.pitch-summary{grid-template-columns:repeat(2,1fr)}}
 """
 
 
@@ -624,7 +649,7 @@ def _td_signed(v, suffix="", good_pos=True):
     return f'<td class="{tone}">{v:+g}{suffix}</td>'
 
 
-def report_body(r):
+def _legacy_report_body(r):
     """Inner report content (no <html>/<style> wrapper) so the app shell can embed it."""
     gd, p, e = r["gd"], r["probs"], html.escape
     sd_t = r["anchors"]["team_sd"]
@@ -812,6 +837,297 @@ def report_body(r):
    <li><b>OSI</b> offense strength index (50 = avg). <b>FIP</b> fielding-independent ERA. <b>wOBA</b> weighted on-base. <b>OBR</b> baserunning index. Percentiles empirical vs the league.</li>
 	   <li><b>Promotion gate:</b> {e(r["promotion"].get("verdict", "HOLD/ABSTAIN"))}. Unpromoted signals can only be MONITOR or AVOID. Observed context, modeled inputs, and market prices are kept distinct.</li></ul></details></div>
 """
+
+
+def report_body(r):
+    """Render a matchup as a betting decision surface, not a written report."""
+    gd, probability, esc = r["gd"], r["probs"], html.escape
+    context = gd.live_context or {}
+    lineups = context.get("lineups") or {}
+    weather = context.get("weather") or {}
+    umpire = context.get("umpire") or {}
+    travel = context.get("travel") or {}
+
+    def market_row(market):
+        market_price = (
+            f'{market["mkt"]:+d}' if market["mkt"] is not None else "—"
+        )
+        market_probability = (
+            f'{market["impl"]:.1f}%' if market["impl"] is not None else "—"
+        )
+        edge = (
+            f'{market["edge"]:+.1f}pt' if market["edge"] is not None else "—"
+        )
+        ev = f'{market["ev"] * 100:+.1f}%' if market["ev"] is not None else "—"
+        tone = "pos" if (market.get("edge") or 0) > 0 else (
+            "neg" if market.get("edge") is not None else "mut"
+        )
+        return (
+            f'<tr><td><b>{esc(market["label"])}</b></td><td>{market_price}</td>'
+            f'<td>{market["fair"]:+d}</td><td>{market_probability}</td>'
+            f'<td>{market["model"]:.1f}%</td><td class={tone}>{edge}</td>'
+            f'<td class={tone}>{ev}</td><td><span class="pill {market["tone"]}">'
+            f'{esc(market["state"])}</span></td></tr>'
+        )
+
+    market_rows = "".join(market_row(market) for market in r["markets"])
+    opportunity = max(
+        (market for market in r["markets"] if market["edge"] is not None),
+        key=lambda market: market["edge"],
+        default=None,
+    )
+    if opportunity and opportunity["edge"] > 0:
+        decision = (
+            f'<div class="vbar {opportunity["tone"]}"><b>{opportunity["state"]}</b>'
+            f'<span>{esc(opportunity["label"])}</span>'
+            f'<span>model {opportunity["model"]:.1f}%</span>'
+            f'<span>market {opportunity["impl"]:.1f}%</span>'
+            f'<span>edge {opportunity["edge"]:+.1f}pt</span></div>'
+        )
+    else:
+        reason = (
+            "No positive priced edge"
+            if any(market["mkt"] is not None for market in r["markets"])
+            else "No paired market snapshot"
+        )
+        decision = f'<div class="vbar mut"><b>NO ACTION</b><span>{esc(reason)}</span></div>'
+
+    weather_label = "Dome"
+    if weather.get("status") != "dome":
+        temperature = weather.get("temperature_f")
+        wind_out = weather.get("wind_out_mph")
+        rain = weather.get("precipitation_probability_pct")
+        weather_label = (
+            f'{temperature:.0f}°F · wind {"out" if (wind_out or 0) >= 0 else "in"} '
+            f'{abs(wind_out or 0):.0f} mph · rain {rain or 0:.0f}%'
+            if temperature is not None else "Unavailable"
+        )
+    away_lineup = (lineups.get("away") or {}).get("status", "unavailable")
+    home_lineup = (lineups.get("home") or {}).get("status", "unavailable")
+    umpire_label = (
+        umpire.get("umpire")
+        if umpire.get("status") == "announced"
+        else "Not announced"
+    )
+    coverage_tone = "pos" if probability.data_coverage_pct >= 85 else "warnc"
+    availability = (
+        f'<div class=availability>'
+        f'<span><b>{esc(gd.away)} lineup</b>{esc(away_lineup)}</span>'
+        f'<span><b>{esc(gd.home)} lineup</b>{esc(home_lineup)}</span>'
+        f'<span><b>First pitch</b>{esc(weather_label)}</span>'
+        f'<span><b>Plate umpire</b>{esc(str(umpire_label))}</span>'
+        f'<span><b>Input coverage</b><i class={coverage_tone}>'
+        f'{probability.data_coverage_pct}%</i></span></div>'
+    )
+
+    factor_rows = "".join(
+        f'<tr><td><b>{esc(factor["name"])}</b><span class=mut>'
+        f' · {esc(factor["side"])}</span></td>'
+        f'<td class={"pos" if factor["runs"] > 0 else "neg"}>'
+        f'{factor["runs"]:+.2f} runs</td>'
+        f'<td>{esc(factor["market"])}</td>'
+        f'<td><span class="pill {"warnc" if factor["conf"] == "low" else "mut"}">'
+        f'{esc(factor["conf"])}</span></td></tr>'
+        for factor in r["factors"][:6]
+    )
+    missing = "".join(
+        f'<span class="pill warnc">{esc(item)}</span>'
+        for item in probability.missing_context
+    ) or '<span class="pill pos">core context loaded</span>'
+
+    def team_value_rows():
+        away_starter = gd.away_starter_features
+        home_starter = gd.home_starter_features
+        away_pen = gd.away_bullpen_features
+        home_pen = gd.home_bullpen_features
+        away_line = gd.away_lineup_features
+        home_line = gd.home_lineup_features
+        away_travel = travel.get("away") or {}
+        home_travel = travel.get("home") or {}
+        away_injury = gd.away_injury_features
+        home_injury = gd.home_injury_features
+
+        def line_value(value):
+            if value.get("status") not in {"confirmed", "projected"}:
+                return "Not posted"
+            return (
+                f'{value.get("projected_osi", "—")} vs '
+                f'{value.get("team_baseline_osi", "—")} baseline'
+            )
+
+        def travel_value(value):
+            if value.get("status") != "available":
+                return "No recent game"
+            return (
+                f'{value.get("rest_hours", 0):.1f}h rest · '
+                f'{value.get("travel_miles", 0):.0f} mi'
+            )
+
+        def injury_value(value):
+            players = value.get("impact_players") or []
+            if not players:
+                return "No quantified hitter loss"
+            return ", ".join(player["player"] for player in players[:3])
+
+        rows = [
+            (
+                "Starter expected level",
+                f'{away_starter.get("skill_fip", settings.LEAGUE_FIP):.2f} runs/9 scale',
+                f'{home_starter.get("skill_fip", settings.LEAGUE_FIP):.2f} runs/9 scale',
+                "Lower is better",
+            ),
+            (
+                "Starter workload",
+                f'{away_starter.get("expected_ip", 5.2):.1f} projected innings',
+                f'{home_starter.get("expected_ip", 5.2):.1f} projected innings',
+                "Shapes bullpen exposure and outs props",
+            ),
+            (
+                "Bullpen quality",
+                f'{away_pen.get("skill_fip", settings.LEAGUE_BULLPEN_ERA):.2f} · '
+                f'{away_pen.get("pitches_1d") or 0:.0f} pitches yesterday',
+                f'{home_pen.get("skill_fip", settings.LEAGUE_BULLPEN_ERA):.2f} · '
+                f'{home_pen.get("pitches_1d") or 0:.0f} pitches yesterday',
+                "Lower quality number and fresher workload are better",
+            ),
+            (
+                "Lineup vs starter hand",
+                line_value(away_line),
+                line_value(home_line),
+                "Posted batting order versus the opposing starter's hand",
+            ),
+            (
+                "Unavailable hitters",
+                injury_value(away_injury),
+                injury_value(home_injury),
+                "Only quantified before confirmed lineups; then lineup absorbs it",
+            ),
+            (
+                "Rest and travel",
+                travel_value(away_travel),
+                travel_value(home_travel),
+                "Short rest, distance, and timezone shift",
+            ),
+        ]
+        return "".join(
+            f'<tr><td><b>{esc(label)}</b></td><td>{esc(away_value)}</td>'
+            f'<td>{esc(home_value)}</td><td class=mut>{esc(context_note)}</td></tr>'
+            for label, away_value, home_value, context_note in rows
+        )
+
+    matchup_rows = team_value_rows()
+
+    def pitcher_panel(team):
+        pitcher = next(
+            (row for row in r.get("pitchers", []) if row.get("team") == team),
+            None,
+        )
+        if not pitcher or not pitcher.get("projections"):
+            return (
+                f'<div class=sec><h2>{esc(team)} starter</h2><div class=body>'
+                f'<div class=empty>No matched pitcher projection.</div></div></div>'
+            )
+        projections = pitcher["projections"]
+        pitch_matchup = pitcher.get("pitch_matchup") or {}
+        pitch_rows = "".join(
+            f'<tr><td><b>{esc(str(pitch["pitch"]))}</b>'
+            f'<span class="mut pitch-name-meta">{pitch["usage_pct"]:.0f}% usage</span></td>'
+            f'<td>{pitch["lineup_xwoba"]:.3f}</td>'
+            f'<td>{pitch["lineup_whiff_pct"]:.1f}%</td>'
+            f'<td class={"pos" if pitch["k_delta"] > 0 else "neg"}>'
+            f'{pitch["k_delta"]:+.2f} K%</td>'
+            f'<td class={"pos" if pitch["er_factor_delta"] < 0 else "neg"}>'
+            f'{pitch["er_factor_delta"] * 100:+.1f}% runs</td>'
+            f'<td>{esc(pitch["edge"])}</td></tr>'
+            for pitch in pitch_matchup.get("pitches", [])[:5]
+        ) or '<tr><td class=mut colspan=6>No reliable pitch overlap.</td></tr>'
+        state_tone = "neg" if pitcher["state"] == "REGRESSION" else (
+            "pos" if pitcher["state"] == "PROGRESSION" else (
+                "warnc" if pitcher["state"] == "LIMITED SAMPLE" else "side"
+            )
+        )
+        return f"""<div class=sec><h2>{esc(str(pitcher["pitcher"]))} vs {esc(str(pitcher["opponent"]))}</h2>
+          <div class=body>
+            <div class=pitch-summary>
+              <span><b>{projections["K"]["mean"]:.1f}</b>K <i>{projections["K"]["p10"]:.0f}–{projections["K"]["p90"]:.0f}</i></span>
+              <span><b>{projections["ER"]["mean"]:.1f}</b>ER <i>{projections["ER"]["p10"]:.0f}–{projections["ER"]["p90"]:.0f}</i></span>
+              <span><b>{projections["Outs"]["mean"]:.1f}</b>outs <i>{projections["Outs"]["p10"]:.0f}–{projections["Outs"]["p90"]:.0f}</i></span>
+              <span><em class={state_tone}>{esc(pitcher["state"])}</em><i>{esc(pitcher["confidence"])} confidence</i></span>
+            </div>
+            <div class=pitch-source>{esc(str(pitch_matchup.get("response_source") or "No response source"))} · expected contact below .320 favors the pitcher</div>
+            <div class=table-scroll><table><tr><th>Pitch</th><th>Opponent expected contact</th>
+              <th>Opponent whiff</th><th>K effect</th><th>Run effect</th><th>Edge</th></tr>{pitch_rows}</table></div>
+          </div></div>"""
+
+    pitcher_panels = pitcher_panel(gd.away) + pitcher_panel(gd.home)
+    risk_rows = "".join(
+        f'<tr><td><b>{esc(signal.label)}</b></td>'
+        f'<td>{esc(signal.implication)}</td>'
+        f'<td><span class="pill {"neg" if signal.severity == "high" else "warnc"}">'
+        f'{esc(signal.category)}</span></td></tr>'
+        for signal in r["risks"][:5]
+    ) or '<tr><td class=mut colspan=3>No additional risk flags.</td></tr>'
+    sharp_rows = "".join(
+        f'<tr><td>{esc(signal["market_type"])}</td><td>{esc(str(signal["selection"]))}</td>'
+        f'<td>{float(signal.get("divergence") or 0) * 100:+.1f}pt</td>'
+        f'<td>{"STEAM" if signal.get("steam_flag") else "—"}</td></tr>'
+        for signal in r["sharp"]
+    ) or '<tr><td class=mut colspan=4>No sharp-money snapshot for this game.</td></tr>'
+
+    fresh_hours = r.get("freshness_hours")
+    freshness = (
+        f"{fresh_hours:.1f}h old" if fresh_hours is not None else "timestamp unavailable"
+    )
+    return f"""<div class=matchup-head>
+      <div class=matchup-team>{_logo(gd.away, "tlogo lg")}<div><b>{esc(gd.away)}</b><span>{esc(gd.away_sp)}</span></div></div>
+      <div class=score-projection><span>Projected score</span><b>{probability.exp_away_runs:.1f} – {probability.exp_home_runs:.1f}</b><i>{probability.exp_total:.1f} total</i></div>
+      <div class=matchup-team home><div><b>{esc(gd.home)}</b><span>{esc(gd.home_sp)}</span></div>{_logo(gd.home, "tlogo lg")}</div>
+    </div>
+    {decision}
+    <div class=decision-strip>
+      <span><b>{probability.p_away_win * 100:.1f}%</b>{esc(gd.away)} win</span>
+      <span><b>{probability.p_home_win * 100:.1f}%</b>{esc(gd.home)} win</span>
+      <span><b>{fair_price(probability.p_home_win):+d}</b>fair {esc(gd.home)} ML</span>
+      <span><b>{r["simulation"].total_p10:.0f}–{r["simulation"].total_p90:.0f}</b>80% total range</span>
+      <span><b>{esc(probability.confidence)}</b>model confidence</span>
+      <span><b>{esc(freshness)}</b>data age</span>
+    </div>
+    {availability}
+
+    <div class=decision-grid>
+      <div class=sec><h2>Market report</h2><div class=body><div class=table-scroll>
+        <table><tr><th>Bet</th><th>Best</th><th>Fair</th><th>Market</th>
+        <th>Model</th><th>Edge</th><th>EV</th><th>State</th></tr>{market_rows}</table>
+      </div></div></div>
+      <div class=sec><h2>Biggest run impacts</h2><div class=body>
+        <div class=table-scroll><table><tr><th>Factor</th><th>Impact</th><th>Affects</th><th>Trust</th></tr>{factor_rows}</table></div>
+        <div class=missing-row><b>Waiting on</b>{missing}</div>
+      </div></div>
+    </div>
+
+    <div class=sec><h2>Matchup inputs</h2><div class=body><div class=table-scroll>
+      <table><tr><th>What matters</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th><th>Betting meaning</th></tr>
+      {matchup_rows}</table></div></div></div>
+
+    <div class=pitcher-grid>{pitcher_panels}</div>
+
+    <div class=decision-grid>
+      <div class=sec><h2>Sharp market activity</h2><div class=body><table>
+        <tr><th>Market</th><th>Side</th><th>Sharp gap</th><th>Move</th></tr>{sharp_rows}</table>
+      </div></div>
+      <div class=sec><h2>What can break the projection</h2><div class=body><table>
+        <tr><th>Risk</th><th>Betting implication</th><th>Type</th></tr>{risk_rows}</table>
+      </div></div>
+    </div>
+
+    <details class=model-details><summary>Model lineage and limits</summary>
+      <p>Runs are built sequentially from team offense, handedness, posted lineup, official injuries,
+      rest/travel, starter innings and skill, bullpen quality and workload, park, first-pitch weather,
+      and the announced plate umpire. Every visible impact above is the exact run change produced at
+      that step. Missing inputs remain neutral and reduce confidence.</p>
+      <p>Promotion gate: <b>{esc(r["promotion"].get("verdict", "HOLD/ABSTAIN"))}</b>.
+      A positive projection-price gap remains MONITOR until executable out-of-sample results pass the gate.</p>
+    </details>"""
 
 
 def render_html(r):

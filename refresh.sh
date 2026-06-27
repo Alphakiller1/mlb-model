@@ -14,20 +14,20 @@ fi
 
 export MLBMA_DATA_DIR="$DATA"
 
-echo "==> 1/7 materialize versioned MLBMA feature datasets"
-"$PYTHON" -m mlbmodel.sources.hub_to_csv --env "$ENV" --out "$DATA"
+echo "==> 1/7 synchronize MLBMA features, slate, and live game context"
+"$PYTHON" -m mlbmodel.sources.sync_mlbma --out "$DATA"
 
-echo "==> 2/7 build today's slate with collision-safe game identifiers"
-"$PYTHON" -m mlbmodel.sources.build_today_matchups --out "$DATA"
-
-echo "==> 3/7 ingest recent finals and update empirical anchors"
+echo "==> 2/7 ingest recent finals and update empirical anchors"
 "$PYTHON" -m mlbmodel.sources.build_game_results --days 14 --out "$DATA"
 
-echo "==> 4/7 seed teams and games"
+echo "==> 3/7 seed teams and games"
 "$PYTHON" -m mlbmodel.sources.seed_warehouse --data-dir "$DATA"
 
-echo "==> 5/7 collect paired odds and sharp-vs-soft observations"
+echo "==> 4/7 collect paired game odds and sharp-vs-soft observations"
 "$PYTHON" -m mlbmodel.market.collect --data-dir "$DATA"
+
+echo "==> 5/7 refresh paired pitcher-prop prices"
+"$PYTHON" -m mlbmodel.market.props --cache "$DATA/prop_odds_latest.json"
 
 echo "==> 6/7 settle eligible sharp observations"
 "$PYTHON" -m mlbmodel.market.settle

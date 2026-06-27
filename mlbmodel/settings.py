@@ -24,7 +24,7 @@ load_dotenv()
 DATA_DIR = Path(os.getenv("MLBMA_DATA_DIR", ROOT / "data"))
 CACHE_DIR = Path(os.getenv("MLBMODEL_CACHE_DIR", ROOT / "data"))
 
-MODEL_VERSION = os.getenv("BET_MODEL_VERSION", "v2-unified-expected-runs")
+MODEL_VERSION = os.getenv("BET_MODEL_VERSION", "v3-context-props")
 METRIC_VERSION = os.getenv("MLBMA_METRIC_VERSION", "2026.06")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
@@ -35,6 +35,7 @@ ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
 ODDS_API_BASE = "https://api.the-odds-api.com/v4"
 ODDS_SPORT_KEY = "baseball_mlb"
 ODDS_REGIONS = os.getenv("ODDS_REGIONS", "us,eu")
+ODDS_PROP_REGIONS = os.getenv("ODDS_PROP_REGIONS", "us")
 ODDS_GAME_MARKETS = "h2h,spreads,totals"
 SHARP_BOOKS = {"pinnacle", "betonlineag", "lowvig", "bookmaker", "circasports"}
 

@@ -1,3 +1,4 @@
+from mlbmodel.market.props import PropOddsBoard
 from mlbmodel.report.app import _portfolio, _props
 from mlbmodel.storage.supabase import ReadResult
 
@@ -10,23 +11,55 @@ class StaticReader:
         return self.result
 
 
-def test_props_board_is_explicitly_research_only():
-    rendered = _props([{
-        "away": "NYY",
-        "home": "BOS",
-        "asp": "Away Starter",
-        "hsp": "Home Starter",
-        "ak": 25.0,
-        "hk": 20.0,
-        "afip": 3.25,
-        "hfip": 4.10,
-        "ahr9": 0.8,
-        "hhr9": 1.2,
-    }])
+def test_props_board_has_distributions_pitch_context_and_market_state():
+    distribution = {"mean": 5.4, "p10": 3.0, "p50": 5.0, "p90": 8.0, "sd": 1.8}
+    rendered = _props(
+        [{
+            "pitcher": "Away Starter",
+            "pitcher_id": 1,
+            "team": "NYY",
+            "opponent": "BOS",
+            "state": "STABLE",
+            "market_state": "NO MARKET",
+            "confidence": "medium",
+            "luck_runs": 0.1,
+            "expected_ip": 5.7,
+            "skill_era": 3.55,
+            "lineup_status": "confirmed",
+            "lineup": {"score": 55.0},
+            "pitch_matchup": {
+                "response_source": "posted lineup, batting-order weighted",
+                "coverage_pct": 84,
+                "lineup_batters_matched": 9,
+                "pitches": [{
+                    "pitch": "Slider",
+                    "usage_pct": 31.0,
+                    "pitcher_whiff_pct": 36.0,
+                    "lineup_whiff_pct": 29.0,
+                    "pitcher_xwoba": 0.270,
+                    "lineup_xwoba": 0.300,
+                    "k_delta": 0.4,
+                    "er_factor_delta": -0.02,
+                    "edge": "pitcher edge",
+                }],
+            },
+            "projections": {
+                "K": distribution,
+                "BB": distribution,
+                "ER": distribution,
+                "Outs": distribution,
+            },
+            "market_report": [],
+        }],
+        PropOddsBoard([]),
+    )
 
-    assert "Research only" in rendered
-    assert "not prop projections" in rendered
-    assert "No play can be issued" in rendered
+    assert "Prop market report" in rendered
+    assert "NO MARKET" in rendered
+    assert "5.4" in rendered
+    assert "3–8" in rendered
+    assert "Arsenal vs opponent production" in rendered
+    assert "posted lineup, batting-order weighted" in rendered
 
 
 def test_portfolio_view_flags_concentration_and_respects_gate():
