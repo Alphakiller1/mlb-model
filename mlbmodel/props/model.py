@@ -537,6 +537,11 @@ class PitcherProjectionEngine:
         expected_ip = _number(profile.get("avg_IP")) or 5.3
         if log_factors.get("recent_ip") is not None:
             expected_ip = expected_ip * 0.65 + log_factors["recent_ip"] * 0.35
+        # Hard sanity bound: no MLB starter projects beyond ~7 IP, and a bad/garbage
+        # avg_IP from a thin profile (e.g. a swingman with one long relief outing) would
+        # otherwise sail past the 8.2-out sample clip and manufacture a near-certain
+        # high-Outs projection — a fake market edge. Clip the mean to a realistic range.
+        expected_ip = _clip(expected_ip, 2.5, 7.0)
 
         opponent_side = "home" if side == "away" else "away"
         context = game.live_context
