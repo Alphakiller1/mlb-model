@@ -23,6 +23,7 @@ evidence and are explicitly marked where their conclusions were invalidated.
 | Paper portfolio risk view | Implemented; migration pending | exposure totals, game concentration, promotion-gated sizing |
 | Responsive tables | Implemented | contained horizontal scrolling; no page overflow at 390px |
 | Self-contained daily pipeline | Implemented | `refresh.sh` has no legacy runtime calls |
+| MLBMA deployment synchronization | Implemented | current hub inputs, exact slate reconciliation, visible live fallback |
 
 ## Invalidated Claim
 

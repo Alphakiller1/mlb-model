@@ -25,6 +25,13 @@ from zoneinfo import ZoneInfo
 
 ET = ZoneInfo("America/New_York")
 
+MATCHUP_COLUMNS = [
+    "Game_PK", "MLB_Game_PK", "Game_Number", "Slate_Date", "Time",
+    "Away", "Home", "Away_SP", "Home_SP", "Away_Hand",
+    "Home_Hand", "Away_OSI", "Home_OSI", "Away_FIP", "Home_FIP", "Away_HR9",
+    "Home_HR9", "Away_K%", "Home_K%",
+]
+
 NAME_TO_ABBR = {
     "Arizona Diamondbacks": "ARI", "Atlanta Braves": "ATL", "Baltimore Orioles": "BAL",
     "Boston Red Sox": "BOS", "Chicago Cubs": "CHC", "Chicago White Sox": "CHW",
@@ -92,17 +99,10 @@ def et_time(game_date_utc: str) -> str:
     return d.strftime("%-I:%M %p ET")
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--out", required=True, help="MLBMA_DATA_DIR to write today_matchups.csv into")
-    ap.add_argument("--date", default=dt.date.today().isoformat())
-    args = ap.parse_args()
-
-    out = Path(args.out)
+def build_rows(out: Path, date_iso: str, games: list[dict] | None = None) -> list[dict]:
     sp = sp_index(read_csv(out / "sp_profiles.csv"))
     tm = team_osi(read_csv(out / "team_profiles.csv"))
-    games = fetch_schedule(args.date)
-    print(f"MLB Stats API: {len(games)} games for {args.date}")
+    games = fetch_schedule(date_iso) if games is None else games
 
     rows = []
     for g in games:
@@ -115,29 +115,46 @@ def main() -> None:
         hsp = sp.get(str(hp.get("id", "")), {})
         game_number = int(g.get("gameNumber") or 1)
         rows.append({
-            "Game_PK": game_pk(args.date, aa, ha, game_number),
+            "Game_PK": game_pk(date_iso, aa, ha, game_number),
             "MLB_Game_PK": g.get("gamePk"),
             "Game_Number": game_number,
-            "Slate_Date": args.date,
+            "Slate_Date": date_iso,
             "Time": et_time(g["gameDate"]),
             "Away": aa, "Home": ha,
             "Away_SP": ap.get("fullName", "TBD"), "Home_SP": hp.get("fullName", "TBD"),
             "Away_Hand": asp.get("hand", "R"), "Home_Hand": hsp.get("hand", "R"),
-            "Away_OSI": tm.get(aa, {}).get("away", ""), "Home_OSI": tm.get(ha, {}).get("home", ""),
+            "Away_OSI": tm.get(aa, {}).get("away", ""),
+            "Home_OSI": tm.get(ha, {}).get("home", ""),
             "Away_FIP": asp.get("FIP", ""), "Home_FIP": hsp.get("FIP", ""),
             "Away_HR9": asp.get("HR9", ""), "Home_HR9": hsp.get("HR9", ""),
             "Away_K%": asp.get("K", ""), "Home_K%": hsp.get("K", ""),
         })
+    return rows
+
+
+def write_rows(rows: list[dict], dest: Path) -> None:
+    with dest.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=MATCHUP_COLUMNS)
+        writer.writeheader()
+        writer.writerows(
+            {column: row.get(column, "") for column in MATCHUP_COLUMNS}
+            for row in rows
+        )
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", required=True, help="MLBMA_DATA_DIR to write today_matchups.csv into")
+    ap.add_argument("--date", default=dt.date.today().isoformat())
+    args = ap.parse_args()
+
+    out = Path(args.out)
+    games = fetch_schedule(args.date)
+    print(f"MLB Stats API: {len(games)} games for {args.date}")
+    rows = build_rows(out, args.date, games)
 
     dest = out / "today_matchups.csv"
-    cols = ["Game_PK", "MLB_Game_PK", "Game_Number", "Slate_Date", "Time",
-            "Away", "Home", "Away_SP", "Home_SP", "Away_Hand",
-            "Home_Hand", "Away_OSI", "Home_OSI", "Away_FIP", "Home_FIP", "Away_HR9",
-            "Home_HR9", "Away_K%", "Home_K%"]
-    with dest.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=cols)
-        w.writeheader()
-        w.writerows(rows)
+    write_rows(rows, dest)
     print(f"wrote {dest} ({len(rows)} games)")
     for r in rows:
         print(f"  {r['Away']:>3} @ {r['Home']:<3}  {r['Time']:<10} "

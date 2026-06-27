@@ -28,6 +28,8 @@ remaining historical-reconciliation and parallel-run gates are complete.
 - Raw implied probabilities are never labeled vig-free.
 - An unpromoted strategy cannot produce a `BET` action.
 - Missing prices and failed data reads produce visible no-action states.
+- A deployed slate must be an exact MLBMA match or visibly use the same live-schedule
+  fallback as Chase Analytics.
 
 ## Run
 
@@ -47,11 +49,18 @@ serve the directory with a static server.
 
 ## Hosted Research Preview
 
-GitHub Pages builds `deployment_data/` into a static research dashboard through
-`.github/workflows/deploy-pages.yml`. The hosted preview deliberately disables live odds and
-warehouse access, displays that limitation in the interface, and cannot issue a wager action.
-Set the repository variable `PAGES_ENABLED=true` after Pages is available for the
-repository; the workflow remains safely skipped until then.
+GitHub Pages runs `mlbmodel.sources.sync_mlbma` before every build. It refreshes team,
+starter, and pitch-mix inputs from MLBMA's public Supabase mirror, then reconciles
+`Today_Matchups` against the live MLB schedule.
+
+- A current, exact pipeline slate is used directly.
+- A stale or mismatched pipeline slate activates Chase Analytics' live-schedule fallback.
+- The source, run date, game count, and fallback state are written to `mlbma_sync.json` and
+  displayed in the interface.
+
+The workflow accepts an `mlbma-pipeline-complete` repository dispatch and runs hourly as a
+fallback after it is merged to the default branch. Live odds and the betting warehouse
+remain disabled in the public preview, so it cannot issue a wager action.
 
 ## Verify
 
@@ -65,6 +74,9 @@ pytest -q
 `refresh.sh` materializes MLBMA data, creates the slate, ingests finals, seeds the
 warehouse, collects paired odds, publishes sharp observations, settles outcomes, and runs
 the blocking promotion gate. It no longer shells into either legacy repository.
+
+The MLBMA pipeline mirrors `Today_Matchups`, `Today_Lineups`, and `Last_Updated` alongside
+its research datasets, then dispatches the model Pages workflow after a successful mirror.
 
 Before enabling executable-entry research, apply
 `migrations/0001_executable_market_signals.sql`. Historical rows without a signal-time

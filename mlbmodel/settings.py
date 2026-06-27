@@ -38,6 +38,19 @@ ODDS_REGIONS = os.getenv("ODDS_REGIONS", "us,eu")
 ODDS_GAME_MARKETS = "h2h,spreads,totals"
 SHARP_BOOKS = {"pinnacle", "betonlineag", "lowvig", "bookmaker", "circasports"}
 
+MLBMA_SHEET_ID = (
+    os.getenv("MLBMA_SHEET_ID")
+    or "1D28pC1lqMbsCcTBP67WhJPzYHn2UdtveMEv6RsUSczk"
+)
+MLBMA_HUB_URL = (
+    os.getenv("MLBMA_HUB_URL")
+    or "https://mvxjcfriirguhjujurhf.supabase.co"
+).rstrip("/")
+MLBMA_HUB_KEY = (
+    os.getenv("MLBMA_HUB_KEY")
+    or "sb_publishable_o5EJOhmdxbUPLMHZGKpv1g_Jk8by5v2"
+)
+
 LEAGUE_RUNS_PER_TEAM = 4.58
 LEAGUE_FIP = 4.20
 HOME_BASE_WINP = 0.540

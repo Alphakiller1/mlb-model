@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import math
 import zlib
 from pathlib import Path
@@ -63,6 +64,16 @@ class DataRepository:
 
     def slate(self) -> pd.DataFrame | None:
         return self.load("today_matchups.csv")
+
+    def sync_manifest(self) -> dict:
+        path = self.data_dir / "mlbma_sync.json"
+        if not path.exists():
+            return {}
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+            return value if isinstance(value, dict) else {}
+        except (OSError, json.JSONDecodeError):
+            return {}
 
     def anchors(self) -> dict[str, float]:
         anchors = {

@@ -14,6 +14,7 @@ mlb-model = "mlbmodel.report.app:main"
 mlb-model-refresh-results = "mlbmodel.sources.build_game_results:main"
 mlb-model-sharp = "mlbmodel.market.collect:main"
 mlb-model-settle = "mlbmodel.market.settle:main"
+mlb-model-sync = "mlbmodel.sources.sync_mlbma:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]

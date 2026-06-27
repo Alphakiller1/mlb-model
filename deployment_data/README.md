@@ -1,12 +1,10 @@
-# Deployment Snapshot
+# Deployment Bootstrap
 
-Minimal MLBMA snapshot used only to build the static GitHub Pages research preview.
+Minimal fallback files used to bootstrap the GitHub Pages research build.
 
-- Slate date: 2026-06-27
-- Snapshot captured: 2026-06-27T07:04:53Z
-- Live odds: disabled
-- Warehouse reads: disabled
-- Betting authority: none
+At build time, `mlbmodel.sources.sync_mlbma` replaces the slate, team profiles, starting
+pitcher profiles, and pitch-mix data with the current MLBMA sources. The committed files
+remain available for local/offline development only.
 
 Production refreshes continue to use `MLBMA_DATA_DIR`; this directory is not a replacement
 for the MLBMA pipeline or historical warehouse.

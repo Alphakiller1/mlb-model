@@ -5,6 +5,11 @@ on:
     branches:
       - main
       - codex/unified-model-foundation
+  repository_dispatch:
+    types:
+      - mlbma-pipeline-complete
+  schedule:
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -30,18 +35,21 @@ jobs:
           cache: pip
       - name: Install model
         run: pip install .
-      - name: Restore snapshot capture time
-        run: touch -d "$(cat deployment_data/source_updated_at.txt)" deployment_data/today_matchups.csv
+      - name: Synchronize MLBMA run inputs
+        run: |
+          mkdir -p _deploy_data
+          cp deployment_data/game_results.csv _deploy_data/
+          python -m mlbmodel.sources.sync_mlbma --out _deploy_data
       - name: Build static research dashboard
         env:
           MLB_MODEL_DEPLOYMENT_NOTICE: >-
-            Static research snapshot. Live odds and warehouse credentials are not connected;
-            no displayed state is a wager instruction.
+            Synchronized MLBMA research build. Live odds and betting-warehouse credentials
+            are not connected; no displayed state is a wager instruction.
         run: |
           mkdir -p _site
           python -m mlbmodel.report.app \
             --game HOU@DET \
-            --data-dir deployment_data \
+            --data-dir _deploy_data \
             --out _site/index.html \
             --no-fetch
       - name: Configure Pages

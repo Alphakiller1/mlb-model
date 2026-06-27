@@ -57,7 +57,7 @@ def _slate(repo):
 
 
 # ── sections (each = context -> conclusion -> evidence; honest empty states) ──
-def _today(slate, sd, sharp_by_pk):
+def _today(slate, sd, sharp_by_pk, sync=None):
     rows = ""
     for g in slate:
         if g.get("err"):
@@ -76,6 +76,10 @@ def _today(slate, sd, sharp_by_pk):
     ok = [g for g in slate if not g.get("err")]
     n = len(ok)
     nsharp = len(sharp_by_pk)
+    sync = sync or {}
+    sync_label = "Exact" if sync.get("status") == "exact" else (
+        "Live fallback" if sync.get("status") == "fallback" else "Untracked"
+    )
     # biggest model leans (proxy for active opportunities until per-game odds load)
     leans = sorted(ok, key=lambda g: -abs(g.get("margin", 0)))[:6]
     lrows = "".join(
@@ -88,7 +92,7 @@ def _today(slate, sd, sharp_by_pk):
    <div class=card><div class=k>Games</div><div class=v>{n}</div></div>
    <div class=card><div class=k>Slate</div><div class=v style="font-size:16px">{e(sd or "—")}</div></div>
    <div class=card><div class=k>With sharp signal</div><div class=v>{nsharp}</div></div>
-   <div class=card><div class=k>Lineups</div><div class=v style="font-size:16px">TBD</div></div>
+   <div class=card><div class=k>MLBMA sync</div><div class=v style="font-size:16px">{e(sync_label)}</div></div>
  </div>
  <div class=cols>
    <div class=sec><h2>Slate</h2><div class=body>
@@ -330,6 +334,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     board = load_board(fetch=fetch)
     gate = _promotion(reader)
     slate, sd = _slate(repo)
+    sync = repo.sync_manifest()
     games = [f'{g["away"]}@{g["home"]}' for g in slate if not g.get("err")]
     if games and featured_game.upper() not in games:
         featured_game = games[0]
@@ -376,7 +381,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     )
 
     views = {
-        "today": _today(slate, sd, sharp_by_pk),
+        "today": _today(slate, sd, sharp_by_pk, sync),
         "matchups": matchups,
         "markets": _markets(slate, sharp_by_pk),
         "props": _props(slate),
@@ -390,9 +395,11 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     sections = "".join(f'<section class="view{" on" if k == "today" else ""}" id="v-{k}">{html_}</section>'
                        for k, html_ in views.items())
     deployment_notice = os.getenv("MLB_MODEL_DEPLOYMENT_NOTICE", "").strip()
+    sync_notice = str(sync.get("message") or "").strip()
+    notice_text = " ".join(part for part in (deployment_notice, sync_notice) if part)
     notice = (
-        f'<div class=deployment-notice>{e(deployment_notice)}</div>'
-        if deployment_notice else ""
+        f'<div class=deployment-notice>{e(notice_text)}</div>'
+        if notice_text else ""
     )
     js = ("function show(k){document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));"
           "document.getElementById('v-'+k).classList.add('on');"
