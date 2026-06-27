@@ -120,14 +120,41 @@ def _factors(gd, anchors):
     return sorted(out, key=lambda x: -abs(x["pct"]))
 
 
-# ── advantage matrix (team vs team, with empirical percentiles) ──────────────
+# ── advantage matrix (team vs team, with empirical percentiles + rank) ────────
+def _rank(pct, n):
+    """Rank (1 = best) implied by a percentile within n peers."""
+    if pct is None or not n:
+        return None
+    return max(1, round((100 - pct) / 100 * n) + 1)
+
+
+def _col(df, name):
+    return df[name] if df is not None and name in df.columns else None
+
+
+def _tv(idx, team, col):
+    import pandas as pd
+    r = idx.get(str(team).upper().strip())
+    if r is None or col not in r:
+        return None
+    v = pd.to_numeric(r[col], errors="coerce")
+    return None if pd.isna(v) else float(v)
+
+
 def _advantage(gd, anchors):
+    import pandas as pd
     sp = BE.load("sp_profiles.csv")
     tp = BE.load("team_profiles.csv")
-    fip_s = sp["FIP"] if sp is not None and "FIP" in sp.columns else None
-    k_s = sp["K_pct"] if sp is not None and "K_pct" in sp.columns else None
-    hr_s = sp["HR9"] if sp is not None and "HR9" in sp.columns else None
-    osi_s = tp["osi"] if tp is not None and "osi" in tp.columns else None
+    fip_s, k_s, hr_s = _col(sp, "FIP"), _col(sp, "K_pct"), _col(sp, "HR9")
+    osi_s = _col(tp, "osi")
+    idx = {str(r["team"]).upper().strip(): r for _, r in tp.iterrows()} if tp is not None and "team" in tp.columns else {}
+    # pooled series for split-based baselines
+    plat_s = pd.concat([s for s in (_col(tp, "osi_vs_lhp"), _col(tp, "osi_vs_rhp")) if s is not None]) if tp is not None else None
+    woba_s = pd.concat([s for s in (_col(tp, "home_woba"), _col(tp, "away_woba")) if s is not None]) if tp is not None else None
+    obr_s = _col(tp, "obr")
+    bhl_s = _col(tp, "bullpen_high_lev_era")
+    a_plat_col = "osi_vs_lhp" if gd.home_hand == "L" else "osi_vs_rhp"   # away faces home SP hand
+    h_plat_col = "osi_vs_lhp" if gd.away_hand == "L" else "osi_vs_rhp"   # home faces away SP hand
 
     def _mean(series, default):
         try:
@@ -151,15 +178,25 @@ def _advantage(gd, anchors):
         hd = (round(h_val - base, 2) if isinstance(h_val, (int, float)) and base is not None else None)
         rows.append({"cat": cat, "a_val": a_val, "h_val": h_val, "a_pct": ap, "h_pct": hp,
                      "base": base, "a_d": ad, "h_d": hd, "n": n, "edge": edge,
+                     "a_rank": _rank(ap, n), "h_rank": _rank(hp, n),
                      "impact": impact, "unit": unit, "lower_better": lower_better})
 
+    # pitching
     row("Starting pitching (FIP)", gd.away_fip, gd.home_fip, fip_s, True, config.LEAGUE_FIP,
         f"{(BE.pitch_factor(gd.home_fip, gd.home_pen_factor) - BE.pitch_factor(gd.away_fip, gd.away_pen_factor)) * anchors['league_runs']:+.2f} R")
     row("SP strikeout (K%)", gd.away_k, gd.home_k, k_s, False, 22.0, "K props · Total", "%")
     row("SP home-run risk (HR/9)", gd.away_hr9, gd.home_hr9, hr_s, True, 1.25, "Total · TT")
+    # offense
     row("Offense (OSI)", gd.away_osi, gd.home_osi, osi_s, False, 50.0,
         f"{(BE.offense_factor(gd.away_osi) - BE.offense_factor(gd.home_osi)) * anchors['league_runs']:+.2f} R")
+    row(f"Platoon (OSI vs {gd.home_hand}HP/{gd.away_hand}HP)", _tv(idx, gd.away, a_plat_col), _tv(idx, gd.home, h_plat_col),
+        plat_s, False, 50.0, "Total · ML")
+    row("Lineup quality (wOBA)", _tv(idx, gd.away, "away_woba"), _tv(idx, gd.home, "home_woba"), woba_s, False, 0.320, "Total · ML")
+    row("Baserunning (OBR)", _tv(idx, gd.away, "obr"), _tv(idx, gd.home, "obr"), obr_s, False, 50.0, "ML · close games")
+    # relief + environment
     row("Bullpen (factor)", gd.away_pen_factor, gd.home_pen_factor, None, True, 1.00, "Late ML · Total")
+    row("Bullpen high-leverage (ERA)", _tv(idx, gd.away, "bullpen_high_lev_era"), _tv(idx, gd.home, "bullpen_high_lev_era"),
+        bhl_s, True, 4.00, "Late ML · live")
     row("Park run env", gd.park_factor, gd.park_factor, None, False, 1.00, "Total · TT")
     return rows
 
@@ -186,6 +223,54 @@ def _market_row(market, side, line, ou, gd, probs, anchors, odds):
     return row
 
 
+def _norm(s):
+    import re
+    t = " ".join(reversed(str(s).lower().split(","))) if "," in str(s) else str(s).lower()
+    return " ".join(sorted(re.sub(r"[^a-z ]", "", t).split()))
+
+
+def _numf(v):
+    import pandas as pd
+    x = pd.to_numeric(v, errors="coerce")
+    return None if pd.isna(x) else float(x)
+
+
+def _extras(away, home, gd, probs, anchors):
+    """Start time, lineup status, SP arsenals, scenario sweep, F5 — from real pipeline data."""
+    out = {"start": None, "lineup": "lineups TBD · probables confirmed",
+           "arsenal_a": [], "arsenal_h": [], "scenario": [], "f5": None}
+    m = BE.load("today_matchups.csv")
+    if m is not None and "Away" in m.columns:
+        m["Away"] = m["Away"].astype(str).str.upper().str.strip()
+        m["Home"] = m["Home"].astype(str).str.upper().str.strip()
+        r = m[(m["Away"] == away) & (m["Home"] == home)]
+        if not r.empty:
+            out["start"] = str(r.iloc[0].get("Time", "") or "")
+    ln = BE.load("today_lineups.csv")
+    if ln is not None and not ln.empty:
+        out["lineup"] = "lineups posted"
+    pm = BE.load("pitch_mix_pitcher.csv")
+
+    def arsenal(name):
+        if pm is None or "full_name" not in pm.columns:
+            return []
+        key = _norm(name)
+        sub = pm[pm["full_name"].astype(str).map(_norm) == key]
+        rows = [{"pitch": str(x.get("pitch_type", "")), "pct": _numf(x.get("pitch_pct")),
+                 "whiff": _numf(x.get("whiff_rate"))} for _, x in sub.iterrows()]
+        return sorted([z for z in rows if z["pct"]], key=lambda z: -z["pct"])[:6]
+    out["arsenal_a"], out["arsenal_h"] = arsenal(gd.away_sp), arsenal(gd.home_sp)
+    for d in (-1.5, -1, -0.5, 0, 0.5, 1, 1.5):
+        line = round((probs.exp_total + d) * 2) / 2
+        po = 1 - BE.normal_cdf((line - probs.exp_total) / anchors["total_sd"])
+        out["scenario"].append((line, round(po * 100, 1)))
+    f5, sdf = probs.exp_total * 0.54, anchors["total_sd"] * 0.74
+    line = round(f5 * 2) / 2
+    po = BE.clip(1 - BE.normal_cdf((line - f5) / sdf), 0.02, 0.98)
+    out["f5"] = {"exp": round(f5, 1), "line": line, "over": round(po * 100, 1), "fair": BE.prob_to_american(po)}
+    return out
+
+
 def build_report(away, home, *, odds_map=None, fetch=True):
     anchors = BE.refresh_anchors()
     gd = BE.load_game(away, home)
@@ -202,9 +287,24 @@ def build_report(away, home, *, odds_map=None, fetch=True):
         _market_row("total", "under", tline, None, gd, probs, anchors, odds_map.get(("total", "under"))),
         _market_row("runline", gd.home if probs.exp_margin > 0 else gd.away, -1.5, None, gd, probs, anchors, None),
     ]
+    ex = _extras(away, home, gd, probs, anchors)
+    f5 = ex["f5"]
+    markets.append({"label": f"F5 Over {f5['line']} (≈)", "model": f5["over"], "fair": f5["fair"],
+                    "mkt": None, "impl": None, "edge": None, "ev": None, "max": f5["fair"],
+                    "state": "NO-EDGE", "tone": "mut"})
+    # line movement (best-effort, open->current for home ML)
+    mv = None
+    try:
+        if MD is not None:
+            mv = MD.line_movement(away, home, "ml", gd.home, None)
+    except Exception:
+        mv = None
     gpk = zlib.crc32(f"{date.today().isoformat()}|{away}|{home}".encode())
+    # model confidence: capped (uncalibrated prior) by data completeness + edge size
+    have = sum(1 for v in (gd.away_osi, gd.home_osi, gd.away_fip, gd.home_fip) if v is not None)
+    conf = "low" if have < 3 else ("high" if (max((abs(m["edge"]) for m in markets if m["edge"] is not None), default=0) >= 4) else "med")
     return {"away": away, "home": home, "gd": gd, "probs": probs, "anchors": anchors,
-            "posted_total": posted_total,
+            "posted_total": posted_total, "extras": ex, "movement": mv, "confidence": conf,
             "markets": markets, "factors": _factors(gd, anchors), "advantage": _advantage(gd, anchors),
             "risks": BE.risk_layer(gd, "ml", anchors), "sharp": _sharp_for(gpk), "game_pk": gpk,
             "model_version": config.MODEL_VERSION, "metric_version": config.METRIC_VERSION,
@@ -259,6 +359,63 @@ def _bar(pct, tone):
     return f'<span class="dbar"><i style="width:{w}%;background:var(--{tone})"></i></span>'
 
 
+def _svg_mktmodel(markets):
+    """Model% vs market-implied% per market — the discrepancy at a glance."""
+    rows = [m for m in markets if m["impl"] is not None][:4]
+    if not rows:
+        return '<div class=mut style="font-size:12px">No market prices to compare.</div>'
+    out = ""
+    for m in rows:
+        edge = m["edge"] or 0
+        tone = "pos" if edge > 0 else ("neg" if edge < 0 else "mut")
+        out += (f'<div class=mm><span class=mml>{html.escape(m["label"])}</span>'
+                f'<span class=mmbar><i class=mod style="width:{m["model"]:.0f}%"></i>'
+                f'<i class=imp style="left:{m["impl"]:.0f}%"></i></span>'
+                f'<span class="mmv {tone}">{edge:+.1f}pt</span></div>')
+    return f'<div class=mmwrap>{out}<div class=cap><span class=side>model bar</span><span class=mut>● market</span></div></div>'
+
+
+def _svg_arsenal(ars, label):
+    if not ars:
+        return f'<div class=mut style="font-size:11.5px">{label}: no pitch-mix data</div>'
+    bars = "".join(
+        f'<div class=arl><span class=apt>{html.escape(p["pitch"])}</span>'
+        f'<span class=abar><i style="width:{min(100,p["pct"]):.0f}%"></i></span>'
+        f'<span class=apv>{p["pct"]:.0f}%</span><span class=aw>whf {(p["whiff"] or 0):.0f}</span></div>'
+        for p in ars)
+    return f'<div class=arshd>{label}</div><div class=ars>{bars}</div>'
+
+
+def _svg_scenario(scenario, mkt):
+    if not scenario:
+        return ""
+    lines = [s[0] for s in scenario]
+    lo, hi = min(lines), max(lines)
+    pts = []
+    for ln, ov in scenario:
+        x = (ln - lo) / (hi - lo) * 260 + 10 if hi > lo else 135
+        pts.append(f"{x:.0f},{70 - ov/100*60:.0f}")
+    mk = ""
+    if mkt is not None and lo <= mkt <= hi:
+        x = (mkt - lo) / (hi - lo) * 260 + 10
+        mk = f'<line x1="{x:.0f}" y1="2" x2="{x:.0f}" y2="72" stroke="#E8C24A" stroke-dasharray="3"/><text x="{x:.0f}" y="84" fill="#E8C24A" font-size="9" text-anchor="middle">mkt {mkt}</text>'
+    labs = "".join(f'<text x="{(s[0]-lo)/(hi-lo)*260+10 if hi>lo else 135:.0f}" y="84" fill="#707687" font-size="8" text-anchor="middle">{s[0]:g}</text>' for s in scenario)
+    return (f'<svg viewBox="0 0 290 90" width="100%" height="92">'
+            f'<polyline points="{" ".join(pts)}" fill="none" stroke="#9A6BFF" stroke-width="2"/>{mk}{labs}</svg>'
+            f'<div class=cap><span class=side>fair Over% vs total line</span></div>')
+
+
+def _svg_movement(mv):
+    if not mv or mv.get("snapshots", 0) < 2:
+        return '<div class=mut style="font-size:11.5px">Line movement: single snapshot — re-fetch over time to build a timeline.</div>'
+    o, c = mv.get("open"), mv.get("current")
+    d = mv.get("delta", 0)
+    tone = "pos" if d and d > 0 else "neg"
+    return (f'<div class=mvrow><span class=mut>open</span><b>{o:+d}</b>'
+            f'<span class=mvarrow>→</span><b>{c:+d}</b>'
+            f'<span class="{tone}">Δ{d:+d} · {mv["snapshots"]} snaps</span></div>')
+
+
 # ── render (Chase Analytics / Sharp Money Tracker design contract) ────────────
 _CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@700;800&family=DM+Sans:wght@400;500;600;700;800&display=swap');
@@ -303,6 +460,17 @@ td:first-child{text-align:left;font-weight:600}tbody tr:last-child td{border-bot
 .dbar{display:inline-block;width:64px;height:7px;border-radius:4px;background:rgba(255,255,255,.07);vertical-align:middle;overflow:hidden}
 .dbar i{display:block;height:100%;border-radius:4px}
 .delta{font-size:11px;font-weight:700}.n{color:var(--muted-2);font-size:10px;font-weight:600}
+/* market-vs-model bars */
+.mmwrap{display:flex;flex-direction:column;gap:7px}.mm{display:flex;align-items:center;gap:9px}
+.mml{flex:0 0 96px;font-size:12px;color:var(--ink2)}.mmbar{position:relative;flex:1;height:12px;background:rgba(255,255,255,.06);border-radius:4px}
+.mmbar i.mod{position:absolute;left:0;top:0;height:100%;background:var(--teal);border-radius:4px;opacity:.55}
+.mmbar i.imp{position:absolute;top:-2px;width:2px;height:16px;background:#fff}.mmv{flex:0 0 46px;text-align:right;font-weight:700;font-size:12px}
+/* arsenal */
+.arshd{font-size:11px;color:var(--ink2);font-weight:700;margin:2px 0 6px}.ars{display:flex;flex-direction:column;gap:5px}
+.arl{display:flex;align-items:center;gap:8px;font-size:11.5px}.apt{flex:0 0 34px;color:var(--muted);font-weight:700}
+.abar{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}.abar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.apv{flex:0 0 32px;text-align:right;font-weight:700}.aw{flex:0 0 50px;text-align:right;color:var(--muted-2);font-size:10px}
+.mvrow{display:flex;align-items:center;gap:9px;font-size:13px}.mvrow b{font-family:var(--display)}.mvarrow{color:var(--muted)}
 .advbar{display:flex;align-items:center;gap:8px;justify-content:flex-end}
 .advbar .seg{height:8px;border-radius:3px}.advbar .a{background:#9A6BFF}.advbar .h{background:#2dd4bf}
 /* charts */
@@ -338,9 +506,9 @@ def render_html(r):
         ("Proj total", f'{p.exp_total:.1f}'),
         ("Mkt total", (f'{r["posted_total"]:.1f}' if r.get("posted_total") else '—')),
         ("Fair ML (H)", f'{BE.prob_to_american(p.p_home_win):+d}'),
-        ("F5 (≈½)", f'{p.exp_total/2:.1f}'),
-        ("Margin", f'{p.exp_margin:+.2f}'),
+        ("F5 Over", f'{r["extras"]["f5"]["over"]:.0f}%'),
         ("Best edge", (f'<span class="{"pos" if best_edge and best_edge>0 else "mut"}">{best_edge:+.1f}pt</span>' if best_edge is not None else "—")),
+        ("Confidence", f'<span class="{"warnc" if r["confidence"]!="high" else "pos"}">{r["confidence"]}</span>'),
     ]
     strip_html = "".join(f'<div class=chipc><div class=k>{e(k)}</div><div class=v>{v}</div></div>' for k, v in strip)
 
@@ -368,9 +536,11 @@ def render_html(r):
     def arow(a):
         ac, al = _chip(a["a_pct"]); hc, hl = _chip(a["h_pct"])
         u, lb = a["unit"], a["lower_better"]
-        # stat-presentation standard: raw + Δ-vs-baseline + percentile chip, per team
-        av = f'{_f(a["a_val"])}{u}{_delta(a["a_d"], lb)} <span class="chip {ac}">{al}</span>'
-        hv = f'{_f(a["h_val"])}{u}{_delta(a["h_d"], lb)} <span class="chip {hc}">{hl}</span>'
+        ar = f' <span class=n>#{a["a_rank"]}</span>' if a.get("a_rank") else ''
+        hr = f' <span class=n>#{a["h_rank"]}</span>' if a.get("h_rank") else ''
+        # stat-presentation standard: raw + Δ-vs-baseline + percentile chip + rank, per team
+        av = f'{_f(a["a_val"])}{u}{_delta(a["a_d"], lb)} <span class="chip {ac}">{al}</span>{ar}'
+        hv = f'{_f(a["h_val"])}{u}{_delta(a["h_d"], lb)} <span class="chip {hc}">{hl}</span>{hr}'
         n = f' <span class=n>n={a["n"]}</span>' if a.get("n") else ''
         return (f'<tr><td>{e(a["cat"])}{n}</td>'
                 f'<td class=side>{av}</td><td class=pos>{hv}</td>'
@@ -392,7 +562,17 @@ def render_html(r):
         f'{_td_signed(round(float(s.get("divergence") or 0)*100,1),"pt")}'
         f'<td>{"STEAM" if s.get("steam_flag") else "—"}</td></tr>' for s in r["sharp"])) \
         or '<tr><td class=mut colspan=4>No sharp signal recorded.</td></tr>'
-    risks = "".join(f"<li>{e(x)}</li>" for x in r["risks"]) or "<li>None flagged.</li>"
+    def _risk_kind(x):
+        xl = x.lower()
+        if "hr-prone" in xl or "shaky" in xl or "blown" in xl:
+            return ("pen/HR", "neg")
+        if "variance" in xl or "babip" in xl or "low-k" in xl:
+            return ("variance", "warnc")
+        if "wind" in xl or "cold" in xl or "dome" in xl:
+            return ("weather", "warnc")
+        return ("context", "mut")
+    rrows = "".join(f'<tr><td>{e(x)}</td><td><span class="pill {t[1]}">{t[0]}</span></td></tr>'
+                    for x in r["risks"] for t in [_risk_kind(x)]) or '<tr><td class=mut colspan=2>None flagged.</td></tr>'
 
     return f"""<!DOCTYPE html><html lang=en><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
@@ -400,7 +580,8 @@ def render_html(r):
  <div class=hd>
    <div><h1>{e(r['away'])} <span class=mut style="font:inherit">@</span> {e(r['home'])}</h1>
      <div class=sp><b>{e(gd.away_sp)}</b> {e(gd.away_hand)}HP · FIP {gd.away_fip} &nbsp;vs&nbsp;
-       <b>{e(gd.home_sp)}</b> {e(gd.home_hand)}HP · FIP {gd.home_fip} &nbsp;·&nbsp; {e(gd.home)} park {gd.park_factor} · {e(wx)}</div></div>
+       <b>{e(gd.home_sp)}</b> {e(gd.home_hand)}HP · FIP {gd.home_fip} &nbsp;·&nbsp;
+       {e(r['extras']['start'] or 'TBD')} · {e(gd.home)} park {gd.park_factor} · {e(wx)} · {e(r['extras']['lineup'])}</div></div>
    <div class=meta><span class=fresh>● live model</span><br>model {e(r['model_version'])} · metrics {e(r['metric_version'])}<br>{e(r['generated'][:16])}Z · pk {r['game_pk']}</div>
  </div>
 
@@ -409,6 +590,10 @@ def render_html(r):
  <div class=charts>
    <div class=sec><h2>Win probability</h2><div class=body>{_svg_winprob(p.p_home_win,p.p_away_win,e(r['home']),e(r['away']))}</div></div>
    <div class=sec><h2>Expected-run distribution</h2><div class=body>{_svg_rundist(p.exp_away_runs,p.exp_home_runs,sd_t,e(r['away']),e(r['home']))}</div></div>
+   <div class=sec><h2>Model vs market</h2><div class=body>{_svg_mktmodel(r['markets'])}</div></div>
+   <div class=sec><h2>Total sensitivity</h2><div class=body>{_svg_scenario(r['extras']['scenario'], r.get('posted_total'))}</div></div>
+   <div class=sec><h2>SP arsenals · usage · whiff</h2><div class=body>{_svg_arsenal(r['extras']['arsenal_a'], e(gd.away_sp))}<div style="height:8px"></div>{_svg_arsenal(r['extras']['arsenal_h'], e(gd.home_sp))}</div></div>
+   <div class=sec><h2>Line movement</h2><div class=body>{_svg_movement(r['movement'])}</div></div>
  </div>
 
  <div class=sec><h2>Market grid · fair vs available (net of vig) · max entry = break-even</h2><div class=body>
@@ -426,7 +611,8 @@ def render_html(r):
  <div class=sec><h2>Sharp money &amp; line movement</h2><div class=body>
    <table><tr><th>Market</th><th>Side</th><th>Divergence</th><th>Steam</th></tr>{sharp}</table></div></div>
 
- <div class=sec><details open><summary>Risks &amp; counter-signals</summary><ul>{risks}</ul></details>
+ <div class=sec><h2>Risks &amp; counter-signals</h2><div class=body>
+   <table><tr><th>Signal</th><th>Type</th></tr>{rrows}</table></div>
    <details><summary>Methodology &amp; audit</summary><ul>
      <li>Expected-runs model (OSI·FIP·park·bullpen, regressed); anchors from settled finals: league {r['anchors']['league_runs']}, home-win {r['anchors']['home_winp']}, margin SD {r['anchors']['margin_sd']}.</li>
      <li>Percentiles empirical from MLBMA pipeline sp_profiles / team_profiles. Sharp from warehouse sharp_signals (de-vig + steam).</li>
