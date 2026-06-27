@@ -27,6 +27,46 @@ from datetime import date, datetime, timezone
 import bet_evaluator as BE
 import config
 
+try:
+    import market_data as MD  # live odds (best price per side) — analytical inheritance
+except Exception:  # pragma: no cover
+    MD = None
+
+
+def _live_odds(away, home, fetch=True):
+    """Populate {(market,side): american_odds} + the posted total line from live/cached odds.
+    Without this the market grid is empty (the failure that prompted this fix)."""
+    om, line = {}, None
+    if MD is None:
+        return om, line
+    try:
+        if fetch:
+            MD.fetch_game(away, home)
+    except (SystemExit, Exception):  # never let an odds hiccup break the report
+        pass
+    for team in (home, away):
+        bp = MD.best_price(away, home, "ml", team, None)
+        if bp:
+            om[("ml", team)] = bp["odds"]
+    try:
+        import pandas as pd
+        df = MD._load_latest()
+        if df is not None:
+            t = df[(df["away"].astype(str).str.upper() == away)
+                   & (df["home"].astype(str).str.upper() == home)
+                   & (df["market"].astype(str) == "total")]
+            ln = pd.to_numeric(t["line"], errors="coerce").dropna() if len(t) else None
+            if ln is not None and len(ln):
+                line = float(ln.mode().iloc[0])
+    except Exception:
+        pass
+    if line is not None:
+        for s in ("over", "under"):
+            bp = MD.best_price(away, home, "total", s, line)
+            if bp:
+                om[("total", s)] = bp["odds"]
+    return om, line
+
 
 # ── stat helpers (raw -> percentile -> semantic chip) ────────────────────────
 def _cdf(z: float) -> float:
@@ -133,20 +173,25 @@ def _market_row(market, side, line, ou, gd, probs, anchors, odds):
     return row
 
 
-def build_report(away, home, *, odds_map=None):
+def build_report(away, home, *, odds_map=None, fetch=True):
     anchors = BE.refresh_anchors()
     gd = BE.load_game(away, home)
     probs = BE.model_probabilities(gd, anchors)
-    odds_map = odds_map or {}
+    if odds_map is None:
+        odds_map, posted_total = _live_odds(away, home, fetch=fetch)
+    else:
+        posted_total = None
+    tline = posted_total if posted_total is not None else round(probs.exp_total * 2) / 2
     markets = [
         _market_row("ml", gd.home, None, None, gd, probs, anchors, odds_map.get(("ml", gd.home))),
         _market_row("ml", gd.away, None, None, gd, probs, anchors, odds_map.get(("ml", gd.away))),
-        _market_row("total", "over", round(probs.exp_total * 2) / 2, None, gd, probs, anchors, odds_map.get(("total", "over"))),
-        _market_row("total", "under", round(probs.exp_total * 2) / 2, None, gd, probs, anchors, odds_map.get(("total", "under"))),
+        _market_row("total", "over", tline, None, gd, probs, anchors, odds_map.get(("total", "over"))),
+        _market_row("total", "under", tline, None, gd, probs, anchors, odds_map.get(("total", "under"))),
         _market_row("runline", gd.home if probs.exp_margin > 0 else gd.away, -1.5, None, gd, probs, anchors, None),
     ]
     gpk = zlib.crc32(f"{date.today().isoformat()}|{away}|{home}".encode())
     return {"away": away, "home": home, "gd": gd, "probs": probs, "anchors": anchors,
+            "posted_total": posted_total,
             "markets": markets, "factors": _factors(gd, anchors), "advantage": _advantage(gd, anchors),
             "risks": BE.risk_layer(gd, "ml", anchors), "sharp": _sharp_for(gpk), "game_pk": gpk,
             "model_version": config.MODEL_VERSION, "metric_version": config.METRIC_VERSION,
@@ -277,7 +322,7 @@ def render_html(r):
         ("Win %", f'<span class="pos">{p.p_home_win*100:.0f}</span>/<span class="side">{p.p_away_win*100:.0f}</span>'),
         ("Proj score", f'{e(gd.home)} {p.exp_home_runs:.1f}–{p.exp_away_runs:.1f}'),
         ("Proj total", f'{p.exp_total:.1f}'),
-        ("Fair total", f'{p.exp_total:.1f}'),
+        ("Mkt total", (f'{r["posted_total"]:.1f}' if r.get("posted_total") else '—')),
         ("Fair ML (H)", f'{BE.prob_to_american(p.p_home_win):+d}'),
         ("F5 (≈½)", f'{p.exp_total/2:.1f}'),
         ("Margin", f'{p.exp_margin:+.2f}'),
@@ -372,9 +417,10 @@ def main():  # pragma: no cover
     ap = argparse.ArgumentParser(description="Matchup Intelligence Report (terminal).")
     ap.add_argument("--game", required=True)
     ap.add_argument("--out", default="matchup_report.html")
+    ap.add_argument("--no-fetch", action="store_true", help="use cached odds only (0 API credits)")
     args = ap.parse_args()
     away, home = (s.strip().upper() for s in args.game.split("@", 1))
-    r = build_report(away, home)
+    r = build_report(away, home, fetch=not args.no_fetch)
     open(args.out, "w", encoding="utf-8").write(render_html(r))
     print(f"wrote {args.out}  ({r['away']}@{r['home']})")
 
