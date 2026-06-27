@@ -48,6 +48,10 @@ HUB_DATASETS = {
     "Signals_Today": "signals_today.csv",
 }
 IDENTITY_COLUMNS = {"Game_PK", "MLB_Game_PK", "Game_Number", "Slate_Date"}
+# Handedness is resolved from the authoritative MLB Stats API people record in
+# build_rows; the MLBMA pipeline's own hand column is unreliable (lefties mislabeled R),
+# so never let the pipeline merge clobber the schedule-sourced hand.
+SCHEDULE_AUTHORITATIVE_COLUMNS = {"Away_Hand", "Home_Hand"}
 
 
 def eastern_date(now: dt.datetime | None = None) -> str:
@@ -173,7 +177,11 @@ def merge_pipeline_slate(
         merged = dict(schedule_row)
         for column in MATCHUP_COLUMNS:
             value = pipeline_row.get(column)
-            if column not in IDENTITY_COLUMNS and value not in (None, "", "--"):
+            if (
+                column not in IDENTITY_COLUMNS
+                and column not in SCHEDULE_AUTHORITATIVE_COLUMNS
+                and value not in (None, "", "--")
+            ):
                 merged[column] = value
         merged_rows.append(merged)
     return merged_rows, True

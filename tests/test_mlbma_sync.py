@@ -39,6 +39,30 @@ def test_exact_pipeline_slate_enriches_live_schedule_identity():
     assert merged[0]["Time"] == "1:10 PM ET"
 
 
+def test_authoritative_handedness_survives_pipeline_merge():
+    # The MLB Stats API people record (resolved in build_rows) is the source of truth
+    # for handedness; the pipeline's hand column is unreliable (lefties mislabeled R).
+    # An exact slate match must NOT let the pipeline overwrite the schedule-sourced hand.
+    schedule = [{
+        "Game_PK": 101, "MLB_Game_PK": 7001, "Game_Number": 1,
+        "Slate_Date": "2026-06-27", "Away": "HOU", "Home": "DET",
+        "Away_SP": "Kai-Wei Teng", "Home_SP": "Framber Valdez",
+        "Away_Hand": "R", "Home_Hand": "L",  # Valdez is a lefty
+        "Away_FIP": "",
+    }]
+    pipeline = [{
+        "Slate_Date": "2026-06-27", "Away": "HOU", "Home": "DET",
+        "Home_Hand": "R",  # wrong upstream hand must be ignored
+        "Away_FIP": "4.63",
+    }]
+
+    merged, exact = merge_pipeline_slate(schedule, pipeline)
+
+    assert exact is True
+    assert merged[0]["Home_Hand"] == "L"  # preserved, not clobbered to R
+    assert merged[0]["Away_FIP"] == "4.63"  # other pipeline values still enrich
+
+
 def test_mismatch_keeps_live_schedule_as_chase_fallback():
     schedule = [{"Away": "NYY", "Home": "BOS"}]
     pipeline = [{"Away": "TOR", "Home": "BAL"}]

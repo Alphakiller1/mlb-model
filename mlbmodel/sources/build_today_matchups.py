@@ -94,6 +94,33 @@ def fetch_schedule(date_iso: str) -> list[dict]:
     return dates[0]["games"] if dates else []
 
 
+def fetch_pitch_hands(pitcher_ids) -> dict:
+    """Authoritative L/R pitching handedness from the MLB Stats API people endpoint.
+
+    sp_profiles' pitcher_hand is unreliable: lefties are mislabeled R and freshly
+    promoted starters are absent entirely (defaulting to R). That silently flips the
+    opposing lineup's platoon split (vRHP shown when the starter is a lefty). The
+    official people record is the source of truth for handedness, so it wins over the
+    profile join. Returns {pitcher_id(str): "L"|"R"}; empty on any fetch failure so the
+    sp_profiles fallback still applies.
+    """
+    ids = sorted({str(pid) for pid in pitcher_ids if pid})
+    if not ids:
+        return {}
+    url = f"https://statsapi.mlb.com/api/v1/people?personIds={','.join(ids)}"
+    try:
+        with urllib.request.urlopen(url, timeout=30) as r:
+            data = json.loads(r.read().decode())
+    except Exception:
+        return {}
+    hands = {}
+    for person in data.get("people", []):
+        code = str((person.get("pitchHand") or {}).get("code") or "").strip().upper()[:1]
+        if code in ("L", "R"):
+            hands[str(person.get("id"))] = code
+    return hands
+
+
 def et_time(game_date_utc: str) -> str:
     d = dt.datetime.fromisoformat(game_date_utc.replace("Z", "+00:00")).astimezone(ET)
     return d.strftime("%-I:%M %p ET")
@@ -103,6 +130,13 @@ def build_rows(out: Path, date_iso: str, games: list[dict] | None = None) -> lis
     sp = sp_index(read_csv(out / "sp_profiles.csv"))
     tm = team_osi(read_csv(out / "team_profiles.csv"))
     games = fetch_schedule(date_iso) if games is None else games
+
+    probable_ids = [
+        (g["teams"][side].get("probablePitcher") or {}).get("id")
+        for g in games
+        for side in ("away", "home")
+    ]
+    api_hand = fetch_pitch_hands(probable_ids)
 
     rows = []
     for g in games:
@@ -122,7 +156,8 @@ def build_rows(out: Path, date_iso: str, games: list[dict] | None = None) -> lis
             "Time": et_time(g["gameDate"]),
             "Away": aa, "Home": ha,
             "Away_SP": ap.get("fullName", "TBD"), "Home_SP": hp.get("fullName", "TBD"),
-            "Away_Hand": asp.get("hand", "R"), "Home_Hand": hsp.get("hand", "R"),
+            "Away_Hand": api_hand.get(str(ap.get("id", "")), asp.get("hand", "R")),
+            "Home_Hand": api_hand.get(str(hp.get("id", "")), hsp.get("hand", "R")),
             "Away_OSI": tm.get(aa, {}).get("away", ""),
             "Home_OSI": tm.get(ha, {}).get("home", ""),
             "Away_FIP": asp.get("FIP", ""), "Home_FIP": hsp.get("FIP", ""),
