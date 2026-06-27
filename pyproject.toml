@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlbmodel"
+version = "0.1.0"
+description = "Unified MLB betting-intelligence research platform (governed by the Model Constitution)."
+requires-python = ">=3.11"
+dependencies = ["pandas>=2.2", "requests>=2.31"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+include = ["mlbmodel*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
