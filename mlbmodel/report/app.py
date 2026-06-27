@@ -140,10 +140,14 @@ def _props(pitchers, prop_board):
             (item for item in row.get("market_report", []) if item["prop"] == prop),
             None,
         )
+        # Untrusted (thin-data) projections still show the line, but the edge is greyed —
+        # the model's edge there is not reliable enough to act on.
+        trusted = row.get("projection_trust") == "trusted"
+        edge_cls = "pos" if (trusted and report and (report.get("edge") or 0) > 0) else "mut"
         market = (
             f'<span class="prop-mkt">{report["side"][0].upper()} {report["line"]:g} '
             f'{report["best_odds"]:+d} · '
-            f'<b class="{"pos" if (report.get("edge") or 0) > 0 else "mut"}">'
+            f'<b class="{edge_cls}">'
             f'{(report.get("edge") or 0) * 100:+.1f}pt</b></span>'
             if report else '<span class="prop-mkt mut">no line</span>'
         )
@@ -157,9 +161,13 @@ def _props(pitchers, prop_board):
     all_markets = []
     for index, row in enumerate(pitchers):
         reports = row.get("market_report") or []
-        all_markets.extend(
-            [{"pitcher": row.get("pitcher"), **report} for report in reports]
-        )
+        trusted = row.get("projection_trust") == "trusted"
+        # Only trusted projections feed the ranked edge board; thin-data pitchers would
+        # otherwise dominate it with phantom edges.
+        if trusted:
+            all_markets.extend(
+                [{"pitcher": row.get("pitcher"), **report} for report in reports]
+            )
         state = row.get("state", "DATA GAP")
         state_tone = "neg" if state == "REGRESSION" else (
             "pos" if state == "PROGRESSION" else "side" if state == "STABLE" else "warnc"
@@ -167,6 +175,9 @@ def _props(pitchers, prop_board):
         best = reports[0] if reports else None
         market_state = best.get("state") if best else row.get("market_state", "NO MARKET")
         market_tone = "pos" if market_state in {"BET", "MONITOR"} else "mut"
+        if not trusted:
+            market_state = "THIN DATA"
+            market_tone = "warnc"
         rows += (
             f'<tr class=prop-main onclick="togglePitcher({index})">'
             f'<td><div class=pitcher-cell>{_headshot(row.get("pitcher_id"))}'

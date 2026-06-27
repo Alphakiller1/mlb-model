@@ -604,6 +604,13 @@ class PitcherProjectionEngine:
         outs = np.rint(ip_samples * 3)
         state, luck = self._performance_state(profile, log_factors, skill_era)
 
+        # Projection trust gates the edge board. The real signal is sample size, not which
+        # table the profile came from: an established arm on the MLB-Stats-API fallback
+        # (e.g. Yamamoto, 14 starts) is reliable, while a 0-4 start swingman projects
+        # overconfidently and manufactures phantom edges. Those thin rows are shown but
+        # never surfaced as actionable edges.
+        projection_trust = "trusted" if starts >= 5 else "thin"
+
         return {
             "pitcher": pitcher_name,
             "pitcher_id": int(_number(profile.get("pitcher_id")) or 0) or None,
@@ -614,6 +621,7 @@ class PitcherProjectionEngine:
             "luck_runs": luck,
             "market_state": "NO MARKET",
             "confidence": confidence,
+            "projection_trust": projection_trust,
             "data_coverage_pct": coverage,
             "missing_context": missing,
             "lineup_status": lineup.get("status", "unavailable"),
