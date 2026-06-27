@@ -514,10 +514,12 @@ def render_html(r):
 
     # market grid
     def mrow(m):
+        mkt = f'{m["mkt"]:+d}' if m["mkt"] is not None else "—"
+        impl = f'{m["impl"]}%' if m["impl"] is not None else "—"
         return (f'<tr><td>{e(m["label"])}</td>'
-                f'<td>{(f"{m['mkt']:+d}") if m["mkt"] is not None else "—"}</td>'
+                f'<td>{mkt}</td>'
                 f'<td>{m["fair"]:+d}</td>'
-                f'<td>{(f"{m['impl']}%") if m["impl"] is not None else "—"}</td>'
+                f'<td>{impl}</td>'
                 f'<td>{m["model"]}%</td>'
                 f'{_td_signed(m["edge"], "pt")}'
                 f'{_td_signed(m["ev"], "")}'
@@ -534,7 +536,8 @@ def render_html(r):
         return f' <span class="delta {tone}">{d:+g}</span>'
 
     def arow(a):
-        ac, al = _chip(a["a_pct"]); hc, hl = _chip(a["h_pct"])
+        ac, al = _chip(a["a_pct"])
+        hc, hl = _chip(a["h_pct"])
         u, lb = a["unit"], a["lower_better"]
         ar = f' <span class=n>#{a["a_rank"]}</span>' if a.get("a_rank") else ''
         hr = f' <span class=n>#{a["h_rank"]}</span>' if a.get("h_rank") else ''
