@@ -21,6 +21,7 @@ from mlbmodel.market.props import load_prop_board, market_report
 from mlbmodel.market.quotes import load_board
 from mlbmodel.portfolio.risk import summarize_positions
 from mlbmodel.props.model import build_pitcher_board
+from mlbmodel.trends import build_slate_reports
 from mlbmodel.report.matchup import (
     _CSS,
     _headshot,
@@ -401,6 +402,114 @@ def _results(reader):
  <div class=note>Open-versus-close calibration describes market learning. It does not, by itself, establish a profitable entry rule.</div>"""
 
 
+_CAT_LABEL = {
+    "bullpen_fatigue": "BULLPEN", "form_vs_hand": "FORM vs HAND",
+    "starter_quality": "SP QUALITY", "park": "PARK",
+}
+_CAT_TONE = {
+    "bullpen_fatigue": "warnc", "form_vs_hand": "side",
+    "starter_quality": "pos", "park": "mut",
+}
+
+
+def _bet_tone(implication):
+    """Color a bet by direction: OVER green, UNDER red, else neutral."""
+    u = (implication or "").upper()
+    if "OVER" in u:
+        return "pos"
+    if "UNDER" in u:
+        return "neg"
+    return "mut"
+
+
+def _mag_grade(effect_size):
+    """chase 5-tier color for a trend's standardized magnitude (in SD)."""
+    if effect_size is None:
+        return "c-na"
+    if effect_size >= 1.5:
+        return "c-elite"
+    if effect_size >= 0.9:
+        return "c-good"
+    if effect_size >= 0.6:
+        return "c-mid"
+    if effect_size >= 0.3:
+        return "c-weak"
+    return "c-poor"
+
+
+def _edge_bar(score):
+    """A 0–100 situational-edge meter, graded by distance from neutral (50)."""
+    cls = _mag_grade(abs(score - 50) / 12.0)
+    return (
+        f'<div class=edgebar><i style="width:{max(2, min(100, score)):.0f}%"></i>'
+        f'<b class={cls}>{score:.0f}</b></div>'
+    )
+
+
+def _trends(reports):
+    if not reports:
+        return ("<h2>Situational Trends</h2><div class=ctx>No slate loaded.</div>"
+                "<div class=empty>No games to analyze.</div>")
+    # slate-wide dominant-trend board
+    flat = []
+    for r in reports:
+        for t in r.trends:
+            if t.category == "park":
+                continue
+            flat.append((r, t))
+    flat.sort(key=lambda rt: rt[1].trend_score, reverse=True)
+    board = "".join(
+        f'<tr><td><button class=gamepick onclick="openGame(\'{e(r.game)}\')">'
+        f'{e(r.game)}</button></td>'
+        f'<td><span class=gcell>{_logo(t.team, "tlogo sm")}{e(t.team)}</span></td>'
+        f'<td><span class="pill {_CAT_TONE.get(t.category, "mut")}">{_CAT_LABEL.get(t.category, t.category.upper())}</span></td>'
+        f'<td class=trend-sig>{e(t.trend_description)}</td>'
+        f'<td><b class={_mag_grade(t.effect_size)}>{t.effect_size:.1f}σ</b></td>'
+        f'<td>{t.sample_size or "—"}</td>'
+        f'<td class={_bet_tone(t.betting_implications[0] if t.betting_implications else "")}>'
+        f'{e(t.betting_implications[0]) if t.betting_implications else "—"}</td></tr>'
+        for r, t in flat[:14]
+    ) or '<tr><td class=mut colspan=7>No dominant situational trends cleared the threshold today.</td></tr>'
+
+    # per-game cards
+    cards = ""
+    for r in sorted(reports, key=lambda x: -abs(x.away_edge_score - x.home_edge_score)):
+        lean_txt = (f'edge <b class=side>{e(r.edge_lean)}</b>' if r.edge_lean != "even"
+                    else 'edge <b class=mut>even</b>')
+        bullets = "".join(
+            f'<li><span class="pill {_CAT_TONE.get(t.category, "mut")}">{_CAT_LABEL.get(t.category, t.category.upper())}</span> '
+            f'{e(t.trend_description)} '
+            f'<span class=mut>· {e(t.mechanistic_explanation)}</span> '
+            f'<b class={_bet_tone(t.betting_implications[0] if t.betting_implications else "")}>'
+            f'→ {e(t.betting_implications[0]) if t.betting_implications else ""}</b></li>'
+            for t in r.trends[:5]
+        ) or '<li class=mut>No dominant trends cleared the magnitude/sample threshold.</li>'
+        cards += f"""<div class=sec><h2>{e(r.game)} · {lean_txt}</h2><div class=body>
+          <div class=edge-row>
+            <div class=edge-cell><span class=k>{e(r.away)}</span>{_edge_bar(r.away_edge_score)}</div>
+            <div class=edge-cell><span class=k>{e(r.home)}</span>{_edge_bar(r.home_edge_score)}</div>
+          </div>
+          <ul class=trend-list>{bullets}</ul>
+        </div></div>"""
+
+    total = sum(len(r.trends) for r in reports)
+    strongest = flat[0][1].effect_size if flat else 0.0
+    return f"""<h2>Situational Trends</h2>
+ <div class=ctx>Context-matched situational edges — bullpen fatigue, recent form vs the opposing
+   hand, starter-quality interactions, and park. Standalone read; not folded into projections.</div>
+ <div class=cards>
+   <div class=card><div class=k>Games analyzed</div><div class=v>{len(reports)}</div></div>
+   <div class=card><div class=k>Dominant trends</div><div class=v>{total}</div></div>
+   <div class=card><div class=k>Strongest signal</div><div class=v>{strongest:.1f}σ</div></div>
+   <div class=card><div class=k>Source</div><div class=v style="font-size:16px">MLBMA logs</div></div>
+ </div>
+ <div class=sec><h2>Dominant trend board</h2><div class=body>
+   <div class=table-scroll><table><tr><th>Game</th><th>Team</th><th>Type</th><th>Signal</th>
+   <th>Mag</th><th>n</th><th>Lean / bet</th></tr>{board}</table></div>
+   <div class=note>Ranked by blended score (magnitude × sample × relevance). σ = SDs from the league baseline.</div></div></div>
+ {cards}"""
+
+
 def _research(reader, pv):
     cal_result = reader.get(
         "v_pm_calibration?select=price_bucket,n,avg_price,actual_win_rate,gap"
@@ -421,7 +530,7 @@ def _research(reader, pv):
    <div class=table-scroll><table><tr><th>Bucket</th><th>n</th><th>Avg price</th><th>Actual win%</th><th>Gap</th></tr>{crows}</table></div></div></div>"""
 
 
-_NAV = [("today", "Today"), ("matchups", "Matchups"), ("markets", "Markets"),
+_NAV = [("today", "Today"), ("matchups", "Matchups"), ("trends", "Trends"), ("markets", "Markets"),
         ("props", "Props"), ("portfolio", "Portfolio"), ("results", "Results"), ("research", "Research")]
 
 _SHELL_CSS = """
@@ -471,6 +580,15 @@ background:rgba(124,77,255,.08);color:var(--ink2);font-size:12px;margin-bottom:1
 .prop-detail>td{padding:14px!important}.prop-detail-grid{display:grid;grid-template-columns:1fr;gap:12px}
 .detail-strip{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin:0 0 10px}
 .detail-strip b{color:var(--ink)}
+.trend-sig{text-align:left;color:var(--ink2);font-size:12.5px;max-width:560px;white-space:normal;line-height:1.4}
+.edge-row{display:flex;gap:18px;margin:2px 0 14px}.edge-cell{flex:1;min-width:0}
+.edge-cell .k{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+.edgebar{position:relative;height:20px;margin-top:5px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden}
+.edgebar i{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,rgba(124,77,255,.5),var(--teal));border-radius:6px}
+.edgebar b{position:absolute;right:8px;top:0;line-height:20px;font-family:var(--display);font-weight:800;font-size:12px}
+.trend-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.trend-list li{font-size:12.5px;line-height:1.5;color:var(--ink2);padding-left:2px}
+.trend-list .pill{margin-right:6px;vertical-align:middle}
 @media(max-width:760px){body{flex-direction:column}#nav{width:100%;height:auto;position:static;display:flex;flex-wrap:wrap;gap:4px}
 #nav .brand,#nav .tagline{width:100%}.navb{width:auto}.cards{grid-template-columns:repeat(2,1fr)}}
 """
@@ -543,9 +661,15 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         f'{"".join(matchup_reports)}'
     )
 
+    try:
+        slate_reports = build_slate_reports(repo)
+    except Exception:
+        slate_reports = []
+
     views = {
         "today": _today(slate, sd, sharp_by_pk, sync),
         "matchups": matchups,
+        "trends": _trends(slate_reports),
         "markets": _markets(slate, sharp_by_pk),
         "props": _props(pitchers, prop_prices),
         "portfolio": _portfolio(reader, gate, slate),
