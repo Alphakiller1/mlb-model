@@ -16,6 +16,7 @@ mlb-model-sharp = "mlbmodel.market.collect:main"
 mlb-model-props = "mlbmodel.market.props:main"
 mlb-model-settle = "mlbmodel.market.settle:main"
 mlb-model-sync = "mlbmodel.sources.sync_mlbma:main"
+mlb-model-trends = "mlbmodel.trends.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
