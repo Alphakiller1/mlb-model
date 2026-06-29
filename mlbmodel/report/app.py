@@ -107,20 +107,63 @@ def _today(slate, sd, sharp_by_pk, sync=None):
  </div></div>"""
 
 
+_MKT_LABEL = {
+    "moneyline": "Moneyline", "h2h": "Moneyline", "ml": "Moneyline",
+    "total": "Total", "totals": "Total",
+    "spread": "Run line", "spreads": "Run line", "run_line": "Run line", "runline": "Run line",
+}
+
+
 def _markets(slate, sharp_by_pk):
     pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate}
-    rows = ""
-    for pk, sigs in sharp_by_pk.items():
-        for s in sigs:
-            d = float(s.get("divergence") or 0) * 100
-            tone = "pos" if d > 0 else "neg"
-            rows += (f'<tr><td>{e(pkmap.get(pk, str(pk)))}</td><td>{e(s["market_type"])}</td>'
-                     f'<td>{e(str(s["selection"]))}</td><td class={tone}>{d:+.1f}pt</td>'
-                     f'<td>{"STEAM" if s.get("steam_flag") else "—"}</td></tr>')
-    return f"""<h2>Markets</h2>
- <div class=ctx>Sharp-vs-soft de-vig divergence + steam, point-in-time from the warehouse.</div>
- <div class=sec><h2>Sharp money</h2><div class=body>
-   <div class=table-scroll><table><tr><th>Game</th><th>Market</th><th>Side</th><th>Divergence</th><th>Steam</th></tr>{rows or '<tr><td class=mut colspan=5>No sharp signals on the current slate.</td></tr>'}</table></div></div></div>"""
+    flat = [(pk, s) for pk, sigs in sharp_by_pk.items() for s in sigs]
+    flat.sort(key=lambda item: -(float(item[1].get("divergence") or 0)))
+
+    def row(pk, s):
+        div = float(s.get("divergence") or 0)
+        sharp_p = float(s.get("sharp_novig_prob") or 0) * 100
+        soft_p = float(s.get("soft_novig_prob") or 0) * 100
+        mkt = _MKT_LABEL.get(str(s.get("market_type") or "").lower(), str(s.get("market_type") or "").title())
+        sel = str(s.get("selection") or "")
+        line = s.get("line_current")
+        line_txt = f' <span class=mut>{line:+d}</span>' if isinstance(line, int) else ""
+        ns, no = s.get("n_sharp_books", "—"), s.get("n_soft_books", "—")
+        steam = '<span class="pill warnc">STEAM</span>' if s.get("steam_flag") else '<span class=mut>—</span>'
+        return (
+            f'<tr><td><button class=gamepick onclick="openGame(\'{e(pkmap.get(pk, str(pk)))}\')">'
+            f'{e(pkmap.get(pk, str(pk)))}</button></td>'
+            f'<td><span class="pill side">{e(mkt)}</span></td>'
+            f'<td><b>{e(sel)}</b>{line_txt}</td>'
+            f'<td class=num>{sharp_p:.1f}%</td>'
+            f'<td class=num>{soft_p:.1f}%</td>'
+            f'<td><b class={_edge_grade(div)}>+{div * 100:.1f}pt</b></td>'
+            f'<td class=mut>{ns}<span class=mut>s</span> / {no}<span class=mut>o</span></td>'
+            f'<td>{steam}</td></tr>'
+        )
+
+    rows = "".join(row(pk, s) for pk, s in flat[:20]) or (
+        '<tr><td class=mut colspan=8>No sharp-vs-soft divergence on the current slate '
+        '(needs the live game-odds feed). When sharp books price a side above the soft '
+        'consensus, it surfaces here.</td></tr>'
+    )
+    n_games = len({pk for pk, _ in flat})
+    biggest = (float(flat[0][1].get("divergence") or 0) * 100) if flat else 0.0
+    return f"""<h2>Markets · Sharp Money</h2>
+ <div class=ctx>De-vigged <b>sharp-vs-soft</b> divergence across books. When the sharp consensus
+   (Pinnacle, Circa, BookMaker…) prices a side above the soft/public consensus, that gap is sharp lean.</div>
+ <div class=cards>
+   <div class=card><div class=k>Games with sharp lean</div><div class=v>{n_games}</div></div>
+   <div class=card><div class=k>Signals</div><div class=v>{len(flat)}</div></div>
+   <div class=card><div class=k>Biggest divergence</div><div class=v>{biggest:.1f}pt</div></div>
+   <div class=card><div class=k>Method</div><div class=v style="font-size:16px">2-way de-vig</div></div>
+ </div>
+ <div class=sec><h2>Sharp money board</h2><div class=body>
+   <div class=table-scroll><table><tr><th>Game</th><th>Market</th><th>Sharp side</th>
+   <th title="Sharp-book no-vig consensus probability">Sharp%</th>
+   <th title="Soft/public-book no-vig consensus probability">Soft%</th>
+   <th>Divergence</th><th title="sharp books / soft books used">Books</th><th>Steam</th></tr>{rows}</table></div>
+   <div class=note>Divergence = sharp consensus − soft consensus (de-vigged). Bet the sharp side; bigger gap on more books = stronger. Click a game to open its matchup.</div>
+ </div></div>"""
 
 
 def _display(value, suffix="", digits=1):
@@ -530,8 +573,9 @@ def _research(reader, pv):
    <div class=table-scroll><table><tr><th>Bucket</th><th>n</th><th>Avg price</th><th>Actual win%</th><th>Gap</th></tr>{crows}</table></div></div></div>"""
 
 
+# Portfolio/Results are hidden until they carry live betting/settlement data — no dead tabs.
 _NAV = [("today", "Today"), ("matchups", "Matchups"), ("trends", "Trends"), ("markets", "Markets"),
-        ("props", "Props"), ("portfolio", "Portfolio"), ("results", "Results"), ("research", "Research")]
+        ("props", "Props"), ("research", "Research")]
 
 _SHELL_CSS = """
 body{display:flex;padding:0;min-height:100vh}
@@ -616,14 +660,29 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     if games and featured_game.upper() not in games:
         featured_game = games[0]
     pks = {g["pk"] for g in slate if "pk" in g}
-    sharp_result = reader.get(
-        "sharp_signals?select=game_pk,market_type,selection,divergence,steam_flag&limit=200"
-    )
-    sharp = sharp_result.rows
+    # Compute fresh sharp-vs-soft de-vig signals directly from the live odds board — the
+    # model is now self-contained (SMT parity), not dependent on a warehouse table that may
+    # be stale/empty. Fall back to the sharp_signals table only when no odds feed is loaded.
+    from mlbmodel.market.collect import signals_for_game
+
     sharp_by_pk = {}
-    for s in sharp:
-        if s["game_pk"] in pks:
-            sharp_by_pk.setdefault(s["game_pk"], []).append(s)
+    for game in slate:
+        if game.get("err") or "pk" not in game:
+            continue
+        try:
+            gd = repo.load_game(game["away"], game["home"])
+            sigs, _obs = signals_for_game(gd, board.game_quotes(game["away"], game["home"]))
+        except Exception:
+            sigs = []
+        if sigs:
+            sharp_by_pk[game["pk"]] = sigs
+    if not sharp_by_pk:
+        for s in reader.get(
+            "sharp_signals?select=game_pk,market_type,selection,divergence,steam_flag,"
+            "sharp_novig_prob,soft_novig_prob,n_sharp_books,n_soft_books,line_current&limit=200"
+        ).rows:
+            if s.get("game_pk") in pks:
+                sharp_by_pk.setdefault(s["game_pk"], []).append(s)
 
     matchup_reports = []
     for game in slate:

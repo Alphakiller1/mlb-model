@@ -910,15 +910,22 @@ def report_body(r):
         else "Not announced"
     )
     coverage_tone = "pos" if probability.data_coverage_pct >= 85 else "warnc"
-    availability = (
-        f'<div class=availability>'
-        f'<span><b>{esc(gd.away)} lineup</b>{esc(away_lineup)}</span>'
-        f'<span><b>{esc(gd.home)} lineup</b>{esc(home_lineup)}</span>'
-        f'<span><b>First pitch</b>{esc(weather_label)}</span>'
-        f'<span><b>Plate umpire</b>{esc(str(umpire_label))}</span>'
+    # Only surface availability facts that actually have data — no "unavailable" filler.
+    avail_parts = []
+    if away_lineup != "unavailable" or home_lineup != "unavailable":
+        avail_parts.append(
+            f'<span><b>Lineups</b>{esc(gd.away)} {esc(away_lineup)} · '
+            f'{esc(gd.home)} {esc(home_lineup)}</span>'
+        )
+    if weather_label not in ("Unavailable",):
+        avail_parts.append(f'<span><b>First pitch</b>{esc(weather_label)}</span>')
+    if str(umpire_label) != "Not announced":
+        avail_parts.append(f'<span><b>Plate umpire</b>{esc(str(umpire_label))}</span>')
+    avail_parts.append(
         f'<span><b>Input coverage</b><i class={coverage_tone}>'
-        f'{probability.data_coverage_pct}%</i></span></div>'
+        f'{probability.data_coverage_pct}%</i></span>'
     )
+    availability = f'<div class=availability>{"".join(avail_parts)}</div>'
 
     factor_rows = "".join(
         f'<tr><td><b>{esc(factor["name"])}</b><span class=mut>'
@@ -1078,6 +1085,55 @@ def report_body(r):
     freshness = (
         f"{fresh_hours:.1f}h old" if fresh_hours is not None else "timestamp unavailable"
     )
+
+    # Graded advantage matrix — the congruent team-vs-team breakdown (raw · Δ-vs-baseline ·
+    # percentile chip · rank). This replaces the wordy "Matchup inputs" prose table.
+    def _adv_delta(d, lower_better):
+        if d is None:
+            return ""
+        good = (d < 0) if lower_better else (d > 0)
+        tone = "pos" if good else ("neg" if d != 0 else "mut")
+        return f' <span class="delta {tone}">{d:+g}</span>'
+
+    def adv_row(a):
+        ac, al = _chip(a.get("a_pct"))
+        hc, hl = _chip(a.get("h_pct"))
+        unit, lb = a.get("unit", ""), a.get("lower_better")
+        ar = f' <span class=n>#{a["a_rank"]}</span>' if a.get("a_rank") else ""
+        hr = f' <span class=n>#{a["h_rank"]}</span>' if a.get("h_rank") else ""
+        av = f'{_f(a.get("a_val"))}{unit}{_adv_delta(a.get("a_d"), lb)} <span class="chip {ac}">{al}</span>{ar}'
+        hv = f'{_f(a.get("h_val"))}{unit}{_adv_delta(a.get("h_d"), lb)} <span class="chip {hc}">{hl}</span>{hr}'
+        return (
+            f'<tr><td title="{esc(_cat_def(a["cat"]))}"><b>{esc(a["cat"])}</b></td>'
+            f'<td class=side>{av}</td><td>{hv}</td>'
+            f'<td class=mut>{_f(a.get("base"))}{unit}</td>'
+            f'<td>{esc(str(a.get("edge", "")))}</td></tr>'
+        )
+
+    advantage_rows = "".join(adv_row(a) for a in r.get("advantage", []))
+    has_price = any(market.get("mkt") is not None for market in r["markets"])
+    has_sharp = bool(r["sharp"])
+    market_panel = (
+        f'<div class=sec><h2>Market report</h2><div class=body><div class=table-scroll>'
+        f'<table><tr><th>Bet</th><th>Best</th><th>Fair</th><th>Market</th>'
+        f'<th>Model</th><th>Edge</th><th>EV</th><th>State</th></tr>{market_rows}</table>'
+        f'</div></div></div>'
+        if has_price else ''
+    )
+    sharp_panel = (
+        f'<div class=sec><h2>Sharp market activity</h2><div class=body><table>'
+        f'<tr><th>Market</th><th>Side</th><th>Sharp gap</th><th>Move</th></tr>{sharp_rows}</table>'
+        f'</div></div>'
+        if has_sharp else ''
+    )
+    advantage_panel = (
+        f'<div class=sec><h2>Matchup advantage</h2><div class=body><div class=table-scroll>'
+        f'<table><tr><th>Category</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th>'
+        f'<th>League base</th><th>Edge</th></tr>{advantage_rows}</table></div>'
+        f'<div class=note>Per team: value · Δ vs season baseline · percentile chip '
+        f'(elite→poor) · rank. Edge = which side the metric favors.</div></div></div>'
+        if advantage_rows else ''
+    )
     return f"""<div class=matchup-head>
       <div class=matchup-team>{_logo(gd.away, "tlogo lg")}<div><b>{esc(gd.away)}</b><span>{esc(gd.away_sp)}</span></div></div>
       <div class=score-projection><span>Projected score</span><b>{probability.exp_away_runs:.1f} – {probability.exp_home_runs:.1f}</b><i>{probability.exp_total:.1f} total</i></div>
@@ -1095,30 +1151,26 @@ def report_body(r):
     {availability}
 
     <div class=decision-grid>
-      <div class=sec><h2>Market report</h2><div class=body><div class=table-scroll>
-        <table><tr><th>Bet</th><th>Best</th><th>Fair</th><th>Market</th>
-        <th>Model</th><th>Edge</th><th>EV</th><th>State</th></tr>{market_rows}</table>
-      </div></div></div>
+      {advantage_panel}
       <div class=sec><h2>Biggest run impacts</h2><div class=body>
         <div class=table-scroll><table><tr><th>Factor</th><th>Impact</th><th>Affects</th><th>Trust</th></tr>{factor_rows}</table></div>
         <div class=missing-row><b>Waiting on</b>{missing}</div>
       </div></div>
     </div>
 
-    <div class=sec><h2>Matchup inputs</h2><div class=body><div class=table-scroll>
-      <table><tr><th>What matters</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th><th>Betting meaning</th></tr>
-      {matchup_rows}</table></div></div></div>
+    {market_panel}
 
     <div class=pitcher-grid>{pitcher_panels}</div>
 
-    <div class=decision-grid>
-      <div class=sec><h2>Sharp market activity</h2><div class=body><table>
-        <tr><th>Market</th><th>Side</th><th>Sharp gap</th><th>Move</th></tr>{sharp_rows}</table>
-      </div></div>
-      <div class=sec><h2>What can break the projection</h2><div class=body><table>
-        <tr><th>Risk</th><th>Betting implication</th><th>Type</th></tr>{risk_rows}</table>
-      </div></div>
-    </div>
+    {sharp_panel}
+    <div class=sec><h2>What can break the projection</h2><div class=body><table>
+      <tr><th>Risk</th><th>Betting implication</th><th>Type</th></tr>{risk_rows}</table>
+    </div></div>
+
+    <details class=model-details><summary>Matchup inputs (detail)</summary>
+      <div class=table-scroll><table><tr><th>What matters</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th><th>Betting meaning</th></tr>
+      {matchup_rows}</table></div>
+    </details>
 
     <details class=model-details><summary>Model lineage and limits</summary>
       <p>Runs are built sequentially from team offense, handedness, posted lineup, official injuries,

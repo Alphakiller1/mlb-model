@@ -40,18 +40,21 @@ jobs:
           mkdir -p _deploy_data
           cp deployment_data/game_results.csv _deploy_data/
           python -m mlbmodel.sources.sync_mlbma --out _deploy_data
-      - name: Fetch live pitcher-prop odds
+      - name: Fetch live odds (props + game lines for sharp-money board)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          MLBMODEL_CACHE_DIR: _deploy_data
         run: |
-          # Caches live prop lines into _deploy_data so the static build can show
-          # over/under leans + edges. Non-fatal: a missing key or fetch error just leaves
-          # props as NO MARKET rather than failing the deploy.
+          # Caches live prop lines + game-line odds into _deploy_data so the static build can
+          # show over/under prop leans AND the sharp-vs-soft Markets board. Non-fatal: a missing
+          # key or fetch error just leaves those sections empty rather than failing the deploy.
           if [ -n "$ODDS_API_KEY" ]; then
             python -m mlbmodel.market.props --cache _deploy_data/prop_odds_latest.json \
               || echo "WARNING: prop odds fetch failed; props stay NO MARKET"
+            python -m mlbmodel.market.collect --data-dir _deploy_data \
+              || echo "WARNING: game odds fetch failed; sharp board stays empty"
           else
-            echo "ODDS_API_KEY not set; skipping odds fetch (props stay NO MARKET)"
+            echo "ODDS_API_KEY not set; skipping odds fetch (props + sharp stay empty)"
           fi
       - name: Build static research dashboard
         env:
