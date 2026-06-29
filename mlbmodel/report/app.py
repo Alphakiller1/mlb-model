@@ -660,22 +660,38 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     if games and featured_game.upper() not in games:
         featured_game = games[0]
     pks = {g["pk"] for g in slate if "pk" in g}
-    # Compute fresh sharp-vs-soft de-vig signals directly from the live odds board — the
-    # model is now self-contained (SMT parity), not dependent on a warehouse table that may
-    # be stale/empty. Fall back to the sharp_signals table only when no odds feed is loaded.
-    from mlbmodel.market.collect import signals_for_game
-
+    # Sharp-vs-soft board, computed live from the odds board (self-contained — SMT parity).
+    # We surface the strongest sharp lean PER GAME even when it's sub-2pt: today's market is
+    # often efficient, and an empty board reads as broken. The 2pt "actionable" line is shown
+    # via the graded divergence chip (≥2pt grades up; below that is a weak lean). 0.6pt floor
+    # drops pure de-vig noise.
     sharp_by_pk = {}
     for game in slate:
         if game.get("err") or "pk" not in game:
             continue
         try:
-            gd = repo.load_game(game["away"], game["home"])
-            sigs, _obs = signals_for_game(gd, board.game_quotes(game["away"], game["home"]))
+            quotes = board.game_quotes(game["away"], game["home"])
         except Exception:
-            sigs = []
-        if sigs:
-            sharp_by_pk[game["pk"]] = sigs
+            quotes = []
+        candidates = [
+            q for q in quotes
+            if q.sharp_divergence is not None and q.sharp_divergence >= 0.006
+            and q.sharp_book_count >= 1 and q.soft_book_count >= 1
+        ]
+        if not candidates:
+            continue
+        best = max(candidates, key=lambda q: q.sharp_divergence)
+        sharp_by_pk[game["pk"]] = [{
+            "market_type": best.market,
+            "selection": best.selection,
+            "divergence": round(best.sharp_divergence, 4),
+            "sharp_novig_prob": best.sharp_probability,
+            "soft_novig_prob": best.soft_probability,
+            "n_sharp_books": best.sharp_book_count,
+            "n_soft_books": best.soft_book_count,
+            "line_current": best.best_odds,
+            "steam_flag": best.sharp_divergence >= 0.05,
+        }]
     if not sharp_by_pk:
         for s in reader.get(
             "sharp_signals?select=game_pk,market_type,selection,divergence,steam_flag,"
