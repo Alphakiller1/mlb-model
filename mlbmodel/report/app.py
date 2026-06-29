@@ -114,55 +114,166 @@ _MKT_LABEL = {
 }
 
 
-def _markets(slate, sharp_by_pk):
-    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate}
-    flat = [(pk, s) for pk, sigs in sharp_by_pk.items() for s in sigs]
-    flat.sort(key=lambda item: -(float(item[1].get("divergence") or 0)))
+# Verdict tiers, ranked best→worst. Each maps to a tinted badge + a suggested stake (units).
+_VERDICT = {
+    "STRONG":  (4, 2.0, "#2dd4bf", "rgba(45,212,191,.16)", "Sharp + model agree, price gives value"),
+    "BET":     (3, 1.0, "#36d399", "rgba(54,211,153,.14)", "Sharp + model agree at a fair-or-better #"),
+    "LEAN":    (2, 0.5, "#f5b14c", "rgba(245,177,76,.14)", "Right side, but the price is gone — wait for a number"),
+    "SHARP":   (1, 0.5, "#9A6BFF", "rgba(154,107,255,.14)", "Sharp lean only — model/price hasn't confirmed"),
+    "CONFLICT":(0, 0.0, "#f87171", "rgba(248,113,113,.14)", "Sharp and the model disagree — pass"),
+}
 
-    def row(pk, s):
-        div = float(s.get("divergence") or 0)
-        sharp_p = float(s.get("sharp_novig_prob") or 0) * 100
-        soft_p = float(s.get("soft_novig_prob") or 0) * 100
-        mkt = _MKT_LABEL.get(str(s.get("market_type") or "").lower(), str(s.get("market_type") or "").title())
-        sel = str(s.get("selection") or "")
-        line = s.get("line_current")
-        line_txt = f' <span class=mut>{line:+d}</span>' if isinstance(line, int) else ""
-        ns, no = s.get("n_sharp_books", "—"), s.get("n_soft_books", "—")
-        steam = '<span class="pill warnc">STEAM</span>' if s.get("steam_flag") else '<span class=mut>—</span>'
+
+_VERDICT_LABEL = {"STRONG": "STRONG BET", "BET": "BET", "LEAN": "LEAN",
+                  "SHARP": "SHARP-ONLY", "CONFLICT": "PASS"}
+
+
+def _verdict_label(v):
+    return _VERDICT_LABEL[v]
+
+
+def _verdict_badge(v):
+    _, _, fg, bg, _why = _VERDICT[v]
+    return (f'<span class="pill" style="background:{bg};color:{fg};'
+            f'border:1px solid {fg}55;font-weight:800">{_VERDICT_LABEL[v]}</span>')
+
+
+def _sel_match(model_side, sharp_sel):
+    return str(model_side or "").strip().lower() == str(sharp_sel or "").strip().lower()
+
+
+def _decide(s, model_rows):
+    """Fuse one sharp signal with the model's read on the same bet → an actionable call.
+
+    Three independent reads: sharp-vs-public divergence, model%-vs-price edge, and the live
+    number itself. We bet only where sharp AND model agree the side is underpriced.
+    """
+    div = float(s.get("divergence") or 0)            # sharp − public (fraction)
+    div_pts = div * 100
+    sharp_p = float(s.get("sharp_novig_prob") or 0) * 100
+    soft_p = float(s.get("soft_novig_prob") or 0) * 100
+    mkt_type = str(s.get("market_type") or "").lower()
+    sel = str(s.get("selection") or "")
+
+    m = next((r for r in (model_rows or [])
+              if str(r.get("market") or "").lower() == mkt_type and _sel_match(r.get("side"), sel)),
+             None)
+    model_p = m.get("model") if m else None          # model fair % for this side
+    medge = m.get("edge") if m else None             # model% − price-implied% (pts)
+    ev = m.get("ev") if m else None                  # EV per unit at the executable price
+    price = m.get("mkt") if m else None              # the number you'd actually bet
+    fair = m.get("fair") if m else None
+    book = m.get("book") if m else None
+
+    # Verdict. Directional agreement = model's fair prob for the side ≥ the public's (soft).
+    model_supports = model_p is not None and model_p >= soft_p
+    has_price = price is not None and medge is not None
+    if not m:
+        verdict = "SHARP"
+    elif has_price and medge >= 2.0 and div_pts >= 1.5 and (ev or 0) > 0:
+        verdict = "STRONG"
+    elif has_price and medge > 0 and (ev or 0) > 0:
+        verdict = "BET"
+    elif model_supports:
+        verdict = "LEAN"
+    else:
+        verdict = "CONFLICT"
+
+    rank, stake, _fg, _bg, _why = _VERDICT[verdict]
+    # Conviction score for ranking: tier first, then combined edge strength.
+    score = rank * 1000 + div_pts + max(0.0, medge or 0)
+    return {
+        "verdict": verdict, "stake": stake, "score": score,
+        "mkt_type": mkt_type, "sel": sel, "div_pts": div_pts,
+        "sharp_p": sharp_p, "soft_p": soft_p,
+        "model_p": model_p, "medge": medge, "ev": ev,
+        "price": price, "fair": fair, "book": book,
+        "n_sharp": s.get("n_sharp_books"), "n_soft": s.get("n_soft_books"),
+        "steam": bool(s.get("steam_flag")),
+    }
+
+
+def _markets(slate, sharp_by_pk, model_by_pk=None):
+    model_by_pk = model_by_pk or {}
+    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate}
+    plays = []
+    for pk, sigs in sharp_by_pk.items():
+        for s in sigs:
+            d = _decide(s, model_by_pk.get(pk))
+            d["pk"], d["game"] = pk, pkmap.get(pk, str(pk))
+            plays.append(d)
+    plays.sort(key=lambda d: -d["score"])
+
+    def _num(odds):
+        return f"{odds:+d}" if isinstance(odds, int) else "—"
+
+    def row(d):
+        mkt = _MKT_LABEL.get(d["mkt_type"], d["mkt_type"].title())
+        # The bet: side + the live number you'd take (or a flag that there's no posted price).
+        if isinstance(d["price"], int):
+            bet = (f'<b>{e(mkt)} {e(d["sel"])}</b> <span class="pill side">{_num(d["price"])}</span>'
+                   + (f' <span class=mut>{e(str(d["book"]))}</span>' if d["book"] else "")
+                   + (f'<div class=mut style="font-size:11px">fair {_num(d["fair"])}</div>'
+                      if isinstance(d["fair"], int) else ""))
+        else:
+            bet = f'<b>{e(mkt)} {e(d["sel"])}</b><div class=mut style="font-size:11px">no live #</div>'
+        # Sharp lean: divergence chip + the sharp→public split that produced it.
+        sharp = (f'<b class={_edge_grade(d["div_pts"] / 100)}>+{d["div_pts"]:.1f}pt</b>'
+                 f'<div class=mut style="font-size:11px">{d["sharp_p"]:.0f}% vs {d["soft_p"]:.0f}% pub</div>'
+                 + ('<span class="pill warnc" style="font-size:10px">STEAM</span>' if d["steam"] else ""))
+        # Model: its edge vs the price + EV — does the model confirm the sharp side?
+        if d["medge"] is not None:
+            ev_txt = f'{d["ev"] * 100:+.1f}% EV' if d["ev"] is not None else ""
+            model = (f'<b class={_edge_grade(d["medge"] / 100)}>{d["medge"]:+.1f}pt</b>'
+                     f'<div class=mut style="font-size:11px">model {d["model_p"]:.0f}% · {ev_txt}</div>')
+        elif d["model_p"] is not None:
+            model = f'<span class=mut>{d["model_p"]:.0f}% · no live #</span>'
+        else:
+            model = '<span class=mut>—</span>'
+        stake = (f'<b style="color:{_VERDICT[d["verdict"]][2]}">{d["stake"]:.1f}u</b>'
+                 if d["stake"] else '<span class=mut>—</span>')
         return (
-            f'<tr><td><button class=gamepick onclick="openGame(\'{e(pkmap.get(pk, str(pk)))}\')">'
-            f'{e(pkmap.get(pk, str(pk)))}</button></td>'
-            f'<td><span class="pill side">{e(mkt)}</span></td>'
-            f'<td><b>{e(sel)}</b>{line_txt}</td>'
-            f'<td class=num>{sharp_p:.1f}%</td>'
-            f'<td class=num>{soft_p:.1f}%</td>'
-            f'<td><b class={_edge_grade(div)}>+{div * 100:.1f}pt</b></td>'
-            f'<td class=mut>{ns}<span class=mut>s</span> / {no}<span class=mut>o</span></td>'
-            f'<td>{steam}</td></tr>'
+            f'<tr><td><button class=gamepick onclick="openGame(\'{e(d["game"])}\')">{e(d["game"])}</button></td>'
+            f'<td>{bet}</td><td>{sharp}</td><td>{model}</td>'
+            f'<td title="{e(_VERDICT[d["verdict"]][4])}">{_verdict_badge(d["verdict"])}</td>'
+            f'<td class=num>{stake}</td></tr>'
         )
 
-    rows = "".join(row(pk, s) for pk, s in flat[:20]) or (
-        '<tr><td class=mut colspan=8>No sharp-vs-soft divergence on the current slate '
+    rows = "".join(row(d) for d in plays) or (
+        '<tr><td class=mut colspan=6>No sharp-vs-soft divergence on the current slate '
         '(needs the live game-odds feed). When sharp books price a side above the soft '
-        'consensus, it surfaces here.</td></tr>'
+        'consensus, it surfaces here with the model\'s read.</td></tr>'
     )
-    n_games = len({pk for pk, _ in flat})
-    biggest = (float(flat[0][1].get("divergence") or 0) * 100) if flat else 0.0
-    return f"""<h2>Markets · Sharp Money</h2>
- <div class=ctx>De-vigged <b>sharp-vs-soft</b> divergence across books. When the sharp consensus
-   (Pinnacle, Circa, BookMaker…) prices a side above the soft/public consensus, that gap is sharp lean.</div>
+    n_bet = sum(1 for d in plays if d["verdict"] in ("STRONG", "BET"))
+    n_lean = sum(1 for d in plays if d["verdict"] == "LEAN")
+    n_pass = sum(1 for d in plays if d["verdict"] == "CONFLICT")
+    exposure = sum(d["stake"] for d in plays)
+    top = plays[0] if plays else None
+    top_txt = (f'{top["game"]} · {_MKT_LABEL.get(top["mkt_type"], top["mkt_type"].title())} {top["sel"]}'
+               if top else "—")
+    top_sub = (f'{_verdict_label(top["verdict"])} · {_VERDICT[top["verdict"]][4]}' if top else "")
+    return f"""<h2>Markets · Where to bet</h2>
+ <div class=ctx>Every play is graded on <b>three independent reads</b>: sharp-book money
+   (de-vigged vs the public), the <b>model's</b> own edge vs the live number, and the price itself.
+   <b style="color:#2dd4bf">BET</b> = sharp and model agree the side is underpriced;
+   <b style="color:#f5b14c">LEAN</b> = right side, the number's gone;
+   <b style="color:#f87171">PASS</b> = they disagree.</div>
  <div class=cards>
-   <div class=card><div class=k>Games with sharp lean</div><div class=v>{n_games}</div></div>
-   <div class=card><div class=k>Signals</div><div class=v>{len(flat)}</div></div>
-   <div class=card><div class=k>Biggest divergence</div><div class=v>{biggest:.1f}pt</div></div>
-   <div class=card><div class=k>Method</div><div class=v style="font-size:16px">2-way de-vig</div></div>
+   <div class=card><div class=k>Top play</div><div class=v style="font-size:17px">{e(top_txt)}</div>
+     <div class=mut style="font-size:11px">{e(top_sub)}</div></div>
+   <div class=card><div class=k>Confirmed bets</div><div class=v>{n_bet}</div></div>
+   <div class=card><div class=k>Leans</div><div class=v>{n_lean}</div></div>
+   <div class=card><div class=k>Suggested exposure</div><div class=v>{exposure:.1f}u</div>
+     <div class=mut style="font-size:11px">{n_pass} pass</div></div>
  </div>
- <div class=sec><h2>Sharp money board</h2><div class=body>
-   <div class=table-scroll><table><tr><th>Game</th><th>Market</th><th>Sharp side</th>
-   <th title="Sharp-book no-vig consensus probability">Sharp%</th>
-   <th title="Soft/public-book no-vig consensus probability">Soft%</th>
-   <th>Divergence</th><th title="sharp books / soft books used">Books</th><th>Steam</th></tr>{rows}</table></div>
-   <div class=note>Divergence = sharp consensus − soft consensus (de-vigged). Bet the sharp side; bigger gap on more books = stronger. Click a game to open its matchup.</div>
+ <div class=sec><h2>Decision board</h2><div class=body>
+   <div class=table-scroll><table><tr><th>Game</th><th>The bet</th>
+   <th title="Sharp-book de-vig consensus minus the public consensus">Sharp lean</th>
+   <th title="Model fair % minus the live price-implied %, plus EV at the number">Model edge</th>
+   <th>Verdict</th><th>Stake</th></tr>{rows}</table></div>
+   <div class=note>Bet only where the sharp lean and the model both clear the live price. Divergence
+   = sharp − public (de-vigged); model edge = model% − price-implied%; EV is per unit at the posted number.
+   Stakes are a conviction guide, not advice. Click a game to open its full matchup.</div>
  </div></div>"""
 
 
@@ -701,19 +812,23 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 sharp_by_pk.setdefault(s["game_pk"], []).append(s)
 
     matchup_reports = []
+    model_by_pk = {}
     for game in slate:
         game_name = f'{game["away"]}@{game["home"]}'
         try:
-            report = report_body(
-                build_report(
-                    game["away"], game["home"], fetch=False, data_dir=data_dir,
-                    board=board, reader=reader, gate=gate,
-                    pitcher_rows=[
-                        pitcher for pitcher in pitchers
-                        if pitcher.get("team") in {game["away"], game["home"]}
-                    ],
-                )
+            r = build_report(
+                game["away"], game["home"], fetch=False, data_dir=data_dir,
+                board=board, reader=reader, gate=gate,
+                pitcher_rows=[
+                    pitcher for pitcher in pitchers
+                    if pitcher.get("team") in {game["away"], game["home"]}
+                ],
             )
+            # Capture the model's own read on each market (model%, edge vs price, EV) so the
+            # Markets decision board can confirm or fade the sharp lean against the live number.
+            if "pk" in game:
+                model_by_pk[game["pk"]] = r.get("markets", [])
+            report = report_body(r)
         except Exception as exc:
             report = f'<div class=empty>Could not build {e(game_name)}: {e(str(exc))}</div>'
         active = " on" if game_name == featured_game.upper() else ""
@@ -745,7 +860,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "today": _today(slate, sd, sharp_by_pk, sync),
         "matchups": matchups,
         "trends": _trends(slate_reports),
-        "markets": _markets(slate, sharp_by_pk),
+        "markets": _markets(slate, sharp_by_pk, model_by_pk),
         "props": _props(pitchers, prop_prices),
         "portfolio": _portfolio(reader, gate, slate),
         "results": _results(reader),

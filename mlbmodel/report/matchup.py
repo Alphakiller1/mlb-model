@@ -262,6 +262,9 @@ def _market_row(market, side, line, ou, gd, probs, anchors, quote, promotion):
     }[assessment.action]
     return {
         "label": description,
+        "market": market,
+        "side": str(side),
+        "line": line,
         "model": round(probability * 100, 1),
         "fair": assessment.fair_odds,
         "mkt": quote.best_odds if quote else None,
