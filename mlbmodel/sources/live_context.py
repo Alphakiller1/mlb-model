@@ -19,7 +19,18 @@ from mlbmodel import settings
 
 MLB_API = "https://statsapi.mlb.com/api"
 WEATHER_API = "https://api.open-meteo.com/v1/forecast"
+ROTOWIRE_LINEUPS = "https://www.rotowire.com/baseball/daily-lineups.php"
 INJURED_CODES = {"D7", "D10", "D15", "D60", "ILF"}
+
+# Rotowire team abbreviations that differ from the model's canonical set.
+_ROTOWIRE_ABBR_FIX = {
+    "TB": "TBR", "WSH": "WSN", "KC": "KCR", "CWS": "CHW", "SD": "SDP",
+    "SF": "SFG", "OAK": "ATH", "AZ": "ARI", "FLA": "MIA",
+}
+_BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
 
 
 def _request_json(url: str, timeout: int = 45) -> Any:
@@ -122,6 +133,78 @@ def _official_lineup(feed: dict, side: str) -> list[dict]:
     return rows
 
 
+def fetch_rotowire_lineups(
+    slate_pairings: set[tuple[str, str]] | None = None,
+) -> list[dict]:
+    """Scrape Rotowire's projected/confirmed daily lineups.
+
+    Returns rows in the same schema ``_pipeline_lineup`` consumes (Team/Bat_Order/Player/
+    Position/Bats), so Rotowire can serve as the projected-lineup source when the official
+    MLB feed has not posted yet. Rotowire keeps stale next-day cards on the page, so when a
+    ``slate_pairings`` set of ``(away, home)`` canonical abbreviations is supplied we keep
+    only cards that match today's actual slate. Network/parse failures return ``[]`` (the
+    model then falls back to ``unavailable``, never to a stale guess).
+    """
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+    except Exception:
+        return []
+    try:
+        response = requests.get(
+            ROTOWIRE_LINEUPS, headers={"User-Agent": _BROWSER_UA}, timeout=30
+        )
+        response.raise_for_status()
+    except Exception:
+        return []
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    rows: list[dict] = []
+    for card in soup.find_all("div", class_="lineup"):
+        abbrs = card.find_all("div", class_="lineup__abbr")
+        if len(abbrs) < 2:
+            continue
+        away = _ROTOWIRE_ABBR_FIX.get(abbrs[0].text.strip(), abbrs[0].text.strip())
+        home = _ROTOWIRE_ABBR_FIX.get(abbrs[1].text.strip(), abbrs[1].text.strip())
+        away = settings.team_abbr(away)
+        home = settings.team_abbr(home)
+        if slate_pairings is not None and (away, home) not in slate_pairings:
+            continue
+        lists = card.find_all("ul", class_="lineup__list")
+        for side_index, unordered in enumerate(lists[:2]):
+            side = "AWAY" if side_index == 0 else "HOME"
+            team = away if side == "AWAY" else home
+            # Skip the card unless it is a real batting order (confirmed or projected),
+            # not the "no lineup yet" placeholder.
+            is_confirmed = "is-confirmed" in (unordered.get("class") or [])
+            players = unordered.find_all("li", class_="lineup__player")
+            if not players:
+                continue
+            status = "confirmed" if is_confirmed else "projected"
+            for order, player in enumerate(players, start=1):
+                name_el = player.find("a")
+                pos_el = player.find("div", class_="lineup__pos")
+                bats_el = player.find(
+                    "span", class_=lambda value: value and "lineup__bats" in value
+                )
+                name = (name_el.get("title") or name_el.text).strip() if name_el else ""
+                if not name:
+                    continue
+                rows.append(
+                    {
+                        "Game": f"{away}@{home}",
+                        "Team": team,
+                        "Side": side,
+                        "Bat_Order": order,
+                        "Player": name,
+                        "Position": pos_el.text.strip() if pos_el else "",
+                        "Bats": bats_el.text.strip() if bats_el else "",
+                        "Status": status,
+                    }
+                )
+    return rows
+
+
 def _pipeline_lineup(rows: list[dict], team: str) -> list[dict]:
     selected = [
         row
@@ -201,12 +284,17 @@ def _weather(
     if None not in (wind_speed, wind_direction, azimuth):
         toward = (wind_direction + 180.0) % 360.0
         wind_out = wind_speed * math.cos(math.radians(toward - azimuth))
+    temperature = at("temperature_2m")
     return {
         "status": "forecast",
         "source": "Open-Meteo hourly best-match",
         "forecast_time": (times[index] or start).isoformat(),
         "dome": False,
-        "temperature_f": at("temperature_2m"),
+        # Emit BOTH keys: the run-factor and several report readers expect `temp_f`,
+        # while others read `temperature_f`. Keeping them in sync stops temperature from
+        # being silently dropped (which neutralizes the weather adjustment).
+        "temp_f": temperature,
+        "temperature_f": temperature,
         "humidity_pct": at("relative_humidity_2m"),
         "precipitation_probability_pct": at("precipitation_probability"),
         "precipitation_in": at("precipitation"),
@@ -450,6 +538,20 @@ def collect(
 ) -> dict:
     """Write ``live_context.json`` and return its payload."""
     pipeline_lineups = pipeline_lineups or []
+    lineup_source = "pipeline" if pipeline_lineups else None
+    # When no upstream projected lineups were supplied (e.g. the deploy can't read the
+    # Today_Lineups sheet), pull Rotowire's projected lineups directly so the lineup-strength
+    # and pitch-type matchup factors still engage before official lineups are posted.
+    if not pipeline_lineups:
+        slate_pairings = {
+            (
+                settings.team_abbr(game["teams"]["away"]["team"].get("name", "")),
+                settings.team_abbr(game["teams"]["home"]["team"].get("name", "")),
+            )
+            for game in games
+        }
+        pipeline_lineups = fetch_rotowire_lineups(slate_pairings)
+        lineup_source = "rotowire" if pipeline_lineups else None
     fetched_at = dt.datetime.now(dt.timezone.utc)
     venue_cache: dict[int, dict] = {}
     try:
@@ -512,13 +614,17 @@ def collect(
         official_home = _official_lineup(feed, "home")
         projected_away = _pipeline_lineup(pipeline_lineups, away)
         projected_home = _pipeline_lineup(pipeline_lineups, home)
+        projected_label = (
+            "Rotowire (projected)" if lineup_source == "rotowire"
+            else "MLBMA Today_Lineups"
+        )
         lineups = {
             "away": {
                 "status": "confirmed" if len(official_away) >= 9 else (
                     "projected" if len(projected_away) >= 9 else "unavailable"
                 ),
                 "source": "MLB live feed" if len(official_away) >= 9 else (
-                    "MLBMA Today_Lineups" if len(projected_away) >= 9 else None
+                    projected_label if len(projected_away) >= 9 else None
                 ),
                 "players": official_away if len(official_away) >= 9 else projected_away,
             },
@@ -527,7 +633,7 @@ def collect(
                     "projected" if len(projected_home) >= 9 else "unavailable"
                 ),
                 "source": "MLB live feed" if len(official_home) >= 9 else (
-                    "MLBMA Today_Lineups" if len(projected_home) >= 9 else None
+                    projected_label if len(projected_home) >= 9 else None
                 ),
                 "players": official_home if len(official_home) >= 9 else projected_home,
             },

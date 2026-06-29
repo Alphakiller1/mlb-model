@@ -13,7 +13,11 @@ def weather_run_factor(weather: dict | None) -> float:
     value = weather or {}
     if value.get("dome") or value.get("status") == "dome":
         return 1.0
-    temperature = value.get("temp_f", value.get("temperature_f"))
+    # None-safe: a present-but-None `temp_f` must not shadow `temperature_f` (a plain
+    # dict.get default only applies when the key is absent, not when it holds None).
+    temperature = value.get("temp_f")
+    if temperature is None:
+        temperature = value.get("temperature_f")
     wind_out = value.get("wind_out_mph")
     humidity = value.get("humidity_pct")
     pressure = value.get("pressure_hpa")

@@ -7,7 +7,7 @@ name = "mlbmodel"
 version = "0.1.0"
 description = "Unified MLB betting-intelligence research platform (governed by the Model Constitution)."
 requires-python = ">=3.11"
-dependencies = ["numpy>=1.26", "pandas>=2.2", "requests>=2.31"]
+dependencies = ["numpy>=1.26", "pandas>=2.2", "requests>=2.31", "beautifulsoup4>=4.12"]
 
 [project.scripts]
 mlb-model = "mlbmodel.report.app:main"

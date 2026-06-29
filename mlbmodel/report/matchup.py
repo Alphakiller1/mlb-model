@@ -26,9 +26,11 @@ from mlbmodel.baseball.model import (
     offense_factor,
     pitch_factor,
 )
+from mlbmodel.baseball.context import weather_run_factor
 from mlbmodel.baseball.repository import DataRepository
 from mlbmodel.baseball.risk import risk_signals
 from mlbmodel.baseball.simulation import simulate_game
+from mlbmodel.market.oddsmath import prob_to_american
 from mlbmodel.market.quotes import OddsBoard, load_board
 from mlbmodel.market.value import assess_value
 from mlbmodel.quant.promotion_gate import promotion_verdict
@@ -272,6 +274,15 @@ def _market_row(market, side, line, ou, gd, probs, anchors, quote, promotion):
         "impl": (
             round(quote.vigfree_probability * 100, 1)
             if quote else None
+        ),
+        # The book's true price with its two-sided hold removed, and the hold itself.
+        # This is the "fair value" benchmark the model's edge is measured against.
+        "mkt_fair": (
+            prob_to_american(quote.vigfree_probability) if quote else None
+        ),
+        "hold": (
+            round(quote.hold * 100, 1)
+            if quote and quote.hold is not None else None
         ),
         "edge": (
             round(assessment.edge * 100, 1)
@@ -842,6 +853,83 @@ def _legacy_report_body(r):
 """
 
 
+def _f5_panel(r, gd, esc):
+    """First-5-innings decision panel.
+
+    F5 is a distinct, heavily-bet market: it isolates the two starters from the bullpens.
+    We build it from the pitcher engine's simulated first-5 earned-run distributions —
+    each starter's F5 ER is the runs the OPPOSING lineup is projected to score in innings
+    1-5. That gives a grounded F5 total (sum of both) and an F5 lead probability (whichever
+    starter is projected to allow fewer), rather than a flat fraction of the full-game total.
+    """
+    pitchers = r.get("pitchers") or []
+
+    def f5_for(team):
+        for row in pitchers:
+            if str(row.get("team") or "").upper() == team:
+                dist = (row.get("projections") or {}).get("F5_ER")
+                if dist and dist.get("sd"):
+                    return row, dist
+        return None, None
+
+    away_sp, away_f5 = f5_for(gd.away)   # away starter -> runs the HOME team scores in F5
+    home_sp, home_f5 = f5_for(gd.home)   # home starter -> runs the AWAY team scores in F5
+
+    # Fallback to the coarse extras approximation when a starter has no F5 simulation.
+    if not (away_f5 and home_f5):
+        f5 = (r.get("extras") or {}).get("f5")
+        if not f5:
+            return ""
+        return (
+            f'<div class=sec><h2>First 5 innings (F5)</h2><div class=body>'
+            f'<div class=availability><span><b>F5 total</b>{f5["line"]} · '
+            f'over {f5["over"]:.0f}% (fair {f5["fair"]:+d})</span>'
+            f'<span class=mut>Approximate — starter F5 sim unavailable</span></div>'
+            f'</div></div>'
+        )
+
+    # Home team scores off the away starter; away team scores off the home starter.
+    home_runs_mean, away_runs_mean = away_f5["mean"], home_f5["mean"]
+    home_runs_sd, away_runs_sd = away_f5["sd"], home_f5["sd"]
+    total_mean = home_runs_mean + away_runs_mean
+    total_sd = max(0.5, math.sqrt(home_runs_sd ** 2 + away_runs_sd ** 2))
+    line = round(total_mean * 2) / 2
+    p_over = max(0.02, min(0.98, 1 - normal_cdf((line - total_mean) / total_sd)))
+
+    # Lead probability: away team out-scores home in F5 when the home starter allows more
+    # than the away starter. diff = away_runs - home_runs.
+    diff_mean = away_runs_mean - home_runs_mean
+    diff_sd = max(0.5, math.sqrt(away_runs_sd ** 2 + home_runs_sd ** 2))
+    p_away_lead = max(0.02, min(0.98, 1 - normal_cdf((0 - diff_mean) / diff_sd)))
+    lead_team = gd.away if p_away_lead >= 0.5 else gd.home
+    lead_prob = p_away_lead if p_away_lead >= 0.5 else (1 - p_away_lead)
+
+    over_state = "over" if p_over >= 0.5 else "under"
+    over_prob = p_over if p_over >= 0.5 else (1 - p_over)
+
+    def sp_cell(sp, dist, team):
+        name = esc(sp.get("pitcher") or team)
+        return (
+            f'<span><b>{esc(team)} SP · {name}</b>'
+            f'{dist["mean"]:.2f} ER F5 <span class=mut>({dist["p10"]:.0f}–{dist["p90"]:.0f})</span></span>'
+        )
+
+    return (
+        f'<div class=sec><h2>First 5 innings (F5)</h2><div class=body>'
+        f'<div class=availability>'
+        f'<span><b>F5 total</b>{line:g} · {over_state} {over_prob * 100:.0f}% '
+        f'<span class=mut>(fair {fair_price(p_over if over_state == "over" else 1 - p_over):+d})</span></span>'
+        f'<span><b>F5 lead</b>{esc(lead_team)} {lead_prob * 100:.0f}% '
+        f'<span class=mut>(fair {fair_price(lead_prob):+d})</span></span>'
+        f'</div>'
+        f'<div class=availability>{sp_cell(away_sp, away_f5, gd.away)}{sp_cell(home_sp, home_f5, gd.home)}</div>'
+        f'<div class=note>F5 isolates the starters from the bullpens. Total = both starters\' '
+        f'projected first-5 ER; lead = the starter projected to allow fewer runs. No live F5 '
+        f'price in the feed yet — these are model fair values.</div>'
+        f'</div></div>'
+    )
+
+
 def report_body(r):
     """Render a matchup as a betting decision surface, not a written report."""
     gd, probability, esc = r["gd"], r["probs"], html.escape
@@ -855,9 +943,17 @@ def report_body(r):
         market_price = (
             f'{market["mkt"]:+d}' if market["mkt"] is not None else "—"
         )
-        market_probability = (
-            f'{market["impl"]:.1f}%' if market["impl"] is not None else "—"
-        )
+        # No-vig market fair price (book's two-sided hold removed) + the hold itself.
+        novig_fair = market.get("mkt_fair")
+        hold = market.get("hold")
+        if novig_fair is not None:
+            hold_tag = (
+                f'<span class=mut style="font-size:10px"> {hold:.1f}% hold</span>'
+                if hold is not None else ""
+            )
+            novig_cell = f'{novig_fair:+d}{hold_tag}'
+        else:
+            novig_cell = '<span class=mut>—</span>'
         edge = (
             f'{market["edge"]:+.1f}pt' if market["edge"] is not None else "—"
         )
@@ -867,7 +963,7 @@ def report_body(r):
         )
         return (
             f'<tr><td><b>{esc(market["label"])}</b></td><td>{market_price}</td>'
-            f'<td>{market["fair"]:+d}</td><td>{market_probability}</td>'
+            f'<td>{novig_cell}</td><td>{market["fair"]:+d}</td>'
             f'<td>{market["model"]:.1f}%</td><td class={tone}>{edge}</td>'
             f'<td class={tone}>{ev}</td><td><span class="pill {market["tone"]}">'
             f'{esc(market["state"])}</span></td></tr>'
@@ -897,12 +993,17 @@ def report_body(r):
 
     weather_label = "Dome"
     if weather.get("status") != "dome":
-        temperature = weather.get("temperature_f")
+        temperature = weather.get("temp_f")
+        if temperature is None:
+            temperature = weather.get("temperature_f")
         wind_out = weather.get("wind_out_mph")
         rain = weather.get("precipitation_probability_pct")
+        # Show the modeled run effect so it's visible the weather is actually applied.
+        wx_runs = (weather_run_factor(weather) - 1.0) * 100
+        wx_tag = f' · runs {wx_runs:+.1f}%' if abs(wx_runs) >= 0.1 else ' · neutral'
         weather_label = (
             f'{temperature:.0f}°F · wind {"out" if (wind_out or 0) >= 0 else "in"} '
-            f'{abs(wind_out or 0):.0f} mph · rain {rain or 0:.0f}%'
+            f'{abs(wind_out or 0):.0f} mph · rain {rain or 0:.0f}%{wx_tag}'
             if temperature is not None else "Unavailable"
         )
     away_lineup = (lineups.get("away") or {}).get("status", "unavailable")
@@ -1118,8 +1219,11 @@ def report_body(r):
     has_sharp = bool(r["sharp"])
     market_panel = (
         f'<div class=sec><h2>Market report</h2><div class=body><div class=table-scroll>'
-        f'<table><tr><th>Bet</th><th>Best</th><th>Fair</th><th>Market</th>'
-        f'<th>Model</th><th>Edge</th><th>EV</th><th>State</th></tr>{market_rows}</table>'
+        f'<table><tr><th>Bet</th><th title="best available American price">Best</th>'
+        f'<th title="book\'s price with its two-sided hold removed">No-vig fair</th>'
+        f'<th title="model fair price from the projection">Model fair</th>'
+        f'<th>Model%</th><th title="model% minus the no-vig market%">Edge</th>'
+        f'<th>EV</th><th>State</th></tr>{market_rows}</table>'
         f'</div></div></div>'
         if has_price else ''
     )
@@ -1137,6 +1241,8 @@ def report_body(r):
         f'(elite→poor) · rank. Edge = which side the metric favors.</div></div></div>'
         if advantage_rows else ''
     )
+    f5_panel = _f5_panel(r, gd, esc)
+
     return f"""<div class=matchup-head>
       <div class=matchup-team>{_logo(gd.away, "tlogo lg")}<div><b>{esc(gd.away)}</b><span>{esc(gd.away_sp)}</span></div></div>
       <div class=score-projection><span>Projected score</span><b>{probability.exp_away_runs:.1f} – {probability.exp_home_runs:.1f}</b><i>{probability.exp_total:.1f} total</i></div>
@@ -1162,6 +1268,8 @@ def report_body(r):
     </div>
 
     {market_panel}
+
+    {f5_panel}
 
     <div class=pitcher-grid>{pitcher_panels}</div>
 

@@ -21,6 +21,7 @@ class MarketQuote:
     best_odds: int
     best_book: str
     vigfree_probability: float
+    hold: float | None
     book_count: int
     sharp_book_count: int
     soft_book_count: int
@@ -118,7 +119,7 @@ def build_board(events: list[dict], fetched_at: str | None = None) -> OddsBoard:
     for row in rows:
         grouped.setdefault(_pair_id(row), []).append(row)
 
-    novig: dict[tuple, list[tuple[dict, float]]] = {}
+    novig: dict[tuple, list[tuple[dict, float, float]]] = {}
     for pair_rows in grouped.values():
         if len(pair_rows) != 2:
             continue
@@ -126,25 +127,30 @@ def build_board(events: list[dict], fetched_at: str | None = None) -> OddsBoard:
         pa = american_to_implied(first["odds"])
         pb = american_to_implied(second["odds"])
         da, db = devig_two_way(pa, pb)
+        # Two-sided hold (overround): how much vig the book bakes into BOTH sides. The
+        # de-vigged probs already remove it; we carry it so the report can show the true
+        # no-vig fair price next to the posted (juiced) number.
+        hold = max(0.0, pa + pb - 1.0)
         novig.setdefault(
             (first["game"], first["market"], first["selection"], first["line"]), []
-        ).append((first, da))
+        ).append((first, da, hold))
         novig.setdefault(
             (second["game"], second["market"], second["selection"], second["line"]), []
-        ).append((second, db))
+        ).append((second, db, hold))
 
     quotes = {}
     for key, values in novig.items():
-        best_row = max((row for row, _ in values), key=lambda row: row["odds"])
-        all_probs = [probability for _, probability in values]
+        best_row = max((row for row, _, _ in values), key=lambda row: row["odds"])
+        all_probs = [probability for _, probability, _ in values]
+        holds = [hold for _, _, hold in values]
         sharp_probs = [
             probability
-            for row, probability in values
+            for row, probability, _ in values
             if row["book"] in settings.SHARP_BOOKS
         ]
         soft_probs = [
             probability
-            for row, probability in values
+            for row, probability, _ in values
             if row["book"] not in settings.SHARP_BOOKS
         ]
         game, market, selection, line = key
@@ -155,20 +161,21 @@ def build_board(events: list[dict], fetched_at: str | None = None) -> OddsBoard:
             best_odds=best_row["odds"],
             best_book=best_row["book"],
             vigfree_probability=round(float(statistics.median(all_probs)), 6),
+            hold=round(float(statistics.median(holds)), 6) if holds else None,
             book_count=len(values),
             sharp_book_count=len(sharp_probs),
             soft_book_count=len(soft_probs),
             sharp_books=tuple(
                 sorted(
                     (row["book"], probability)
-                    for row, probability in values
+                    for row, probability, _ in values
                     if row["book"] in settings.SHARP_BOOKS
                 )
             ),
             soft_books=tuple(
                 sorted(
                     (row["book"], probability)
-                    for row, probability in values
+                    for row, probability, _ in values
                     if row["book"] not in settings.SHARP_BOOKS
                 )
             ),

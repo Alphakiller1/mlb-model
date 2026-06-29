@@ -12,7 +12,11 @@ from pathlib import Path
 
 from mlbmodel import settings
 from mlbmodel.baseball.model import normal_cdf
-from mlbmodel.market.oddsmath import american_to_implied, devig_two_way
+from mlbmodel.market.oddsmath import (
+    american_to_implied,
+    devig_two_way,
+    prob_to_american,
+)
 from mlbmodel.market.value import assess_value
 
 API_MARKETS = {
@@ -33,6 +37,7 @@ class PropQuote:
     best_odds: int
     best_book: str
     no_vig_probability: float
+    hold: float | None
     book_count: int
     sharp_probability: float | None
     soft_probability: float | None
@@ -109,30 +114,34 @@ def build_prop_board(
         if len(pair) != 2 or {row["side"] for row in pair} != {"over", "under"}:
             continue
         first, second = pair
+        implied_first = american_to_implied(first["odds"])
+        implied_second = american_to_implied(second["odds"])
         first_probability, second_probability = devig_two_way(
-            american_to_implied(first["odds"]),
-            american_to_implied(second["odds"]),
+            implied_first, implied_second
         )
+        # Two-sided hold (overround) on this over/under pair.
+        hold = max(0.0, implied_first + implied_second - 1.0)
         for row, probability in (
             (first, first_probability), (second, second_probability)
         ):
             key = (
                 row["game"], row["player"], row["prop"], row["line"], row["side"],
             )
-            probabilities.setdefault(key, []).append((row, probability))
+            probabilities.setdefault(key, []).append((row, probability, hold))
     quotes = []
     for key, values in probabilities.items():
-        best = max((row for row, _ in values), key=lambda row: row["odds"])
+        best = max((row for row, _, _ in values), key=lambda row: row["odds"])
         sharp = [
             probability
-            for row, probability in values
+            for row, probability, _ in values
             if row["book"] in settings.SHARP_BOOKS
         ]
         soft = [
             probability
-            for row, probability in values
+            for row, probability, _ in values
             if row["book"] not in settings.SHARP_BOOKS
         ]
+        holds = [hold for _, _, hold in values]
         game, player, prop, line, side = key
         quotes.append(
             PropQuote(
@@ -144,8 +153,9 @@ def build_prop_board(
                 best_odds=best["odds"],
                 best_book=best["book"],
                 no_vig_probability=round(
-                    statistics.median(probability for _, probability in values), 6
+                    statistics.median(probability for _, probability, _ in values), 6
                 ),
+                hold=round(float(statistics.median(holds)), 6) if holds else None,
                 book_count=len(values),
                 sharp_probability=round(statistics.median(sharp), 6) if sharp else None,
                 soft_probability=round(statistics.median(soft), 6) if soft else None,
@@ -259,6 +269,10 @@ def market_report(
                 "books": quote.book_count,
                 "model_probability": round(model_probability, 4),
                 "market_probability": quote.no_vig_probability,
+                "market_fair_odds": prob_to_american(quote.no_vig_probability),
+                "hold": (
+                    round(quote.hold * 100, 1) if quote.hold is not None else None
+                ),
                 "edge": assessment.edge,
                 "ev": assessment.ev_per_unit,
                 "fair_odds": assessment.fair_odds,
