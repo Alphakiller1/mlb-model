@@ -74,7 +74,11 @@ class OddsBoard:
 
 def _normalized_rows(events: list[dict], fetched_at: str) -> list[dict]:
     rows = []
-    market_names = {"h2h": "ml", "spreads": "runline", "totals": "total"}
+    market_names = {
+        "h2h": "ml", "spreads": "runline", "totals": "total",
+        "h2h_1st_5_innings": "f5_ml", "totals_1st_5_innings": "f5_total",
+        "spreads_1st_5_innings": "f5_runline",
+    }
     for event in events:
         away = settings.team_abbr(event.get("away_team", ""))
         home = settings.team_abbr(event.get("home_team", ""))
@@ -89,7 +93,7 @@ def _normalized_rows(events: list[dict], fetched_at: str) -> list[dict]:
                     raw_name = str(outcome.get("name") or "")
                     selection = (
                         settings.team_abbr(raw_name)
-                        if market_name in {"ml", "runline"}
+                        if market_name in {"ml", "runline", "f5_ml", "f5_runline"}
                         else raw_name.lower()
                     )
                     point = outcome.get("point")
@@ -107,7 +111,8 @@ def _normalized_rows(events: list[dict], fetched_at: str) -> list[dict]:
 
 
 def _pair_id(row: dict) -> tuple:
-    if row["market"] == "total":
+    # Totals (full-game and F5) pair by line; moneyline/runline pair without one.
+    if row["market"] in {"total", "f5_total"}:
         return row["game"], row["book"], row["market"], row["line"]
     return row["game"], row["book"], row["market"], None
 
@@ -199,11 +204,54 @@ def fetch_events(*, cache_path: Path | None = None) -> tuple[list[dict], str]:
     url = f"{settings.ODDS_API_BASE}/sports/{settings.ODDS_SPORT_KEY}/odds?{params}"
     with urllib.request.urlopen(url, timeout=30) as response:
         events = json.loads(response.read().decode())
+    if settings.ODDS_F5_ENABLED and isinstance(events, list):
+        # Best-effort and fully isolated: F5 is an add-on, it must never break (or block the
+        # caching of) the core full-game odds.
+        try:
+            _merge_f5_markets(events)
+        except Exception:
+            pass
     fetched = datetime.now(timezone.utc).isoformat(timespec="seconds")
     path = cache_path or settings.CACHE_DIR / "odds_latest.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"fetched_at": fetched, "events": events}), encoding="utf-8")
     return events, fetched
+
+
+def _merge_f5_markets(events: list[dict]) -> None:
+    """Fetch first-5-innings odds per event and merge them into each event's bookmakers.
+
+    F5 markets are "additional markets" only served by the per-event endpoint, so this costs
+    one extra call per game. Best-effort: any failure leaves the event with its full-game
+    markets only (F5 then falls back to model fair values downstream).
+    """
+    base = f"{settings.ODDS_API_BASE}/sports/{settings.ODDS_SPORT_KEY}/events"
+    for event in events:
+        event_id = event.get("id")
+        if not event_id:
+            continue
+        params = urllib.parse.urlencode({
+            "apiKey": settings.ODDS_API_KEY,
+            "regions": settings.ODDS_REGIONS,
+            "markets": settings.ODDS_F5_MARKETS,
+            "oddsFormat": "american",
+            "dateFormat": "iso",
+        })
+        try:
+            with urllib.request.urlopen(f"{base}/{event_id}/odds?{params}", timeout=30) as response:
+                payload = json.loads(response.read().decode())
+        except Exception:
+            continue
+        # Merge the F5 markets into the matching bookmaker entries already on the event.
+        existing = {bm.get("key"): bm for bm in event.get("bookmakers", [])}
+        for book in payload.get("bookmakers", []):
+            key = book.get("key")
+            target = existing.get(key)
+            if target is None:
+                event.setdefault("bookmakers", []).append(book)
+                existing[key] = book
+            else:
+                target.setdefault("markets", []).extend(book.get("markets", []))
 
 
 def load_cached_events(cache_path: Path | None = None) -> tuple[list[dict], str]:

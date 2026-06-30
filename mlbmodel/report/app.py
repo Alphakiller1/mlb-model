@@ -111,6 +111,7 @@ _MKT_LABEL = {
     "moneyline": "Moneyline", "h2h": "Moneyline", "ml": "Moneyline",
     "total": "Total", "totals": "Total",
     "spread": "Run line", "spreads": "Run line", "run_line": "Run line", "runline": "Run line",
+    "f5_ml": "F5 ML", "f5_total": "F5 Total", "f5_runline": "F5 Run line",
 }
 
 
@@ -664,7 +665,7 @@ def _trends(reports):
  {cards}"""
 
 
-def _research(reader, pv):
+def _research(reader, pv, f5_board=None):
     cal_result = reader.get(
         "v_pm_calibration?select=price_bucket,n,avg_price,actual_win_rate,gap"
         "&order=price_bucket&limit=12"
@@ -675,11 +676,36 @@ def _research(reader, pv):
         f'<td>{c["actual_win_rate"]}</td><td class={"neg" if abs(c.get("gap") or 0)>0.1 else "mut"}>{c.get("gap")}</td></tr>'
         for c in cal) or '<tr><td class=mut colspan=5>No calibration sample.</td></tr>'
     tone = "pos" if pv["verdict"] == "PROMOTE" else "mut"
+
+    # First-5 (F5) board — the same graded F5 rows surfaced across the model, ranked by edge.
+    f5 = sorted(
+        (item for item in (f5_board or []) if item[1].get("edge") is not None),
+        key=lambda item: -(item[1].get("edge") or 0),
+    )
+    if f5:
+        f5rows = "".join(
+            f'<tr><td><button class=gamepick onclick="openGame(\'{e(g)}\')">{e(g)}</button></td>'
+            f'<td><span class="pill side">{e(_MKT_LABEL.get(m["market"], m["market"]))}</span></td>'
+            f'<td><b>{e(str(m.get("side")))}</b></td><td class=num>{m.get("model"):.0f}%</td>'
+            f'<td class=num>{(str(m["mkt"]) if isinstance(m.get("mkt"), int) and m["mkt"]>=0 else str(m.get("mkt"))) if m.get("mkt") is not None else "—"}</td>'
+            f'<td><b class={_edge_grade((m.get("edge") or 0)/100)}>{m["edge"]:+.1f}pt</b></td>'
+            f'<td><span class="pill {m.get("tone","mut")}">{e(str(m.get("state")))}</span></td></tr>'
+            for g, m in f5)
+        f5_note = "First-5 markets, de-vigged and graded against the model — priced when live F5 odds are in the feed."
+    else:
+        f5rows = '<tr><td class=mut colspan=7>No live F5 prices on the slate yet — F5 shows as model fair values in each matchup.</td></tr>'
+        f5_note = "F5 prices appear here when the live F5 feed returns them."
+    f5_panel = (f'<div class=sec><h2>First 5 (F5) edges</h2><div class=body>'
+                f'<div class=table-scroll><table><tr><th>Game</th><th>Market</th><th>Side</th>'
+                f'<th>Model%</th><th>Price</th><th>Edge</th><th>State</th></tr>{f5rows}</table></div>'
+                f'<div class=note>{f5_note}</div></div></div>')
+
     return f"""<h2>Research</h2>
  <div class=ctx>Model + data health. Not part of the betting workflow — promotion is gated here.</div>
  <div class=sec><h2>Promotion gate</h2><div class=body>
    <div class="vbar {tone}"><b>{pv['verdict']}</b><span>{e('; '.join(pv.get('reasons', [])))}</span></div>
 	   <div class=note>Promotion also requires an executable signal timestamp and entry price. Open-to-close hindsight cannot qualify.</div></div></div>
+ {f5_panel}
  <div class=sec><h2>Kalshi price calibration</h2><div class=body>
    <div class=table-scroll><table><tr><th>Bucket</th><th>n</th><th>Avg price</th><th>Actual win%</th><th>Gap</th></tr>{crows}</table></div></div></div>"""
 
@@ -856,6 +882,14 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     except Exception:
         slate_reports = []
 
+    # Slate-wide F5 board (for Research) — the same graded F5 rows the matchups produce.
+    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
+    f5_board = [
+        (pkmap.get(pk, str(pk)), m)
+        for pk, rows in model_by_pk.items()
+        for m in rows
+        if str(m.get("market") or "").startswith("f5_")
+    ]
     views = {
         "today": _today(slate, sd, sharp_by_pk, sync),
         "matchups": matchups,
@@ -864,7 +898,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "props": _props(pitchers, prop_prices),
         "portfolio": _portfolio(reader, gate, slate),
         "results": _results(reader),
-        "research": _research(reader, gate),
+        "research": _research(reader, gate, f5_board),
     }
     nav = '<div class=brand>Chase Analytics</div><div class=tagline>MLB Model</div>' + "".join(
         f'<button class="navb{" on" if k == "today" else ""}" data-v="{k}" onclick="show(\'{k}\')">{lbl}</button>'

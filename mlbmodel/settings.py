@@ -37,6 +37,13 @@ ODDS_SPORT_KEY = "baseball_mlb"
 ODDS_REGIONS = os.getenv("ODDS_REGIONS", "us,eu")
 ODDS_PROP_REGIONS = os.getenv("ODDS_PROP_REGIONS", "us")
 ODDS_GAME_MARKETS = "h2h,spreads,totals"
+# First-5-innings markets are "additional markets": only the per-event odds endpoint returns
+# them, so they cost ~1 extra API call PER GAME per fetch. That multiplies Odds API credit
+# usage and can exhaust the quota (which would empty the WHOLE board), so live F5 pricing is
+# OFF by default — set ODDS_F5_ENABLED=1 to turn it on when there's credit headroom. With it
+# off, F5 still appears everywhere as a graded model market (just at model fair value).
+ODDS_F5_MARKETS = os.getenv("ODDS_F5_MARKETS", "h2h_1st_5_innings,totals_1st_5_innings")
+ODDS_F5_ENABLED = os.getenv("ODDS_F5_ENABLED", "0") not in {"0", "", "false", "False"}
 SHARP_BOOKS = {"pinnacle", "betonlineag", "lowvig", "bookmaker", "circasports"}
 
 MLBMA_SHEET_ID = (
