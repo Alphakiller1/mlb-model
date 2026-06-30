@@ -9,7 +9,11 @@ on:
     types:
       - mlbma-pipeline-complete
   schedule:
-    - cron: "17 * * * *"
+    # The Odds API free tier is 500 credits/month; a game-odds fetch costs ~6 credits, so an
+    # hourly cron (24/day) would drain it in ~3 days. The mlbma-pipeline dispatch already
+    # rebuilds on each pipeline run, so the cron is only a safety net — a few pregame refreshes
+    # (UTC) covering the afternoon and evening slates is plenty and keeps the key alive a month.
+    - cron: "17 16,20,23 * * *"
   workflow_dispatch:
 
 permissions:
