@@ -74,6 +74,10 @@ LEAGUE_BULLPEN_ERA = 4.05
 BULLPEN_IR_SENSITIVITY = 0.004
 OFF_FACTOR_CLIP = (0.55, 1.60)
 PITCH_FACTOR_CLIP = (0.60, 1.70)
+# Incremental team-total impact of the pitch-mix (arsenal-vs-lineup) response. Kept tight
+# because this signal partially overlaps the lineup/platoon value already applied, and it is
+# additionally regressed toward the mean before use.
+ARSENAL_FACTOR_CLIP = (0.95, 1.05)
 IMPLAUSIBLE_EDGE = 0.15
 
 PARK_FACTORS = {

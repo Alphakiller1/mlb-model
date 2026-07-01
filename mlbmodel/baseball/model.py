@@ -76,6 +76,8 @@ class GameData:
     home_lineup_features: dict = field(default_factory=dict)
     away_injury_features: dict = field(default_factory=dict)
     home_injury_features: dict = field(default_factory=dict)
+    away_arsenal_features: dict = field(default_factory=dict)
+    home_arsenal_features: dict = field(default_factory=dict)
     context_coverage_pct: int = 0
     missing_context: list[str] = field(default_factory=list)
 
@@ -150,6 +152,21 @@ def staff_factor(
     starter_share = clip(starter_innings / 9, 0.38, 0.81)
     raw = starter_component * starter_share + bullpen_component * (1 - starter_share)
     return _regress(clip(raw, *settings.PITCH_FACTOR_CLIP))
+
+
+def arsenal_factor(features: dict) -> float:
+    """Fold the opposing starter's pitch-mix (arsenal-vs-lineup) response into team runs.
+
+    The props engine already computes a bounded per-pitch response (usage-weighted whiff /
+    xwOBA / chase edges vs a league per-pitch baseline) and zeroes it below 35% arsenal
+    coverage, so a missing/low-coverage matchup arrives here as 1.0. We clip it tighter than
+    the props value and regress it, because this signal partially overlaps the lineup/platoon
+    value already applied to the same runs.
+    """
+    er_factor = (features or {}).get("er_factor")
+    if not isinstance(er_factor, (int, float)):
+        return 1.0
+    return _regress(clip(float(er_factor), *settings.ARSENAL_FACTOR_CLIP))
 
 
 def platoon_factor(context: TeamContext, baseline_osi: float | None) -> float:
@@ -271,6 +288,20 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         exp_home_pre_hfa, home_pitch, name=f"{gd.away} starter and bullpen",
         side=gd.home, markets="Home runs / Total / ML", confidence="medium",
         source="MLBMA starter season/L14 + bullpen quality/workload",
+    )
+    away_arsenal = arsenal_factor(gd.away_arsenal_features)
+    home_arsenal = arsenal_factor(gd.home_arsenal_features)
+    exp_away = apply_side(
+        exp_away, away_arsenal, name=f"{gd.home_sp} arsenal vs {gd.away} lineup",
+        side=gd.away, markets="Away runs / Total / pitcher props", confidence="medium",
+        source="MLBMA pitch-mix arsenal vs lineup per-pitch response",
+        include=away_arsenal != 1.0,
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, home_arsenal, name=f"{gd.away_sp} arsenal vs {gd.home} lineup",
+        side=gd.home, markets="Home runs / Total / pitcher props", confidence="medium",
+        source="MLBMA pitch-mix arsenal vs lineup per-pitch response",
+        include=home_arsenal != 1.0,
     )
 
     def apply_shared(
