@@ -1,5 +1,9 @@
 # MLB MODEL — Operational Status
 
+> **Historical setup record.** Current runtime and gate status are documented in
+> `governance/IMPLEMENTATION-STATUS-2026-06-27.md`. The daily pipeline no longer requires
+> either legacy repository.
+
 Last verified: 2026-06-26. The two betting repos now run **end-to-end on live data into one
 unified Supabase warehouse**. Nothing in the mlbma pipeline or the betting-brain vault was modified.
 

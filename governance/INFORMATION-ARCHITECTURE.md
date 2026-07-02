@@ -1,5 +1,9 @@
 # Information Architecture — MLB MODEL
 
+> **Implementation update 2026-06-27:** Today rows and the Matchups selector now switch
+> among all loaded games without regenerating the application. Props and Portfolio remain
+> explicit placeholders rather than simulated functionality.
+
 Version 1.0.0 · 2026-06-27. The product is one coherent app (`mlbmodel/report/app.py`), not
 separate dashboards. Repository boundaries (Bet Evaluator / Sharp Money Tracker / MLBMA) are never
 exposed to the user.

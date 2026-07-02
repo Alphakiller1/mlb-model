@@ -6,8 +6,8 @@ build_game_results.py — ingest recent FINAL scores from the MLB Stats API and:
   2. upsert games + game_outcomes into Supabase so settlement / CLV / calibration
      can grade sharp_observations + model_predictions as they accumulate.
 
-Run from a repo dir (so `import config, db, _compat` resolve) with that repo's venv:
-    cd sharp-money-tracker && .venv/bin/python ../../../mlb-model-planning/build_game_results.py --days 14
+Run from the unified repository:
+    python -m mlbmodel.sources.build_game_results --days 14 --out ./data
 """
 from __future__ import annotations
 
@@ -15,14 +15,12 @@ import argparse
 import csv
 import datetime as dt
 import json
-import sys
 import urllib.request
+import zlib
 from pathlib import Path
 
-sys.path.insert(0, str(Path.cwd()))
-import config          # noqa: E402
-import db              # noqa: E402
-import _compat as cmp  # noqa: E402
+from mlbmodel import settings
+from mlbmodel.storage.supabase import SupabaseWriter
 
 NAME_TO_ABBR = {
     "Arizona Diamondbacks": "ARI", "Atlanta Braves": "ATL", "Baltimore Orioles": "BAL",
@@ -43,6 +41,11 @@ def abbr(name: str) -> str:
     return NAME_TO_ABBR.get(name.strip(), name.strip().upper()[:3])
 
 
+def game_pk(game_date: str, away: str, home: str, game_number: int = 1) -> int:
+    suffix = "" if game_number == 1 else f"|{game_number}"
+    return zlib.crc32(f"{game_date}|{away}|{home}{suffix}".encode())
+
+
 def fetch_finals(start: str, end: str) -> list[dict]:
     url = (f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={start}"
            f"&endDate={end}&hydrate=linescore,team")
@@ -53,7 +56,8 @@ def fetch_finals(start: str, end: str) -> list[dict]:
         for g in d.get("games", []):
             if g.get("status", {}).get("abstractGameState") != "Final":
                 continue
-            a = g["teams"]["away"]; h = g["teams"]["home"]
+            a = g["teams"]["away"]
+            h = g["teams"]["home"]
             if "score" not in a or "score" not in h:
                 continue
             ls = g.get("linescore", {}).get("innings", [])
@@ -61,6 +65,8 @@ def fetch_finals(start: str, end: str) -> list[dict]:
             f5a = sum((i.get("away", {}) or {}).get("runs", 0) or 0 for i in ls[:5])
             games.append({
                 "date": g.get("officialDate", d["date"]),
+                "game_number": int(g.get("gameNumber") or 1),
+                "mlb_game_pk": g.get("gamePk"),
                 "away": abbr(a["team"]["name"]), "home": abbr(h["team"]["name"]),
                 "ar": int(a["score"]), "hr": int(h["score"]),
                 "f5a": int(f5a), "f5h": int(f5h),
@@ -71,6 +77,7 @@ def fetch_finals(start: str, end: str) -> list[dict]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=14)
+    ap.add_argument("--out", default=str(settings.DATA_DIR))
     args = ap.parse_args()
 
     today = dt.date.today()
@@ -88,30 +95,35 @@ def main() -> None:
         res_rows.append({"game_date": g["date"], "home_away": "away", "team": g["away"],
                          "opp": g["home"], "team_runs": g["ar"], "opp_runs": g["hr"],
                          "result": "W" if g["ar"] > g["hr"] else "L"})
-    out = Path(config.PIPELINE_DATA_DIR) / "game_results.csv"
+    out = Path(args.out) / "game_results.csv"
+    out.parent.mkdir(parents=True, exist_ok=True)
     cols = ["game_date", "home_away", "team", "opp", "team_runs", "opp_runs", "result"]
     with out.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=cols); w.writeheader(); w.writerows(res_rows)
+        writer = csv.DictWriter(f, fieldnames=cols)
+        writer.writeheader()
+        writer.writerows(res_rows)
     print(f"wrote {out} ({len(res_rows)} team-rows)")
 
     # 2) seed past games + game_outcomes in Supabase (settlement backbone)
     grows, orows = [], []
     for g in games:
-        gpk = cmp.game_pk(g["date"], g["away"], g["home"])
+        gpk = game_pk(g["date"], g["away"], g["home"], g["game_number"])
         winner = g["home"] if g["hr"] > g["ar"] else g["away"]
-        grows.append({"game_pk": gpk, "season": 2026, "game_date": g["date"],
+        grows.append({"game_pk": gpk, "season": int(g["date"][:4]), "game_date": g["date"],
                       "home_team": g["home"], "away_team": g["away"], "status": "final"})
         orows.append({"game_pk": gpk, "home_runs": g["hr"], "away_runs": g["ar"],
                       "home_f5_runs": g["f5h"], "away_f5_runs": g["f5a"],
                       "total_runs": g["hr"] + g["ar"], "margin_home": g["hr"] - g["ar"],
                       "winner_team": winner})
-    # dedupe by game_pk — doubleheaders share the deterministic date|away|home key
-    # (a known limitation of that key, consistent with sharp_tracker/bet_evaluator).
     grows = list({r["game_pk"]: r for r in grows}.values())
     orows = list({r["game_pk"]: r for r in orows}.values())
-    db.upsert("games", grows, "game_pk")
-    db.upsert("game_outcomes", orows, "game_pk")
-    print(f"upserted games={db.count('games')}  game_outcomes={db.count('game_outcomes')}")
+    writer = SupabaseWriter()
+    if writer.url and writer.key:
+        writer.upsert("games", grows, "game_pk")
+        writer.upsert("game_outcomes", orows, "game_pk")
+        print(f"upserted games={len(grows)} game_outcomes={len(orows)}")
+    else:
+        print("warehouse write skipped: SUPABASE_URL/SUPABASE_KEY not configured")
 
 
 if __name__ == "__main__":

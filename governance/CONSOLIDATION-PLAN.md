@@ -1,5 +1,11 @@
 # Consolidation Program — make MLB MODEL the single canonical home
 
+> **Status update 2026-06-27:** the active expected-runs, pricing, sharp collection,
+> settlement, reporting, and promotion runtime has moved into this repository. This plan's
+> original Phase 2 matrix is retained as migration history. Current cutover status is in
+> `IMPLEMENTATION-STATUS-2026-06-27.md`; legacy repositories remain parity references and
+> must not be archived yet.
+
 Version 1.0.0 · 2026-06-26. Governs the migration that makes `bet-evaluator` and
 `sharp-money-tracker` safely obsolete. **Working principle: no broad rewrite; preserve validated
 behavior; nothing is declared obsolete until the decommissioning gates pass.** This plan covers the

@@ -1,5 +1,11 @@
 # Forensic Integration Verification — MLB MODEL
 
+> **Historical audit, superseded 2026-06-27.** Its movement-at-open OOS result was
+> invalidated because `delta = close - open` was used to select a position priced at the
+> opening line. The unified gate now requires `signal_time`, `signal_delta`, and
+> `entry_prob`; legacy rows without those fields are ineligible. Do not cite the ROI claims
+> below as tradable evidence. See `IMPLEMENTATION-STATUS-2026-06-27.md`.
+
 Version 1.0.0 · 2026-06-26 · evidence-based. Verifies whether the unified model genuinely
 builds on Betting Brain, MLBMA, Sharp Money Tracker, and Bet Evaluator — through code, data
 lineage, schemas, and **reproducible point-in-time out-of-sample tests run this session**, not

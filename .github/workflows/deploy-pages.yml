@@ -1,0 +1,93 @@
+name: deploy-pages
+
+on:
+  push:
+    branches:
+      - main
+      - codex/unified-model-foundation
+  repository_dispatch:
+    types:
+      - mlbma-pipeline-complete
+  schedule:
+    # The Odds API free tier is 500 credits/month; a game-odds fetch costs ~6 credits, so an
+    # hourly cron (24/day) would drain it in ~3 days. The mlbma-pipeline dispatch already
+    # rebuilds on each pipeline run, so the cron is only a safety net — a few pregame refreshes
+    # (UTC) covering the afternoon and evening slates is plenty and keeps the key alive a month.
+    - cron: "17 16,20,23 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: vars.PAGES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install model
+        run: pip install .
+      - name: Synchronize MLBMA run inputs
+        run: |
+          mkdir -p _deploy_data
+          cp deployment_data/game_results.csv _deploy_data/
+          python -m mlbmodel.sources.sync_mlbma --out _deploy_data
+      - name: Fetch live odds (props + game lines for sharp-money board)
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          MLBMODEL_CACHE_DIR: _deploy_data
+        run: |
+          # Caches live prop lines + game-line odds into _deploy_data so the static build can
+          # show over/under prop leans AND the sharp-vs-soft Markets board. Non-fatal: a missing
+          # key or fetch error just leaves those sections empty rather than failing the deploy.
+          if [ -n "$ODDS_API_KEY" ]; then
+            python -m mlbmodel.market.props --cache _deploy_data/prop_odds_latest.json \
+              || echo "WARNING: prop odds fetch failed; props stay NO MARKET"
+            python -m mlbmodel.market.collect --data-dir _deploy_data \
+              || echo "WARNING: game odds fetch failed; sharp board stays empty"
+          else
+            echo "ODDS_API_KEY not set; skipping odds fetch (props + sharp stay empty)"
+          fi
+      - name: Build static research dashboard
+        env:
+          MLBMODEL_CACHE_DIR: _deploy_data
+          MLB_MODEL_DEPLOYMENT_NOTICE: >-
+            Synchronized MLBMA research build with live pitcher-prop lines.
+            No displayed state is a wager instruction.
+        run: |
+          mkdir -p _site
+          python -m mlbmodel.report.app \
+            --game HOU@DET \
+            --data-dir _deploy_data \
+            --out _site/index.html \
+            --no-fetch
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    if: vars.PAGES_ENABLED == 'true'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

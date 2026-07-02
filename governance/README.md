@@ -2,16 +2,17 @@
 
 The enforceable charter for the platform. Read in this order:
 
-1. **[MODEL-CONSTITUTION.md](MODEL-CONSTITUTION.md)** — 18 versioned standards, each mapped to an
+1. **[IMPLEMENTATION-STATUS-2026-06-27.md](IMPLEMENTATION-STATUS-2026-06-27.md)** — controlling
+   current-state record and invalidated-claim notice.
+2. **[MODEL-CONSTITUTION.md](MODEL-CONSTITUTION.md)** — 18 versioned standards, each mapped to an
    enforcement mechanism (test / gate / schema / registry / human). The supreme document.
-2. **[CURRENT-STATE-AUDIT.md](CURRENT-STATE-AUDIT.md)** — evidence-based maturity audit (what is
+3. **[CURRENT-STATE-AUDIT.md](CURRENT-STATE-AUDIT.md)** — historical maturity audit (what was
    implemented & verified vs documented but absent), strengths to preserve, gaps, unsupported claims.
-3. **[VERIFICATION-AUDIT.md](VERIFICATION-AUDIT.md)** — forensic integration verification with
-   lineage matrices (Betting Brain / MLBMA / Sharp Money Tracker / Bet Evaluator), the real
-   point-in-time OOS + ablation results, and acceptance criteria for "integration complete".
-4. **[ADVANCEMENT-FRAMEWORK.md](ADVANCEMENT-FRAMEWORK.md)** — traceability, extensibility boundaries,
+4. **[VERIFICATION-AUDIT.md](VERIFICATION-AUDIT.md)** — historical integration evidence; its
+   movement ROI was invalidated by decision-time leakage and must not be cited.
+5. **[ADVANCEMENT-FRAMEWORK.md](ADVANCEMENT-FRAMEWORK.md)** — traceability, extensibility boundaries,
    research/model lifecycle, MLBMA governance, per-market promotion gates.
-5. **[ROADMAP-AND-RISK.md](ROADMAP-AND-RISK.md)** — classified recommendations
+6. **[ROADMAP-AND-RISK.md](ROADMAP-AND-RISK.md)** — classified recommendations
    (Required/Recommended/Experimental/Rejected), migration & rollback, risk register, open questions.
 
 ## What is enforced in code today

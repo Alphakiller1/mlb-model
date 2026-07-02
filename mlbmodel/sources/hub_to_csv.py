@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 hub_to_csv.py — materialize the mlbma pipeline's `hub_dataset` (stored in Supabase)
-into the CSV files the bet-evaluator / sharp-money-tracker model code reads.
+into the versioned CSV inputs the unified MLB Model reads.
 
 This is the bridge that lets the model run off the Supabase warehouse instead of a
 Windows MLBMA_DATA_DIR path. It is READ-ONLY against Supabase and writes CSVs into a
@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import os
 import urllib.request
 from pathlib import Path
 

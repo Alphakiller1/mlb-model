@@ -1,5 +1,10 @@
 # Current-State Audit — MLB MODEL
 
+> **Historical snapshot, superseded by `IMPLEMENTATION-STATUS-2026-06-27.md`.**
+> The Chase Analytics Brain and MLBMA source repositories are now available, the report
+> runtime has been migrated into `mlbmodel`, and the prior movement backtest was found to
+> contain decision-time leakage.
+
 Version 1.0.0 · 2026-06-26 · evidence-based (verified by running the code, querying the
 warehouse, and reading source — **not** inferred from filenames or docs).
 
