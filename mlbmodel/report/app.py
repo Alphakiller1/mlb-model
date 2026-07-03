@@ -21,6 +21,7 @@ from mlbmodel.market.props import load_prop_board, market_report
 from mlbmodel.market.quotes import load_board
 from mlbmodel.portfolio.risk import summarize_positions
 from mlbmodel.props.model import build_pitcher_board
+from mlbmodel.report import chase_theme
 from mlbmodel.trends import build_slate_reports
 from mlbmodel.report.matchup import (
     _CSS,
@@ -104,7 +105,7 @@ def _today(slate, sd, sharp_by_pk, sync=None):
    <div class=sec><h2>Biggest model leans</h2><div class=body>
      <div class=table-scroll><table><tr><th>Lean</th><th>Margin</th><th>Win%</th><th>Tot</th></tr>{lrows or '<tr><td class=mut colspan=4>—</td></tr>'}</table></div>
      <div class=note>Ranked by projected run margin. Open in <b>Matchups</b> for fair vs market edge.</div></div></div>
- </div></div>"""
+ </div>"""
 
 
 _MKT_LABEL = {
@@ -710,19 +711,21 @@ def _research(reader, pv, f5_board=None):
    <div class=table-scroll><table><tr><th>Bucket</th><th>n</th><th>Avg price</th><th>Actual win%</th><th>Gap</th></tr>{crows}</table></div></div></div>"""
 
 
-# Portfolio/Results are hidden until they carry live betting/settlement data — no dead tabs.
+# All 8 sections are always reachable -- each has an honest empty/unavailable state instead
+# of being hidden, so the nav itself never implies a section doesn't exist yet.
 _NAV = [("today", "Today"), ("matchups", "Matchups"), ("trends", "Trends"), ("markets", "Markets"),
-        ("props", "Props"), ("research", "Research")]
+        ("props", "Props"), ("portfolio", "Portfolio"), ("results", "Results"), ("research", "Research")]
 
 _SHELL_CSS = """
-body{display:flex;padding:0;min-height:100vh}
+body{padding:0;min-height:100vh}
+#appshell{display:flex;min-height:calc(100vh - 68px)}
 #nav{width:208px;flex:0 0 208px;background:linear-gradient(160deg,rgba(17,24,39,.96),rgba(8,13,22,.98));
-border-right:1px solid var(--border);padding:18px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+border-right:1px solid var(--border);padding:18px 12px;position:sticky;top:68px;height:calc(100vh - 68px);overflow:auto}
 #nav .brand{font-family:var(--display);font-weight:800;font-size:17px;background:linear-gradient(90deg,var(--teal),var(--v-light));
 -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px}
 #nav .tagline{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px}
 .navb{display:block;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:8px;
-color:var(--muted);font:600 13.5px var(--sans);padding:9px 11px;margin:3px 0;cursor:pointer}
+color:var(--muted);font:600 13.5px var(--sans);padding:11px;margin:3px 0;cursor:pointer;min-height:44px}
 .navb:hover{color:var(--ink);background:rgba(124,77,255,.08)}
 .navb.on{color:var(--ink);background:linear-gradient(135deg,rgba(124,77,255,.2),rgba(45,212,191,.07));border-color:var(--border-violet)}
 #main{flex:1;min-width:0;overflow:auto;padding:24px 26px 70px}
@@ -770,7 +773,7 @@ background:rgba(124,77,255,.08);color:var(--ink2);font-size:12px;margin-bottom:1
 .trend-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
 .trend-list li{font-size:12.5px;line-height:1.5;color:var(--ink2);padding-left:2px}
 .trend-list .pill{margin-right:6px;vertical-align:middle}
-@media(max-width:760px){body{flex-direction:column}#nav{width:100%;height:auto;position:static;display:flex;flex-wrap:wrap;gap:4px}
+@media(max-width:760px){#appshell{flex-direction:column}#nav{width:100%;height:auto;position:static;display:flex;flex-wrap:wrap;gap:4px}
 #nav .brand,#nav .tagline{width:100%}.navb{width:auto}.cards{grid-template-columns:repeat(2,1fr)}}
 """
 
@@ -926,10 +929,17 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
           "r.querySelectorAll('.rtabbar button').forEach(x=>x.classList.remove('on'));"
           "r.querySelectorAll('.pn').forEach(x=>x.classList.remove('on'));"
           "b.classList.add('on');r.querySelector('[data-panel=\"'+k+'\"]').classList.add('on');}")
+    # Brand bar only -- the left sidebar below already handles section navigation for this
+    # product's 8-view information architecture (kept, per the shared design contract's
+    # allowance for product-specific IA); duplicating the same links in both would just be
+    # two navs fighting for the same job.
+    chase_nav = chase_theme.nav_html([], "today", "MLB Model")
     return (f'<!DOCTYPE html><html lang=en><head><meta charset=utf-8>'
             f'<meta name=viewport content="width=device-width,initial-scale=1">'
-            f'<title>MLB Model — Chase Analytics</title><style>{_CSS}{_SHELL_CSS}</style></head><body>'
-            f'<nav id=nav>{nav}</nav><main id=main>{notice}{sections}</main>'
+            f'<title>MLB Model — Chase Analytics</title>'
+            f'<style>{chase_theme.theme_css()}{_CSS}{_SHELL_CSS}</style></head><body>'
+            f'{chase_nav}'
+            f'<div id=appshell><nav id=nav>{nav}</nav><main id=main>{notice}{sections}</main></div>'
             f'<script>{js}</script></body></html>')
 
 

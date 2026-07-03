@@ -1,0 +1,333 @@
+/*
+ * Chase Analytics shared components — vendored, canonical copy.
+ * Source of truth: mlbma-pipeline/dashboard/chase_nav.css + mlbma_design_system.css.
+ * Requires chase_tokens.css to be loaded first.
+ */
+
+/* ── Nav / header (chase_nav.css, exact construction) ─────────────────────── */
+.chase-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  isolation: isolate;
+}
+.chase-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(180deg, rgba(5, 5, 9, 0.72) 0%, rgba(5, 5, 9, 0.48) 72%, rgba(5, 5, 9, 0.18) 100%);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  pointer-events: none;
+}
+.chase-nav {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: var(--chase-nav-max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+  height: var(--chase-nav-height);
+  gap: 16px;
+}
+.chase-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  text-decoration: none;
+  color: #F9FAFB;
+  flex-shrink: 0;
+}
+.chase-logo:hover { color: #fff; }
+.chase-nav-logo--icon {
+  height: 36px !important;
+  max-height: 36px !important;
+  width: 36px !important;
+  max-width: 36px !important;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(124, 58, 237, 0.45));
+}
+.chase-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  color: #FFFFFF;
+  font-family: 'Oswald', 'Arial Narrow', system-ui, sans-serif;
+  font-size: 21px;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(124, 77, 255, 0.38), 0 2px 12px rgba(0, 0, 0, 0.64);
+  white-space: nowrap;
+}
+.chase-wordmark__accent { color: #B8B8C2; }
+.chase-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.chase-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(174, 180, 198, 0.92);
+  text-decoration: none;
+  transition: color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  box-shadow: inset 0 -2px 0 transparent;
+}
+.chase-nav-link:hover { color: #F9FAFB; background: rgba(255, 255, 255, 0.04); }
+.chase-nav-link.active {
+  color: #E9E6FF;
+  background: transparent;
+  box-shadow: inset 0 -2px 0 #7C4DFF;
+  text-shadow: 0 0 18px rgba(124, 77, 255, 0.35);
+}
+.chase-product-tag {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 4px 10px;
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .chase-nav-links { display: none; }
+  .chase-product-tag { display: none; }
+  .chase-nav { padding: 0 14px; }
+}
+
+/* ── Section header (mlbma_design_system.css §Prompt 1) ───────────────────── */
+.ca-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ca-purple-light);
+}
+.ca-page-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.375rem);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  background: linear-gradient(180deg, #FFFFFF 0%, #E9EAF0 38%, #9DA0AE 56%, #D7D9E2 72%, #FFFFFF 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  margin: 10px 0 0;
+}
+.ca-page-header__sub {
+  max-width: 720px;
+  margin: 10px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+.ca-section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.2vw, 1.45rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+.ca-card {
+  border-radius: var(--ca-card-radius);
+  border: 1.5px solid var(--ca-panel-border);
+  background: var(--ca-panel-glass);
+  padding: 24px;
+  box-shadow: var(--ca-glow-violet);
+  position: relative;
+  overflow: hidden;
+}
+.ca-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.ca-badge-elite { background: rgba(34, 197, 94, 0.15); color: var(--ca-green); border-color: rgba(34, 197, 94, 0.3); }
+.ca-badge-high { background: rgba(45, 212, 191, 0.15); color: var(--ca-teal); border-color: rgba(45, 212, 191, 0.3); }
+.ca-badge-danger { background: rgba(245, 158, 11, 0.15); color: var(--ca-amber); border-color: rgba(245, 158, 11, 0.3); }
+.ca-badge-inconsistent { background: rgba(107, 114, 128, 0.15); color: var(--text-2); border-color: rgba(107, 114, 128, 0.3); }
+.ca-badge-weak { background: rgba(251, 113, 133, 0.15); color: var(--ca-red); border-color: rgba(251, 113, 133, 0.3); }
+
+/* ── Premium table shell (mlbma_design_system.css) ─────────────────────────── */
+.ca-table-wrap {
+  background: #10131F;
+  border: 1.5px solid #37405A;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.7);
+}
+.ca-table-wrap::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #9A6BFF, #5B2BE0);
+  z-index: 3;
+}
+table.ca-table { width: 100%; border-collapse: collapse; }
+table.ca-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #0C0E18;
+  color: #AEB4C6;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 14px;
+  border-bottom: 1.5px solid #37405A;
+  font-family: var(--font-display);
+  text-align: right;
+  white-space: nowrap;
+}
+table.ca-table thead th:first-child { text-align: left; }
+table.ca-table tbody td {
+  padding: 9px 14px;
+  height: 42px;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-size: 14px;
+}
+table.ca-table tbody td:first-child { text-align: left; font-weight: 600; }
+table.ca-table tbody tr:last-child td { border-bottom: none; }
+table.ca-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.018); }
+table.ca-table tbody tr:hover td {
+  background: rgba(124, 77, 255, 0.10);
+  box-shadow: inset 3px 0 0 var(--ca-purple);
+}
+
+/* ── Pills / status ─────────────────────────────────────────────────────── */
+.pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  border: 1px solid transparent;
+}
+.pill.pos { background: rgba(60,203,127,.13); color: #7BDC5A; border-color: rgba(60,203,127,.22); }
+.pill.warnc { background: rgba(232,194,74,.12); color: var(--gold); border-color: rgba(232,194,74,.22); }
+.pill.neg { background: rgba(242,84,91,.12); color: #FCA5A5; border-color: rgba(242,84,91,.22); }
+.pill.mut { background: rgba(255,255,255,.06); color: var(--text-2); }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.ca-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.ca-btn--primary {
+  color: #fff;
+  background: linear-gradient(135deg, #7C4DFF 0%, #5B2BE0 100%);
+  box-shadow: 0 10px 40px -10px rgba(124, 77, 255, 0.55);
+}
+.ca-btn--ghost {
+  color: #e9e6ff;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(124, 77, 255, 0.35);
+}
+.ca-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  min-height: 44px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(124, 77, 255, 0.4);
+  background: rgba(255, 255, 255, 0.03);
+  color: #e9e6ff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.ca-pill-btn:hover:not(.active) { background: rgba(124, 77, 255, 0.12); border-color: #C4B0FF; color: #fff; }
+.ca-pill-btn.active {
+  color: #fff;
+  background: linear-gradient(135deg, #7C4DFF 0%, #5B2BE0 100%);
+  border-color: transparent;
+  box-shadow: 0 10px 40px -10px rgba(124, 77, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* ── Honest status states (never let HOLD/ABSTAIN read as an action) ──────── */
+.ca-promo-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: .03em;
+  border: 1px solid var(--border-2);
+}
+.ca-promo-state--hold { background: rgba(255,255,255,.04); color: var(--text-2); border-color: var(--border-2); }
+.ca-promo-state--promote { background: rgba(60,203,127,.12); color: #7BDC5A; border-color: rgba(60,203,127,.3); }
+
+.ca-empty {
+  color: var(--text-2);
+  font-size: 13px;
+  padding: 18px;
+  border: 1px dashed var(--border-2);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 390px) {
+  .ca-page-header__sub { font-size: 14px; }
+  table.ca-table tbody td, table.ca-table thead th { padding: 8px 10px; font-size: 12.5px; }
+}
