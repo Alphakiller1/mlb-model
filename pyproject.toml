@@ -24,6 +24,12 @@ dev = ["pytest>=8", "ruff>=0.6"]
 [tool.setuptools.packages.find]
 include = ["mlbmodel*"]
 
+# Vendored Chase Analytics design layer (CSS + logo asset) read at runtime by
+# mlbmodel.report.chase_theme. Must ship in a non-editable `pip install .` so the hosted
+# GitHub Pages build (deploy-pages.yml) can generate self-contained HTML.
+[tool.setuptools.package-data]
+"mlbmodel.report" = ["static/*.css", "static/assets/*.png"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

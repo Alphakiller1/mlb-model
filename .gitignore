@@ -5,6 +5,8 @@ __pycache__/
 .env.*
 pipeline_data/
 *.egg-info/
+build/
+dist/
 .pytest_cache/
 .ruff_cache/
 
