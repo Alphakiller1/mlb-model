@@ -4,6 +4,11 @@ from mlbmodel.sources.sync_mlbma import (
     merge_pipeline_slate,
     pipeline_metadata,
 )
+from mlbmodel.sources.build_today_matchups import et_time
+
+
+def test_et_time_uses_portable_non_padded_hour_format():
+    assert et_time("2026-07-05T17:35:00Z") == "1:35 PM ET"
 
 
 def test_exact_pipeline_slate_enriches_live_schedule_identity():
