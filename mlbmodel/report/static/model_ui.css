@@ -68,6 +68,76 @@
   border-color: color-mix(in srgb, var(--ca-brand) 22%, var(--border-2));
 }
 .prop-chip > b { color: var(--ink); }
+.prop-chip--sm {
+  min-width: 52px;
+  padding: 5px 8px;
+  border-radius: 8px;
+}
+.prop-chip--sm > b { font-size: 14px; }
+.prop-chip--sm > i { font-size: 8px; }
+
+/* ── Props page — compact deck ── */
+.props-meta {
+  font-size: 12px;
+  margin: -6px 0 12px;
+  letter-spacing: 0.02em;
+}
+.pitcher-prop-deck { gap: 8px; }
+.pitcher-prop-card {
+  border-radius: 12px;
+  border-width: 1.5px;
+}
+.pitcher-prop-head { padding: 10px 12px; }
+.pitcher-prop-body { padding: 0 12px 10px; }
+.pitcher-prop-body .prop-proj-strip { margin: 8px 0 6px; gap: 6px; }
+.prop-panel {
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  margin-top: 6px;
+  background: rgba(6, 10, 18, 0.4);
+}
+.prop-panel > summary {
+  cursor: pointer;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  list-style: none;
+}
+.prop-panel > summary::before {
+  content: "▸ ";
+  color: var(--accent);
+}
+.prop-panel[open] > summary::before { content: "▾ "; }
+.prop-panel .table-scroll { border: 0; border-radius: 0 0 10px 10px; }
+.prop-panel .table-scroll table { font-size: 12px; }
+.prop-panel .table-scroll th,
+.prop-panel .table-scroll td { padding: 7px 10px; }
+.pitcher-prop-body .ca-board--inner { display: none; }
+
+.lean-dir--over,
+.pill.lean-dir--over {
+  color: #4ADE80;
+  border-color: rgba(74, 222, 128, 0.35);
+  background: rgba(74, 222, 128, 0.12);
+}
+.lean-dir--under,
+.pill.lean-dir--under {
+  color: #F87171;
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.12);
+}
+.lean-arrow {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1;
+  margin-right: 3px;
+  font-weight: 900;
+}
+.lean-dir--over .lean-arrow { color: #4ADE80; }
+.lean-dir--under .lean-arrow { color: #F87171; }
 
 /* ── Top leans strip (props header) ── */
 .top-leans {
@@ -110,6 +180,12 @@
   font-weight: 700;
   margin-top: 3px;
 }
+.top-lean .edge-tag.c-elite { color: #4ADE80; }
+.top-lean .edge-tag.c-good  { color: #7BDC5A; }
+.top-lean .edge-tag.c-mid   { color: #FBBF24; }
+.top-lean .edge-tag.c-weak  { color: #FB923C; }
+.top-lean .edge-tag.c-poor  { color: #F87171; }
+.top-lean .edge-tag.mut     { color: var(--ink2); }
 .top-lean button {
   border: 0;
   background: none;
@@ -147,20 +223,32 @@
 }
 #main .table-scroll thead th {
   background: #0C0E18;
-  color: #AEB4C6;
-  font-size: 10px;
+  color: #C4CBDC;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 12px 14px;
+  padding: 11px 14px;
   border-bottom: 1.5px solid #37405A;
   font-family: var(--display);
 }
 #main .table-scroll tbody td {
-  padding: 10px 14px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--ink2);
+  font-size: 14px;
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.35;
+}
+#main .table-scroll tbody td.num {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 14px;
+}
+#main .table-scroll tbody td b {
+  font-family: var(--display);
+  font-weight: 800;
+  color: var(--ink);
 }
 #main .table-scroll tbody tr:hover td {
   background: rgba(124, 77, 255, 0.05);
@@ -179,12 +267,32 @@
 /* ── Matchup context grid ── */
 .matchup-context-grid .ca-subhead:first-child { margin-top: 4px; }
 
+/* ── Matchup hero banner (shell polish) ── */
+#main .matchup-banner { margin-bottom: 14px; }
+#main .matchup-verdict { border-radius: 12px; }
+#main .matchup-kpi-strip .chip { font-size: 13px; }
+#main .matchup-summary .matchup-banner { margin-bottom: 12px; }
+
 /* ── Empty states inside boards ── */
 .ca-board .empty,
 .edge-command .empty {
   border-radius: 12px;
   background: rgba(6, 10, 18, 0.45);
 }
+
+/* ── Verdict pills (Markets board) ── */
+#main .pill.pos,
+#main .pill.warnc,
+#main .pill.neg,
+#main .pill.side {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+}
+#main b.pos { color: #4ADE80; }
+#main b.warnc { color: #FBBF24; }
+#main b.neg { color: #F87171; }
 
 /* ── Cards row variants ── */
 .cards.cards--tight { margin-bottom: 12px; }

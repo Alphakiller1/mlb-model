@@ -35,7 +35,14 @@ from mlbmodel.market.oddsmath import prob_to_american
 from mlbmodel.market.quotes import OddsBoard, load_board
 from mlbmodel.market.value import assess_value
 from mlbmodel.quant.promotion_gate import promotion_verdict
-from mlbmodel.report.html_fmt import section_head
+from mlbmodel.report.html_fmt import (
+    edge_grade,
+    pct_chip_html,
+    prob_chip_html,
+    section_head,
+    val_chip_html,
+    val_grade_html,
+)
 from mlbmodel.storage.supabase import SupabaseReader
 
 
@@ -562,6 +569,56 @@ details{border-top:1px solid var(--border);padding:12px 16px}summary{cursor:poin
 summary::before{content:"▸ ";color:var(--accent)}details[open] summary::before{content:"▾ "}
 details ul{margin:8px 0 0;padding-left:18px}details li{font-size:12.5px;color:var(--muted);margin:4px 0}
 /* decision-first matchup */
+.matchup-banner{position:relative;margin:0 0 12px;padding:18px 20px 14px;border-radius:16px;overflow:hidden;
+background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 28%),linear-gradient(180deg,var(--ca-board-top,#181B26),var(--ca-board-bottom,#12141D));
+border:2px solid var(--ca-panel-border,var(--border-violet));box-shadow:var(--ca-card-shadow),inset 0 1px 0 rgba(255,255,255,.08)}
+.matchup-banner::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--v-grad);opacity:.85}
+.matchup-banner__teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}
+.matchup-banner__team{display:flex;align-items:center;gap:12px;min-width:0}
+.matchup-banner__team--home{justify-content:flex-end;text-align:right}
+.matchup-banner__team-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.matchup-banner__abbr{font:800 28px var(--display);letter-spacing:-.02em;line-height:1;color:var(--ink)}
+.matchup-banner__team--favored .matchup-banner__abbr{color:var(--teal)}
+.matchup-banner__osi-tag{font-size:11px;font-weight:700;margin-top:1px}
+.matchup-banner__center{text-align:center;padding:0 8px}
+.matchup-banner__label{display:block;color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.matchup-banner__score{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:4px 0 6px}
+.matchup-banner__runs{font:800 32px var(--display);letter-spacing:-.03em;line-height:1;color:var(--ink)}
+.matchup-banner__dash{color:var(--muted-2);font:800 22px var(--display)}
+.matchup-banner__meta{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--ink2)}
+.matchup-banner__lean b{font-family:var(--display)}
+.matchup-banner__osi-bar{display:flex;height:5px;border-radius:999px;overflow:hidden;margin:12px 0 14px;background:rgba(255,255,255,.06)}
+.matchup-banner__osi-seg--away{background:linear-gradient(90deg,#9A6BFF,#7C4DFF)}
+.matchup-banner__osi-seg--home{background:linear-gradient(90deg,#2dd4bf,#14b8a6)}
+.matchup-banner__pitchers{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+.matchup-banner__sp{display:flex;align-items:center;gap:10px;min-width:0}
+.matchup-banner__sp--home{justify-content:flex-end;text-align:right}
+.matchup-banner__sp .phead{width:48px;height:48px;border-width:2px}
+.matchup-banner__sp b{display:block;font:800 14px var(--display);color:var(--ink);margin-top:1px}
+.matchup-banner__sp .mut{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.07em;font-weight:800}
+.matchup-banner__sp-stats{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px;justify-content:flex-start}
+.matchup-banner__sp--home .matchup-banner__sp-stats{justify-content:flex-end}
+.matchup-banner__vs{font:800 11px var(--display);color:var(--muted-2);letter-spacing:.12em}
+.hand-pill{display:inline-block;padding:2px 7px;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:.04em;border:1px solid transparent;vertical-align:middle}
+.hand-pill.hand-l{color:#93C5FD;border-color:rgba(147,197,253,.35);background:rgba(147,197,253,.1)}
+.hand-pill.hand-r{color:#FCA5A5;border-color:rgba(252,165,165,.35);background:rgba(252,165,165,.1)}
+.matchup-banner__kickoff{margin-top:12px;padding-top:10px;border-top:1px solid var(--border-2);text-align:center;font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+.matchup-banner--compact{padding:14px 16px 12px;margin-bottom:10px}
+.matchup-banner--compact .matchup-banner__abbr{font-size:22px}
+.matchup-banner--compact .matchup-banner__runs{font-size:24px}
+.matchup-banner--compact .matchup-banner__pitchers{display:none}
+.matchup-banner--compact .matchup-banner__osi-bar{margin-bottom:0}
+.matchup-verdict{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 10px}
+.matchup-verdict__pick b{font-family:var(--display);font-size:14px}
+.matchup-verdict__stats{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--ink2)}
+.matchup-kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);border:1.5px solid var(--border-2);border-radius:12px;overflow:hidden;margin:0 0 10px}
+.matchup-kpi{background:linear-gradient(180deg,var(--raised),var(--card));padding:11px 12px;text-align:center}
+.matchup-kpi .k{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin-bottom:5px}
+.matchup-kpi .v{font-family:var(--display);font-weight:800;font-size:15px;line-height:1.1}
+.matchup-meta-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.matchup-meta-bar span{flex:1 1 180px;background:linear-gradient(180deg,rgba(255,255,255,.04),transparent),var(--card);
+border:1px solid var(--border-2);border-radius:10px;padding:9px 11px;color:var(--ink2);font-size:11px;line-height:1.35}
+.matchup-meta-bar b{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;font-weight:800}
 .matchup-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;padding:4px 0 14px;border-bottom:1px solid var(--border)}
 .matchup-team{display:flex;align-items:center;gap:10px}.matchup-team.home{justify-content:flex-end;text-align:right}
 .matchup-team b{display:block;font:800 26px var(--display)}.matchup-team span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
@@ -583,8 +640,12 @@ details ul{margin:8px 0 0;padding-left:18px}details li{font-size:12.5px;color:va
 .pitch-source{color:var(--muted);font-size:10px;margin-bottom:7px}.model-details{border:1px solid var(--border);border-radius:8px;margin-top:12px}
 .pitch-name-meta{display:block;font-size:10px;margin-top:2px}
 .model-details p{color:var(--muted);font-size:12px;line-height:1.5;max-width:1000px}
-@media(max-width:980px){.decision-strip{grid-template-columns:repeat(3,1fr)}.decision-grid,.pitcher-grid{grid-template-columns:1fr}}
-@media(max-width:680px){.matchup-head{grid-template-columns:1fr auto 1fr}.matchup-team b{font-size:20px}.matchup-team span{display:none}.score-projection b{font-size:18px}.decision-strip{grid-template-columns:repeat(2,1fr)}.availability{display:grid;grid-template-columns:1fr 1fr}.pitch-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:980px){.matchup-kpi-strip{grid-template-columns:repeat(3,1fr)}.decision-grid,.pitcher-grid{grid-template-columns:1fr}}
+@media(max-width:680px){.matchup-banner__teams{grid-template-columns:1fr;gap:10px}.matchup-banner__center{order:-1}
+.matchup-banner__team--home{justify-content:flex-start;text-align:left}.matchup-banner__abbr{font-size:22px}
+.matchup-banner__runs{font-size:26px}.matchup-banner__pitchers{grid-template-columns:1fr;gap:8px}
+.matchup-banner__sp--home{justify-content:flex-start;text-align:left}.matchup-banner__vs{display:none}
+.matchup-kpi-strip{grid-template-columns:repeat(2,1fr)}.matchup-meta-bar span{flex:1 1 100%}.pitch-summary{grid-template-columns:repeat(2,1fr)}}
 """
 
 
@@ -697,16 +758,22 @@ def _graded_market_row(market, esc):
         novig_cell = f'{novig_fair:+d}{hold_tag}'
     else:
         novig_cell = '<span class=mut>—</span>'
-    edge = f'{market["edge"]:+.1f}pt' if market.get("edge") is not None else "—"
-    ev = f'{market["ev"] * 100:+.1f}%' if market.get("ev") is not None else "—"
-    tone = "pos" if (market.get("edge") or 0) > 0 else (
-        "neg" if market.get("edge") is not None else "mut"
+    edge_cls = edge_grade((market.get("edge") or 0) / 100) if market.get("edge") is not None else "c-na"
+    edge = (
+        f'<b class="{edge_cls}">{market["edge"]:+.1f}pt</b>'
+        if market.get("edge") is not None else '<span class="c-na">—</span>'
     )
+    ev_cls = edge_grade((market.get("ev") or 0)) if market.get("ev") is not None else "c-na"
+    ev = (
+        f'<b class="{ev_cls}">{market["ev"] * 100:+.1f}%</b>'
+        if market.get("ev") is not None else '<span class="c-na">—</span>'
+    )
+    model_cell = pct_chip_html(market.get("model"), digits=1) if market.get("model") is not None else "—"
     return (
         f'<tr><td><b>{esc(market["label"])}</b></td><td>{market_price}</td>'
         f'<td>{novig_cell}</td><td>{market["fair"]:+d}</td>'
-        f'<td>{market["model"]:.1f}%</td><td class={tone}>{edge}</td>'
-        f'<td class={tone}>{ev}</td><td><span class="pill {market["tone"]}">'
+        f'<td class=num>{model_cell}</td><td class=num>{edge}</td>'
+        f'<td class=num>{ev}</td><td><span class="pill {market["tone"]}">'
         f'{esc(market["state"])}</span></td></tr>'
     )
 
@@ -727,6 +794,43 @@ def _weather_detail(weather) -> str:
         f'{temperature:.0f}°F · wind {"out" if (wind_out or 0) >= 0 else "in"} '
         f'{abs(wind_out or 0):.0f} mph · rain {rain or 0:.0f}%{wx_tag}'
     )
+
+
+def _adv_metric_context(cat: str) -> str:
+    low = cat.lower()
+    if "fip" in low:
+        return "fip"
+    if "strikeout" in low or "k%" in low:
+        return "kpct"
+    if "home-run" in low or "hr/9" in low:
+        return "hr9"
+    if "woba" in low:
+        return "woba"
+    if "obr" in low or "baserunning" in low:
+        return "obr"
+    if "abq" in low:
+        return "abq"
+    if "rcv" in low:
+        return "rcv"
+    if "pals" in low:
+        return "pals"
+    if "projosi" in low.replace(" ", ""):
+        return "projosi"
+    if "bullpen (factor)" in low:
+        return "park"
+    if "era" in low:
+        return "era"
+    if "park" in low:
+        return "park"
+    return "osi"
+
+
+def _adv_val_cell(val, cat: str, unit: str) -> str:
+    if not isinstance(val, (int, float)):
+        return "—"
+    ctx = _adv_metric_context(cat)
+    digits = 3 if ctx == "woba" else (1 if unit == "%" else 2)
+    return val_grade_html(val, ctx, digits=digits, suffix=unit, bold=True)
 
 
 def _fmt_optional(value, *, digits=1, suffix=""):
@@ -835,7 +939,7 @@ def _matchup_context_panel(gd, probability, context, esc):
         else "Not announced"
     )
     park_pct = (gd.park_factor - 1.0) * 100
-    park_tone = "pos" if park_pct > 0.5 else ("neg" if park_pct < -0.5 else "mut")
+    park_cell = val_grade_html(gd.park_factor, "park", digits=3)
 
     def split_row(team, ctx, opposing_hand, arsenal):
         platoon = ctx.platoon_osi
@@ -849,9 +953,9 @@ def _matchup_context_panel(gd, probability, context, esc):
             )
         return (
             f'<tr><td><b>{esc(team)}</b><span class=mut> vs {esc(opposing_hand)}HP</span></td>'
-            f'<td>{_fmt_optional(platoon)}</td>'
-            f'<td>{_fmt_optional(woba, digits=3)}</td>'
-            f'<td>{_fmt_optional(ctx.osi)}</td>'
+            f'<td>{val_chip_html(platoon, "osi", digits=0) if platoon is not None else "<span class=c-na>—</span>"}</td>'
+            f'<td>{val_chip_html(woba, "woba", digits=3) if woba is not None else "<span class=c-na>—</span>"}</td>'
+            f'<td>{val_chip_html(ctx.osi, "osi", digits=0) if ctx.osi is not None else "<span class=c-na>—</span>"}</td>'
             f'<td class=mut>{esc(str(ctx.window_direction or "—"))}{arsenal_note}</td></tr>'
         )
 
@@ -861,7 +965,7 @@ def _matchup_context_panel(gd, probability, context, esc):
     )
     workload_rows = _workload_context_rows(gd, travel, esc)
     env_bits = [
-        f'<span><b>Park</b><i class={park_tone}>{gd.park_factor:.3f}</i> ({park_pct:+.1f}% runs)</span>',
+        f'<span><b>Park</b>{park_cell} <span class=mut>({park_pct:+.1f}% runs)</span></span>',
         f'<span><b>Weather</b>{esc(_weather_detail(weather))}</span>',
         f'<span><b>Plate umpire</b>{esc(str(umpire_label))}</span>',
         f'<span><b>Lineups</b>{esc(gd.away)} {esc(away_lineup)} · {esc(gd.home)} {esc(home_lineup)}</span>',
@@ -878,7 +982,6 @@ def _matchup_context_panel(gd, probability, context, esc):
           <div class=table-scroll><table><tr><th>Input</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th><th>Meaning</th></tr>{workload_rows}</table></div>
         </div>
       </div>
-      <div class=note>Park, weather, umpire, rest/travel, bullpen workload, lineup-vs-hand, and pitch-mix factors feed the expected-runs model above.</div>
     </div></div>"""
 
 
@@ -922,11 +1025,6 @@ def _f5_panel(r, gd, esc):
                     f'<span class=mut>({dist["p10"]:.0f}–{dist["p90"]:.0f})</span></span>')
         sp_html = (f'<div class=availability>{sp_cell(proj["away_sp"], proj["away_f5"], gd.away)}'
                    f'{sp_cell(proj["home_sp"], proj["home_f5"], gd.home)}</div>')
-    priced = any(isinstance(m.get("mkt"), int) for m in f5_rows)
-    note = ("F5 isolates the starters from the bullpens. Live F5 odds are de-vigged and graded "
-            "against the model — same as every other market." if priced else
-            "F5 isolates the starters from the bullpens. No live F5 price in the feed right now — "
-            "these are model fair values.")
     f5_table = "".join(_graded_market_row(market, esc) for market in f5_rows)
     table_html = (
         f'<div class="table-scroll table-scroll--spaced"><table><tr><th>Bet</th><th>Best</th>'
@@ -935,43 +1033,157 @@ def _f5_panel(r, gd, esc):
         if f5_table else ""
     )
     return (f'<div class=ca-board>{section_head("First 5 innings (F5)", icon="markets")}<div class=body>'
-            f'<div class=availability>{"".join(parts)}</div>{sp_html}{table_html}'
-            f'<div class=note>{note}</div></div></div>')
+            f'<div class=availability>{"".join(parts)}</div>{sp_html}{table_html}</div></div>')
+
+
+def _hand_pill(hand: str) -> str:
+    h = str(hand or "R").upper()[:1]
+    cls = "hand-l" if h == "L" else "hand-r"
+    return f'<span class="hand-pill {cls}">{html.escape(h)}HP</span>'
+
+
+def _sp_stat_chips(gd, side: str) -> str:
+    """Compact graded SP inputs for the banner."""
+    if side == "away":
+        k, fip = gd.away_k, gd.away_fip
+    else:
+        k, fip = gd.home_k, gd.home_fip
+    parts = []
+    if k is not None:
+        parts.append(val_chip_html(k, "kpct", digits=1, suffix="% K"))
+    if fip is not None:
+        parts.append(val_chip_html(fip, "fip", digits=2, suffix=" FIP"))
+    return "".join(parts)
+
+
+def _matchup_banner(r: dict, esc, *, compact: bool = False) -> str:
+    """Broadcast-style matchup hero — teams, score, OSI bar, starter row."""
+    gd, prob = r["gd"], r["probs"]
+    ex = r.get("extras") or {}
+    favored = gd.home if prob.exp_margin > 0 else gd.away
+    lean_margin = abs(prob.exp_margin)
+    away_id, home_id = ex.get("a_id"), ex.get("h_id")
+    start = str(ex.get("start") or gd.start_time or "").strip()
+    away_osi = gd.away_osi if gd.away_osi is not None else 50.0
+    home_osi = gd.home_osi if gd.home_osi is not None else 50.0
+    osi_total = max(away_osi + home_osi, 1.0)
+    away_pct = away_osi / osi_total * 100.0
+    home_pct = home_osi / osi_total * 100.0
+    away_fav = " matchup-banner__team--favored" if favored == gd.away else ""
+    home_fav = " matchup-banner__team--favored" if favored == gd.home else ""
+    lean_cls = edge_grade(lean_margin / 100) if lean_margin >= 0.25 else "c-mid"
+    compact_cls = " matchup-banner--compact" if compact else ""
+    away_osi_cell = (
+        f'<span class="matchup-banner__osi-tag">{val_grade_html(away_osi, "osi", digits=0, suffix=" OSI", bold=False)}</span>'
+        if gd.away_osi is not None else ""
+    )
+    home_osi_cell = (
+        f'<span class="matchup-banner__osi-tag">{val_grade_html(home_osi, "osi", digits=0, suffix=" OSI", bold=False)}</span>'
+        if gd.home_osi is not None else ""
+    )
+    kickoff = (
+        f'<div class=matchup-banner__kickoff><span>{esc(start)}</span></div>'
+        if start else ""
+    )
+    pitchers = ""
+    if not compact:
+        pitchers = f"""<div class=matchup-banner__pitchers>
+      <div class="matchup-banner__sp matchup-banner__sp--away">
+        {_headshot(away_id)}
+        <div>
+          <span class=mut>Away SP</span>
+          <b>{esc(gd.away_sp)}</b>
+          <div class=matchup-banner__sp-stats>{_hand_pill(gd.away_hand)}{_sp_stat_chips(gd, "away")}</div>
+        </div>
+      </div>
+      <div class=matchup-banner__vs>VS</div>
+      <div class="matchup-banner__sp matchup-banner__sp--home">
+        <div>
+          <span class=mut>Home SP</span>
+          <b>{esc(gd.home_sp)}</b>
+          <div class=matchup-banner__sp-stats>{_hand_pill(gd.home_hand)}{_sp_stat_chips(gd, "home")}</div>
+        </div>
+        {_headshot(home_id)}
+      </div>
+    </div>"""
+    return f"""<div class="matchup-banner{compact_cls}">
+  <div class=matchup-banner__teams>
+    <div class="matchup-banner__team matchup-banner__team--away{away_fav}">
+      {_logo(gd.away, "tlogo lg")}
+      <div class=matchup-banner__team-copy>
+        <span class=matchup-banner__abbr>{esc(gd.away)}</span>{away_osi_cell}
+      </div>
+    </div>
+    <div class=matchup-banner__center>
+      <span class=matchup-banner__label>Projected score</span>
+      <div class=matchup-banner__score>
+        <span class=matchup-banner__runs>{prob.exp_away_runs:.1f}</span>
+        <span class=matchup-banner__dash>–</span>
+        <span class=matchup-banner__runs>{prob.exp_home_runs:.1f}</span>
+      </div>
+      <div class=matchup-banner__meta>
+        {val_chip_html(prob.exp_total, "game_total", digits=1, suffix=" total")}
+        <span class=mut>·</span>
+        <span class=matchup-banner__lean>Lean <b class="{lean_cls}">{esc(favored)} {lean_margin:+.1f}</b></span>
+      </div>
+    </div>
+    <div class="matchup-banner__team matchup-banner__team--home{home_fav}">
+      <div class=matchup-banner__team-copy>
+        <span class=matchup-banner__abbr>{esc(gd.home)}</span>{home_osi_cell}
+      </div>
+      {_logo(gd.home, "tlogo lg")}
+    </div>
+  </div>
+  <div class=matchup-banner__osi-bar aria-hidden=true>
+    <span class="matchup-banner__osi-seg matchup-banner__osi-seg--away" style="width:{away_pct:.1f}%"></span>
+    <span class="matchup-banner__osi-seg matchup-banner__osi-seg--home" style="width:{home_pct:.1f}%"></span>
+  </div>
+  {pitchers}{kickoff}
+</div>"""
+
+
+def _matchup_kpi_strip(r: dict, esc, freshness: str) -> str:
+    gd, prob = r["gd"], r["probs"]
+    sim = r.get("simulation")
+    total_rng = (
+        f'{sim.total_p10:.0f}–{sim.total_p90:.0f}'
+        if sim is not None else "—"
+    )
+    conf_tone = "pos" if prob.confidence == "high" else ("warnc" if prob.confidence == "medium" else "mut")
+    fair_ml = fair_price(prob.p_home_win)
+    return f"""<div class=matchup-kpi-strip>
+  <div class=matchup-kpi><span class=k>{esc(gd.away)} win</span><span class=v>{prob_chip_html(prob.p_away_win, digits=1)}</span></div>
+  <div class=matchup-kpi><span class=k>{esc(gd.home)} win</span><span class=v>{prob_chip_html(prob.p_home_win, digits=1)}</span></div>
+  <div class=matchup-kpi><span class=k>Fair {esc(gd.home)} ML</span><span class=v>{fair_ml:+d}</span></div>
+  <div class=matchup-kpi><span class=k>80% total</span><span class=v>{val_chip_html(prob.exp_total, "game_total", digits=1)} <span class=mut style="font-size:11px">({total_rng})</span></span></div>
+  <div class=matchup-kpi><span class=k>Confidence</span><span class=v><span class="pill {conf_tone}">{esc(prob.confidence)}</span></span></div>
+  <div class=matchup-kpi><span class=k>Data age</span><span class=v>{esc(freshness)}</span></div>
+</div>"""
 
 
 def matchup_summary_html(report: dict) -> str:
     """Compact matchup card — optional embed; the app shell uses full ``report_body`` per game."""
     esc = html.escape
-    gd, probs = report["gd"], report["probs"]
-    away, home = report["away"], report["home"]
-    lean = home if probs.exp_margin > 0 else away
     markets = report.get("markets") or []
     mrows = ""
     for market in markets[:4]:
         edge = market.get("edge")
-        edge_cls = "pos" if (edge or 0) > 0 else "mut"
         mkt = esc(str(market.get("label") or market.get("market") or ""))
         edge_cell = (
-            f'<span class="{edge_cls}">{edge:+.1f}pt</span>'
+            f'<b class={edge_grade((edge or 0) / 100)}>{edge:+.1f}pt</b>'
             if edge is not None else '<span class=mut>—</span>'
         )
         mrows += (
             f'<tr><td>{mkt}</td><td>{esc(str(market.get("side") or ""))}</td>'
-            f'<td>{market.get("model", "—")}%</td><td>{edge_cell}</td></tr>'
+            f'<td>{pct_chip_html(market.get("model"), digits=1)}</td><td>{edge_cell}</td></tr>'
         )
     if not mrows:
         mrows = '<tr><td class=mut colspan=4>No priced markets on this slate.</td></tr>'
+    banner = _matchup_banner(report, esc, compact=True)
     return f"""<div class=matchup-summary>
- <div class=ctx>Compact view · full terminal loads for the featured game at build time.</div>
- <div class=cards>
-   <div class=card><div class=k>Proj total</div><div class=v>{probs.exp_total:.1f}</div></div>
-   <div class=card><div class=k>Margin</div><div class=v>{probs.exp_margin:+.1f}</div></div>
-   <div class=card><div class=k>Win% (H)</div><div class=v>{probs.p_home_win * 100:.0f}%</div></div>
-   <div class=card><div class=k>Lean</div><div class=v>{esc(lean)}</div></div>
- </div>
- <div class=ca-board><h2>{esc(away)} @ {esc(home)}</h2><div class=body>
+ {banner}
+ <div class=ca-board><div class=body>
    <div class=table-scroll><table><tr><th>Market</th><th>Side</th><th>Model%</th><th>Edge</th></tr>{mrows}</table></div>
-   <div class=note>SP: {esc(gd.away_sp)} vs {esc(gd.home_sp)}. Rebuild with <code>--game {esc(away)}@{esc(home)}</code> for the full matchup terminal.</div>
  </div></div></div>"""
 
 
@@ -993,12 +1205,16 @@ def report_body(r):
         default=None,
     )
     if opportunity and opportunity["edge"] > 0:
+        edge_cls = edge_grade((opportunity.get("edge") or 0) / 100)
         decision = (
-            f'<div class="vbar {opportunity["tone"]}"><b>{opportunity["state"]}</b>'
-            f'<span>{esc(opportunity["label"])}</span>'
-            f'<span>model {opportunity["model"]:.1f}%</span>'
-            f'<span>market {opportunity["impl"]:.1f}%</span>'
-            f'<span>edge {opportunity["edge"]:+.1f}pt</span></div>'
+            f'<div class="matchup-verdict vbar {opportunity["tone"]}">'
+            f'<span class="pill {opportunity["tone"]} matchup-verdict__badge">{opportunity["state"]}</span>'
+            f'<span class=matchup-verdict__pick><b>{esc(opportunity["label"])}</b></span>'
+            f'<span class=matchup-verdict__stats>'
+            f'model {pct_chip_html(opportunity.get("model"), digits=1)} '
+            f'market {pct_chip_html(opportunity.get("impl"), digits=1)} '
+            f'edge <b class="{edge_cls}">{opportunity["edge"]:+.1f}pt</b>'
+            f'</span></div>'
         )
     else:
         reason = (
@@ -1006,7 +1222,7 @@ def report_body(r):
             if any(market["mkt"] is not None for market in r["markets"])
             else "No paired market snapshot"
         )
-        decision = f'<div class="vbar mut"><b>NO ACTION</b><span>{esc(reason)}</span></div>'
+        decision = f'<div class="matchup-verdict vbar mut"><span class="pill mut">NO ACTION</span><span>{esc(reason)}</span></div>'
 
     weather_label = "Dome"
     if weather.get("status") != "dome":
@@ -1046,7 +1262,14 @@ def report_body(r):
         f'<span><b>Input coverage</b><i class={coverage_tone}>'
         f'{probability.data_coverage_pct}%</i></span>'
     )
-    availability = f'<div class=availability>{"".join(avail_parts)}</div>'
+    availability = f'<div class="matchup-meta-bar availability">{"".join(avail_parts)}</div>'
+
+    fresh_hours = r.get("freshness_hours")
+    freshness = (
+        f"{fresh_hours:.1f}h old" if fresh_hours is not None else "timestamp unavailable"
+    )
+    banner = _matchup_banner(r, esc)
+    kpi_strip = _matchup_kpi_strip(r, esc, freshness)
 
     factor_rows = "".join(
         f'<tr><td><b>{esc(factor["name"])}</b><span class=mut>'
@@ -1080,12 +1303,10 @@ def report_body(r):
         pitch_rows = "".join(
             f'<tr><td><b>{esc(str(pitch["pitch"]))}</b>'
             f'<span class="mut pitch-name-meta">{pitch["usage_pct"]:.0f}% usage</span></td>'
-            f'<td>{pitch["lineup_xwoba"]:.3f}</td>'
-            f'<td>{pitch["lineup_whiff_pct"]:.1f}%</td>'
-            f'<td class={"pos" if pitch["k_delta"] > 0 else "neg"}>'
-            f'{pitch["k_delta"]:+.2f} K%</td>'
-            f'<td class={"pos" if pitch["er_factor_delta"] < 0 else "neg"}>'
-            f'{pitch["er_factor_delta"] * 100:+.1f}% runs</td>'
+            f'<td>{val_chip_html(pitch["lineup_xwoba"], "woba", digits=3)}</td>'
+            f'<td>{val_chip_html(pitch["lineup_whiff_pct"], "rate", digits=1, suffix="%")}</td>'
+            f'<td>{val_grade_html(pitch["k_delta"], "margin", digits=2, suffix=" K%")}</td>'
+            f'<td>{val_grade_html(-pitch["er_factor_delta"] * 100, "margin", digits=1, suffix="% runs")}</td>'
             f'<td>{esc(pitch["edge"])}</td></tr>'
             for pitch in pitch_matchup.get("pitches", [])[:5]
         ) or '<tr><td class=mut colspan=6>No reliable pitch overlap.</td></tr>'
@@ -1124,13 +1345,7 @@ def report_body(r):
         for signal in r["sharp"]
     ) or '<tr><td class=mut colspan=4>No sharp-money snapshot for this game.</td></tr>'
 
-    fresh_hours = r.get("freshness_hours")
-    freshness = (
-        f"{fresh_hours:.1f}h old" if fresh_hours is not None else "timestamp unavailable"
-    )
-
-    # Graded advantage matrix — the congruent team-vs-team breakdown (raw · Δ-vs-baseline ·
-    # percentile chip · rank). This replaces the wordy "Matchup inputs" prose table.
+    # Graded advantage matrix (raw · Δ-vs-baseline · percentile chip · rank).
     def _adv_delta(d, lower_better):
         if d is None:
             return ""
@@ -1144,8 +1359,8 @@ def report_body(r):
         unit, lb = a.get("unit", ""), a.get("lower_better")
         ar = f' <span class=n>#{a["a_rank"]}</span>' if a.get("a_rank") else ""
         hr = f' <span class=n>#{a["h_rank"]}</span>' if a.get("h_rank") else ""
-        av = f'{_f(a.get("a_val"))}{unit}{_adv_delta(a.get("a_d"), lb)} <span class="chip {ac}">{al}</span>{ar}'
-        hv = f'{_f(a.get("h_val"))}{unit}{_adv_delta(a.get("h_d"), lb)} <span class="chip {hc}">{hl}</span>{hr}'
+        av = f'{_adv_val_cell(a.get("a_val"), a["cat"], unit)}{_adv_delta(a.get("a_d"), lb)} <span class="chip {ac}">{al}</span>{ar}'
+        hv = f'{_adv_val_cell(a.get("h_val"), a["cat"], unit)}{_adv_delta(a.get("h_d"), lb)} <span class="chip {hc}">{hl}</span>{hr}'
         return (
             f'<tr><td title="{esc(_cat_def(a["cat"]))}"><b>{esc(a["cat"])}</b></td>'
             f'<td class=side>{av}</td><td>{hv}</td>'
@@ -1175,29 +1390,15 @@ def report_body(r):
     advantage_panel = (
         f'<div class=ca-board>{section_head("Matchup advantage", icon="matchups")}<div class=body><div class=table-scroll>'
         f'<table><tr><th>Category</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th>'
-        f'<th>League base</th><th>Edge</th></tr>{advantage_rows}</table></div>'
-        f'<div class=note>Per team: value · Δ vs season baseline · percentile chip '
-        f'(elite→poor) · rank. Edge = which side the metric favors.</div></div></div>'
+        f'<th>League base</th><th>Edge</th></tr>{advantage_rows}</table></div></div></div>'
         if advantage_rows else ''
     )
     f5_panel = _f5_panel(r, gd, esc)
 
-    return f"""<div class=matchup-head>
-      <div class=matchup-team>{_logo(gd.away, "tlogo lg")}<div><b>{esc(gd.away)}</b><span>{esc(gd.away_sp)}</span></div></div>
-      <div class=score-projection><span>Projected score</span><b>{probability.exp_away_runs:.1f} – {probability.exp_home_runs:.1f}</b><i>{probability.exp_total:.1f} total</i></div>
-      <div class=matchup-team home><div><b>{esc(gd.home)}</b><span>{esc(gd.home_sp)}</span></div>{_logo(gd.home, "tlogo lg")}</div>
-    </div>
+    return f"""{banner}
     {decision}
-    <div class=decision-strip>
-      <span><b>{probability.p_away_win * 100:.1f}%</b>{esc(gd.away)} win</span>
-      <span><b>{probability.p_home_win * 100:.1f}%</b>{esc(gd.home)} win</span>
-      <span><b>{fair_price(probability.p_home_win):+d}</b>fair {esc(gd.home)} ML</span>
-      <span><b>{r["simulation"].total_p10:.0f}–{r["simulation"].total_p90:.0f}</b>80% total range</span>
-      <span><b>{esc(probability.confidence)}</b>model confidence</span>
-      <span><b>{esc(freshness)}</b>data age</span>
-    </div>
+    {kpi_strip}
     {availability}
-
     {context_panel}
 
     <div class=decision-grid>
@@ -1219,13 +1420,8 @@ def report_body(r):
       <tr><th>Risk</th><th>Betting implication</th><th>Type</th></tr>{risk_rows}</table>
     </div></div></div>
 
-    <details class=model-details><summary>Model lineage and limits</summary>
-      <p>Runs are built sequentially from team offense, handedness, posted lineup, official injuries,
-      rest/travel, starter innings and skill, bullpen quality and workload, park, first-pitch weather,
-      and the announced plate umpire. Every visible impact above is the exact run change produced at
-      that step. Missing inputs remain neutral and reduce confidence.</p>
-      <p>Promotion gate: <b>{esc(r["promotion"].get("verdict", "HOLD/ABSTAIN"))}</b>.
-      A positive projection-price gap remains MONITOR until executable out-of-sample results pass the gate.</p>
+    <details class=model-details><summary>Model lineage</summary>
+      <p>Gate: <b>{esc(r["promotion"].get("verdict", "HOLD/ABSTAIN"))}</b> · sequential run build from lineup, SP, bullpen, park, weather, ump.</p>
     </details>"""
 
 

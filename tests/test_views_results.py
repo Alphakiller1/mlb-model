@@ -70,7 +70,7 @@ def test_results_view_handles_warehouse_error():
 
 def test_trends_view_empty_slate():
     html = trends([])
-    assert "No games to analyze" in html
+    assert "No slate loaded" in html
 
 
 def test_trends_view_renders_board():

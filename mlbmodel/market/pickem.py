@@ -2,14 +2,52 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 from mlbmodel.market import prizepicks
 from mlbmodel.market.probability import p_over_line_erf, p_over_line_normal
 from mlbmodel import settings
 
+log = logging.getLogger(__name__)
+
 PICKEM_BOOKS = ("prizepicks", "underdog", "sleeper")
 _PICKEM_ORDER = ["PP_Fantasy", "K", "Outs", "ER", "H", "BB"]
+_PICKEM_LEAN_PTS = 8.0
+
+
+def load_pickem_lines(
+    loader,
+    cache_path: Path,
+    *,
+    fetch: bool = False,
+    fallback_path: Path | None = None,
+) -> list[dict]:
+    """Load pick'em lines: live fetch when asked, then cache, then bundled snapshot."""
+    cache_path = Path(cache_path)
+    if fetch:
+        try:
+            lines = loader.fetch_lines(cache_path)
+            if lines:
+                log.info("pick'em %s: fetched %s live lines", cache_path.name, len(lines))
+                return lines
+        except Exception as exc:
+            log.warning("pick'em %s live fetch failed: %s", cache_path.name, exc)
+    lines = loader.load_lines(cache_path)
+    if lines:
+        return lines
+    if fallback_path is None:
+        fallback_path = settings.ROOT / "deployment_data" / cache_path.name
+    fallback_path = Path(fallback_path)
+    if fallback_path != cache_path:
+        lines = loader.load_lines(fallback_path)
+        if lines:
+            log.info(
+                "pick'em %s: using fallback snapshot (%s lines)",
+                cache_path.name,
+                len(lines),
+            )
+    return lines
 
 
 def _load_cache(path: Path | None) -> list[dict]:
@@ -30,6 +68,55 @@ def _p_over(mean: float, sd: float, line: float) -> float:
 
 def _p_over_erf(line: float, mean: float, sd: float) -> float:
     return p_over_line_erf(line, mean, sd)
+
+
+def pickem_market_reports(
+    pitcher: dict,
+    sources: list[tuple[str, dict]],
+    *,
+    lean_threshold_pts: float = _PICKEM_LEAN_PTS,
+) -> list[dict]:
+    """Sportsbook-shaped market rows from pick'em lines when Odds API props are absent."""
+    name_key = prizepicks.normalize_name(pitcher.get("pitcher"))
+    projections = pitcher.get("projections") or {}
+    reports: list[dict] = []
+    for label, board in sources:
+        lines = board.get(name_key, {})
+        if not lines:
+            continue
+        book = label.lower()
+        for key in _PICKEM_ORDER:
+            line_obj, proj = lines.get(key), projections.get(key)
+            if not line_obj or not proj:
+                continue
+            line = float(line_obj["line"])
+            mean, sd = proj.get("mean"), proj.get("sd")
+            p_over = _p_over_erf(line, mean, sd or 0)
+            lean = "OVER" if p_over >= 0.5 else "UNDER"
+            edge_pts = abs(p_over - 0.5) * 100
+            model_probability = p_over if lean == "OVER" else 1 - p_over
+            edge = (p_over - 0.5) if lean == "OVER" else (0.5 - p_over)
+            state = lean if edge_pts >= lean_threshold_pts else "WATCH"
+            reports.append(
+                {
+                    "prop": key,
+                    "side": lean.lower(),
+                    "line": line,
+                    "best_odds": None,
+                    "best_book": book,
+                    "books": 1,
+                    "model_probability": round(model_probability, 4),
+                    "market_probability": None,
+                    "edge": round(edge, 4),
+                    "state": state,
+                    "source": "pickem",
+                }
+            )
+    return sorted(
+        reports,
+        key=lambda row: (-(row.get("edge") or 0), row["prop"], row["side"]),
+    )
+
 
 def build_pickem_rows_from_boards(
     pitchers: list[dict],

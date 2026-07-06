@@ -2,7 +2,7 @@
 mlbmodel.report.app — the unified MLB Model product shell.
 
 ONE coherent application (not separate dashboards) with a 7-section information architecture:
-Today · Matchups · Markets · Props · Portfolio · Results · Research. Workflow:
+Today · Matchups · Markets · Props · Results · Research. Workflow:
 discover -> inspect -> evaluate -> compare -> decide -> track -> review. Each section follows the
 page hierarchy: context -> conclusion -> price/opportunity -> evidence -> risks -> action ->
 methodology. The user never sees which repo a number came from — it reads as one platform.
@@ -37,11 +37,14 @@ from mlbmodel.analytics.edge_intel import clv_from_snapshots, collect_slate_oppo
 from mlbmodel.report.edge_ui import edge_command_html
 from mlbmodel.leans.decision_calibration import thresholds_from_leans
 from mlbmodel.leans.record import collect_leans, record_leans
-from mlbmodel.market.pickem import build_pickem_rows, build_pickem_rows_from_boards
+from mlbmodel.market.pickem import (
+    build_pickem_rows,
+    build_pickem_rows_from_boards,
+    load_pickem_lines,
+    pickem_market_reports,
+)
 from mlbmodel.report.shell import NAV as _NAV, shell_css, shell_js
-from mlbmodel.report.top_leans import top_leans_html
 from mlbmodel.report.views import (
-    portfolio as _portfolio,
     props as _props,
     research as _research,
     results as _results,
@@ -57,34 +60,54 @@ e = html.escape
 log = logging.getLogger(__name__)
 
 # Re-exported for tests and downstream imports.
-__all__ = ["_NAV", "_portfolio", "_props", "build_app", "main"]
+__all__ = ["_NAV", "_props", "build_app", "main"]
 
 
 def build_app(featured_game, *, fetch=True, data_dir=None):
     repo = DataRepository(data_dir)
     reader = SupabaseReader()
-    board = load_board(fetch=fetch)
-    prop_prices = load_prop_board(fetch=fetch)
+    cache_dir = Path(data_dir) if data_dir else settings.CACHE_DIR
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    board = load_board(fetch=fetch, cache_path=cache_dir / "odds_latest.json")
+    prop_prices = load_prop_board(
+        fetch=fetch, cache_path=cache_dir / "prop_odds_latest.json"
+    )
     pp_board = prizepicks.board_by_player(
-        prizepicks.load_lines(settings.CACHE_DIR / "prizepicks_lines.json")
+        load_pickem_lines(
+            prizepicks, cache_dir / "prizepicks_lines.json", fetch=fetch
+        )
     )
     ud_board = prizepicks.board_by_player(
-        underdog.load_lines(settings.CACHE_DIR / "underdog_lines.json")
+        load_pickem_lines(
+            underdog, cache_dir / "underdog_lines.json", fetch=fetch
+        )
     )
     sl_board = prizepicks.board_by_player(
-        sleeper.load_lines(settings.CACHE_DIR / "sleeper_lines.json")
+        load_pickem_lines(
+            sleeper, cache_dir / "sleeper_lines.json", fetch=fetch
+        )
     )
     gate = _promotion(reader)
     pitchers = build_pitcher_board(repo)
     promotion_status = (
         "PROMOTE" if gate.get("verdict") == "PROMOTE" else "HOLD/ABSTAIN"
     )
+    pickem_sources = [
+        ("PrizePicks", pp_board),
+        ("Underdog", ud_board),
+        ("Sleeper", sl_board),
+    ]
     for pitcher in pitchers:
-        pitcher["market_report"] = market_report(
+        reports = market_report(
             pitcher,
             prop_prices,
             promotion_status=promotion_status,
         )
+        if not reports:
+            reports = pickem_market_reports(pitcher, pickem_sources)
+        pitcher["market_report"] = reports
+        if reports:
+            pitcher["market_state"] = str(reports[0].get("state") or "NO MARKET")
     slate, sd = _slate(repo, pitchers)
     sync = repo.sync_manifest()
     games = [f'{g["away"]}@{g["home"]}' for g in slate if not g.get("err")]
@@ -165,8 +188,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         )
     options = "".join(option_rows)
     matchups = (
-        f'<div class=pagehead><div><h2>Matchups</h2>'
-        f'<div class=ctx>Projected runs, fair prices, and matchup impacts.</div></div>'
+        f'<div class=pagehead><div><h2>Matchups</h2></div>'
         f'<select id=gameSelect aria-label="Matchup" onchange="switchGame(this.value)">{options}</select></div>'
         f'{"".join(matchup_reports)}'
     )
@@ -193,11 +215,6 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     market_plays = _collect_market_plays(
         slate, sharp_by_pk, model_by_pk, decision_thresholds
     )
-    pickem_sources = [
-        ("prizepicks", pp_board),
-        ("underdog", ud_board),
-        ("sleeper", sl_board),
-    ]
     pickem_rows = build_pickem_rows_from_boards(pitchers, pickem_sources)
     if not pickem_rows:
         pickem_rows = build_pickem_rows(pitchers)
@@ -226,11 +243,6 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         pickem_rows=pickem_rows,
     )
     edge_command = edge_command_html(opportunities, clv_summary=clv_summary)
-    top_leans = top_leans_html(
-        market_plays=market_plays,
-        pickem_rows=pickem_rows,
-        prop_reports=flat_props,
-    )
 
     if sd:
         try:
@@ -267,8 +279,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "matchups": matchups,
         "trends": _trends(slate_reports),
         "markets": _markets(slate, sharp_by_pk, model_by_pk, decision_thresholds),
-        "props": _props(pitchers, prop_prices, pp_board, ud_board, sl_board, top_leans),
-        "portfolio": _portfolio(reader, gate, slate),
+        "props": _props(pitchers, prop_prices, pp_board, ud_board, sl_board),
         "results": _results(reader),
         "research": _research(reader, gate, f5_board, clv_summary),
     }

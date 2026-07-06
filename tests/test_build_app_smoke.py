@@ -24,7 +24,8 @@ def test_build_app_renders_all_views():
     assert "sortable" in html
     assert "function show(k)" in html
     assert "location.hash" in html
-    assert "pitcher-prop-deck" in html
+    assert "props-graded-table" in html or "Graded lines" in html
+    assert "pitcher-prop-deck" not in html.split("v-props")[1].split("</section>")[0]
     assert "Matchup context" in html
     assert "edge-command" in html
     assert "Where we have edge today" in html
@@ -40,3 +41,4 @@ def test_build_app_matchup_switch_hybrid_terminals():
     assert "matchup-full-src" in html
     assert "matchup-summary" in html
     assert "matchup-body" in html
+    assert "matchup-banner" in html

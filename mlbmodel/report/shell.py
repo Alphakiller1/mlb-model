@@ -13,7 +13,6 @@ NAV = [
     ("trends", "Trends"),
     ("markets", "Markets"),
     ("props", "Props"),
-    ("portfolio", "Portfolio"),
     ("results", "Results"),
     ("research", "Research"),
 ]
@@ -26,20 +25,21 @@ body{padding:0;min-height:100vh}
 @media(prefers-reduced-motion:reduce){.view.on{animation:none}.card{transition:none}}
 #main>.view>h2:first-child{font-family:var(--display);font-weight:800;font-size:30px;font-variation-settings:'wdth' 125;
 letter-spacing:-.02em;margin:0 0 5px;line-height:1.05}
-.ctx{color:var(--muted);font-size:13px;margin-bottom:18px}
-.note{color:var(--muted);font-size:11.5px;margin-top:10px}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:16px}
+.ctx{color:var(--muted);font-size:12px;margin-bottom:10px;line-height:1.35}
+.note{color:var(--muted);font-size:11px;margin-top:6px;line-height:1.35}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
 .card{position:relative;background:linear-gradient(180deg,var(--ca-board-top, #181B26),var(--ca-board-bottom, #12141D));
 border:2px solid var(--ca-panel-border, var(--border-violet));border-radius:14px;
-padding:15px 16px 14px;overflow:hidden;box-shadow:var(--ca-card-shadow);
+padding:12px 14px 11px;overflow:hidden;box-shadow:var(--ca-card-shadow);
 transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
 .card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--v-grad);opacity:.7}
 .card:hover{transform:translateY(-2px);border-color:var(--ca-panel-border);
 box-shadow:0 10px 34px rgba(0,0,0,.5),0 0 0 1px rgba(196,176,255,.12)}
-.card .k{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:800}
-.card .v{color:var(--ink);font-family:var(--display);font-weight:800;font-size:26px;font-variation-settings:'wdth' 120;
+.card .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+.card .v{color:var(--ink);font-family:var(--display);font-weight:800;font-size:24px;font-variation-settings:'wdth' 120;
 margin-top:4px;line-height:1.05;letter-spacing:-.01em}
-.cols{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;align-items:start}
+.cols{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start}
+.empty{color:var(--muted);font-size:12px;padding:12px;border:1px dashed var(--border-2);border-radius:8px}
 @media(max-width:880px){.cols{grid-template-columns:1fr}}
 .gcell{display:inline-flex;align-items:center;gap:5px}
 .gamepick{border:0;background:none;color:inherit;font:inherit;padding:0;cursor:pointer;text-align:left}
@@ -54,7 +54,6 @@ margin-top:4px;line-height:1.05;letter-spacing:-.01em}
 .deployment-notice{position:relative;border:1px solid var(--border-violet);border-radius:12px;padding:11px 14px 11px 16px;
 background:linear-gradient(135deg,rgba(124,77,255,.12),rgba(45,212,191,.04));color:var(--ink2);font-size:12px;margin-bottom:18px;overflow:hidden}
 .deployment-notice::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--v-light),var(--teal))}
-.empty{color:var(--muted);font-size:13px;padding:18px;border:1px dashed var(--border-2);border-radius:8px}
 .empty ul{margin:8px 0 0;padding-left:18px}.empty li{margin:3px 0}
 .pitcher-prop-deck{display:flex;flex-direction:column;gap:10px}
 .pitcher-prop-card{border:2px solid var(--ca-panel-border,var(--border-violet));border-radius:16px;overflow:hidden}

@@ -3,7 +3,16 @@ from __future__ import annotations
 
 import html
 
+from mlbmodel.report.html_fmt import edge_grade
+
 e = html.escape
+
+
+def _lean_edge_class(score: float, view: str) -> str:
+    """Color the edge tag — props/pick'em scores are pt-style; market rows use rank composite."""
+    if view == "markets":
+        return "mut"
+    return edge_grade(score / 100)
 
 
 def top_leans_html(
@@ -54,11 +63,12 @@ def top_leans_html(
         onclick = f"show('{view}')"
         if view == "matchups" and "@" in ctx:
             onclick = f"openGame('{e(ctx)}')"
+        edge_cls = _lean_edge_class(score, view)
         cards.append(
             f'<div class=top-lean><div class=k>{e(view.title())}</div>'
             f'<button type=button onclick="{onclick}">'
             f'<span class=v>{e(label)}</span>'
-            f'<span class=edge-tag>{score:.1f} edge score · {e(ctx)}</span>'
+            f'<span class="edge-tag {edge_cls}">{score:.1f} edge score · {e(ctx)}</span>'
             f'</button></div>'
         )
     return '<div class=top-leans aria-label="Top model leans">' + "".join(cards) + "</div>"

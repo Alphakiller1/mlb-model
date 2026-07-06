@@ -1,7 +1,7 @@
-"""Tests for Research and Portfolio view builders."""
+"""Tests for Research view builder."""
 from __future__ import annotations
 
-from mlbmodel.report.views import portfolio, research
+from mlbmodel.report.views import research
 from mlbmodel.storage.supabase import ReadResult
 
 
@@ -47,25 +47,3 @@ def test_research_view_renders_gate_and_f5():
     assert "ca-neon-icon" in html
     assert "First 5 (F5) edges" in html
     assert "NYY@BOS" in html
-
-
-def test_portfolio_view_with_section_head():
-    positions = [
-        {
-            "game_pk": 1,
-            "market_type": "h2h",
-            "selection": "NYY",
-            "line": None,
-            "entry_odds": 110,
-            "model_probability": 0.52,
-            "market_probability": 0.48,
-            "stake_units": 1.5,
-            "entry_time": "2026-06-27T12:00:00Z",
-            "strategy_version": "test",
-        }
-    ]
-    slate = [{"pk": 1, "away": "NYY", "home": "BOS"}]
-    html = portfolio(StaticReader({"paper_positions?": ReadResult(positions)}), {"verdict": "PROMOTE"}, slate)
-    assert "Open paper positions" in html
-    assert "ca-section-head" in html
-    assert "1.50u" in html
