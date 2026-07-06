@@ -13,12 +13,15 @@ from __future__ import annotations
 
 import argparse
 import html
+import math
 import os
 
 from mlbmodel.baseball.model import model_probabilities
 from mlbmodel.baseball.repository import DataRepository
 from mlbmodel.market.props import load_prop_board, market_report
 from mlbmodel.market.quotes import load_board
+from mlbmodel.market import prizepicks
+from mlbmodel import settings
 from mlbmodel.portfolio.risk import summarize_positions
 from mlbmodel.props.model import build_pitcher_board
 from mlbmodel.report import chase_theme
@@ -304,7 +307,59 @@ def _edge_grade(edge_fraction):
     return "c-poor"
 
 
-def _props(pitchers, prop_board):
+def _p_over(line, mean, sd):
+    """P(stat > line) via a normal approximation of the simulated distribution.
+
+    PrizePicks lines sit on the half-point so there is no push; the sim's own sd captures the
+    right spread (fantasy score is a sum → near-normal; counts are close enough for a lean).
+    """
+    if sd is None or sd <= 0:
+        return 1.0 if mean > line else (0.0 if mean < line else 0.5)
+    return 1.0 - 0.5 * (1.0 + math.erf((line - mean) / (sd * math.sqrt(2))))
+
+
+# Order the pick'em board surfaces PrizePicks pitcher markets (fantasy first, then the rest).
+_PICKEM_ORDER = ["PP_Fantasy", "K", "Outs", "ER", "H", "BB"]
+
+
+def _pickem_rows(pitchers, pp_board):
+    rows = ""
+    count = 0
+    for row in pitchers:
+        lines = pp_board.get(prizepicks.normalize_name(row.get("pitcher")), {})
+        if not lines:
+            continue
+        projections = row.get("projections") or {}
+        for key in _PICKEM_ORDER:
+            line, proj = lines.get(key), projections.get(key)
+            if not line or not proj:
+                continue
+            mean, sd = proj.get("mean"), proj.get("sd")
+            p_over = _p_over(line["line"], mean, sd or 0)
+            lean = "OVER" if p_over >= 0.5 else "UNDER"
+            tone = "pos" if abs(p_over - 0.5) >= 0.08 else "mut"
+            variant = (
+                "" if line.get("odds_type") == "standard"
+                else f' <span class="mut" style="font-size:9px">{e(str(line.get("odds_type")))}</span>'
+            )
+            count += 1
+            rows += (
+                f'<tr><td><div class=pitcher-cell>{_headshot(row.get("pitcher_id"))}'
+                f'<div><b>{e(str(row.get("pitcher") or "TBD"))}</b>'
+                f'<span>{_logo(row.get("team"), "tlogo sm")}{e(str(row.get("team") or ""))}</span>'
+                f'</div></div></td>'
+                f'<td>{prizepicks.STAT_LABEL.get(key, key)}{variant}</td>'
+                f'<td><b>{line["line"]:g}</b></td>'
+                f'<td>{mean:.1f}</td>'
+                f'<td>{p_over * 100:.0f}%</td>'
+                f'<td><span class="pill {tone}">{lean}</span></td></tr>'
+            )
+    return rows, count
+
+
+def _props(pitchers, prop_board, pp_board=None):
+    pp_board = pp_board or {}
+
     def projection_cell(row, prop, model_only=False):
         value = (row.get("projections") or {}).get(prop) or {}
         if not value:
@@ -445,6 +500,11 @@ def _props(pitchers, prop_board):
         '<tr><td class=mut colspan=8>No paired pitcher-prop snapshot is loaded. '
         'Projections remain visible; price decisions remain NO MARKET.</td></tr>'
     )
+    pickem_rows, pickem_count = _pickem_rows(pitchers, pp_board)
+    pickem_rows = pickem_rows or (
+        '<tr><td class=mut colspan=6>No PrizePicks pitcher lines loaded '
+        '(off-hours or feed unavailable).</td></tr>'
+    )
     confirmed = sum(1 for row in pitchers if row.get("lineup_status") == "confirmed")
     return f"""<h2>Pitcher Props</h2>
  <div class=ctx>Projection distributions, opponent pitch response, and executable price comparison.</div>
@@ -458,6 +518,10 @@ def _props(pitchers, prop_board):
    <div class=table-scroll><table><tr><th>Pitcher</th><th>Prop</th><th>Bet</th>
    <th>Best price</th><th>Model</th><th>Market</th><th>Edge</th><th>State</th></tr>
    {report_rows}</table></div></div></div>
+ <div class=sec><h2>PrizePicks pick&apos;em <span class="mut" style="font-weight:600;font-size:11px">model vs line · {pickem_count} lines</span></h2><div class=body>
+   <div class=table-scroll><table><tr><th>Pitcher</th><th>Market</th><th>PP line</th><th>Model</th><th>P(over)</th><th>Lean</th></tr>{pickem_rows}</table></div>
+   <div class=note>Fantasy score = Out +1, K +3, ER −3, quality start +4, win +6 (win modeled at league average). Hits / strikeouts / earned runs / outs / walks grade directly against the projection. P(over) is a normal approximation of the simulated distribution; leans ≥58% are highlighted. Not betting advice.</div>
+ </div></div>
  <div class=sec><h2>Pitcher board</h2><div class=body>
    <div class=table-scroll><table class=prop-table><tr><th>Starter</th><th>vs</th>
    <th>Performance</th><th title="Projected innings and expected runs allowed per nine">Starter baseline</th><th>K</th><th>BB</th>
@@ -808,6 +872,9 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     reader = SupabaseReader()
     board = load_board(fetch=fetch)
     prop_prices = load_prop_board(fetch=fetch)
+    pp_board = prizepicks.board_by_player(
+        prizepicks.load_lines(settings.CACHE_DIR / "prizepicks_lines.json")
+    )
     gate = _promotion(reader)
     pitchers = build_pitcher_board(repo)
     promotion_status = (
@@ -923,7 +990,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "matchups": matchups,
         "trends": _trends(slate_reports),
         "markets": _markets(slate, sharp_by_pk, model_by_pk),
-        "props": _props(pitchers, prop_prices),
+        "props": _props(pitchers, prop_prices, pp_board),
         "portfolio": _portfolio(reader, gate, slate),
         "results": _results(reader),
         "research": _research(reader, gate, f5_board),

@@ -89,6 +89,19 @@ jobs:
           else
             echo "ODDS_API_KEY not set; skipping odds fetch (props + sharp stay empty)"
           fi
+      - name: Fetch PrizePicks pick'em lines
+        run: |
+          # PrizePicks public MLB projections (league 2) — free, no Odds-API credits. curl gets
+          # past the edge that 403s Python clients; the module parses the raw JSON into pitcher
+          # pick'em lines. Non-fatal: a failure just leaves the pick'em board empty.
+          curl -s -m 30 \
+            -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
+            -H "Accept: application/json" \
+            "https://api.prizepicks.com/projections?league_id=2&per_page=1000" \
+            -o _deploy_data/pp_raw.json \
+            && python -m mlbmodel.market.prizepicks --from-raw _deploy_data/pp_raw.json \
+                 --cache _deploy_data/prizepicks_lines.json \
+            || echo "WARNING: PrizePicks fetch failed; pick'em board stays empty"
       - name: Build static research dashboard
         env:
           MLBMODEL_CACHE_DIR: _deploy_data
