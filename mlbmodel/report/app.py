@@ -305,7 +305,7 @@ def _edge_grade(edge_fraction):
 
 
 def _props(pitchers, prop_board):
-    def projection_cell(row, prop):
+    def projection_cell(row, prop, model_only=False):
         value = (row.get("projections") or {}).get(prop) or {}
         if not value:
             return '<td class=mut>—</td>'
@@ -317,13 +317,17 @@ def _props(pitchers, prop_board):
         # the model's edge there is not reliable enough to act on.
         trusted = row.get("projection_trust") == "trusted"
         edge_cls = _edge_grade(report.get("edge")) if (trusted and report) else "mut"
-        market = (
-            f'<span class="prop-mkt">{report["side"][0].upper()} {report["line"]:g} '
-            f'{report["best_odds"]:+d} · '
-            f'<b class="{edge_cls}">'
-            f'{(report.get("edge") or 0) * 100:+.1f}pt</b></span>'
-            if report else '<span class="prop-mkt mut">no line</span>'
-        )
+        if model_only:
+            # Hits allowed and fantasy points are model projections (no book line surfaced here).
+            market = '<span class="prop-mkt mut">model proj</span>'
+        else:
+            market = (
+                f'<span class="prop-mkt">{report["side"][0].upper()} {report["line"]:g} '
+                f'{report["best_odds"]:+d} · '
+                f'<b class="{edge_cls}">'
+                f'{(report.get("edge") or 0) * 100:+.1f}pt</b></span>'
+                if report else '<span class="prop-mkt mut">no line</span>'
+            )
         return (
             f'<td class=prop-cell><b>{value["mean"]:.1f}</b>'
             f'<span class=prop-range>range {value["p10"]:.0f}–{value["p90"]:.0f}</span>'
@@ -365,6 +369,8 @@ def _props(pitchers, prop_board):
             f'<span>{_display(row.get("skill_era"), digits=2)} runs/9</span></td>'
             f'{projection_cell(row, "K")}{projection_cell(row, "BB")}'
             f'{projection_cell(row, "ER")}{projection_cell(row, "Outs")}'
+            f'{projection_cell(row, "H", model_only=True)}'
+            f'{projection_cell(row, "Fantasy", model_only=True)}'
             f'<td><span class="pill {market_tone}">{e(str(market_state))}</span>'
             f'<span class=prop-sub>{e(str(row.get("confidence") or "low"))} confidence</span></td></tr>'
         )
@@ -455,7 +461,7 @@ def _props(pitchers, prop_board):
  <div class=sec><h2>Pitcher board</h2><div class=body>
    <div class=table-scroll><table class=prop-table><tr><th>Starter</th><th>vs</th>
    <th>Performance</th><th title="Projected innings and expected runs allowed per nine">Starter baseline</th><th>K</th><th>BB</th>
-   <th>ER</th><th>Outs</th><th>Market</th></tr>{rows or '<tr><td class=mut colspan=9>No pitcher inputs loaded.</td></tr>'}</table></div>
+   <th>ER</th><th>Outs</th><th title="Projected hits allowed">Hits</th><th title="DraftKings pitcher fantasy points: IP*2.25 + K*2 - ER*2 - H*0.6 - BB*0.6">DK Pts</th><th>Market</th></tr>{rows or '<tr><td class=mut colspan=11>No pitcher inputs loaded.</td></tr>'}</table></div>
  </div></div>"""
 
 

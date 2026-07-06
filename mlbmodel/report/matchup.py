@@ -968,6 +968,8 @@ def report_body(r):
               <span><b>{projections["K"]["mean"]:.1f}</b>K <i>{projections["K"]["p10"]:.0f}–{projections["K"]["p90"]:.0f}</i></span>
               <span><b>{projections["ER"]["mean"]:.1f}</b>ER <i>{projections["ER"]["p10"]:.0f}–{projections["ER"]["p90"]:.0f}</i></span>
               <span><b>{projections["Outs"]["mean"]:.1f}</b>outs <i>{projections["Outs"]["p10"]:.0f}–{projections["Outs"]["p90"]:.0f}</i></span>
+              <span><b>{projections["H"]["mean"]:.1f}</b>hits <i>{projections["H"]["p10"]:.0f}–{projections["H"]["p90"]:.0f}</i></span>
+              <span><b>{projections["Fantasy"]["mean"]:.1f}</b>DK pts <i>{projections["Fantasy"]["p10"]:.0f}–{projections["Fantasy"]["p90"]:.0f}</i></span>
               <span><em class={state_tone}>{esc(pitcher["state"])}</em><i>{esc(pitcher["confidence"])} confidence</i></span>
             </div>
             <div class=pitch-source>{esc(str(pitch_matchup.get("response_source") or "No response source"))} · expected contact below .320 favors the pitcher</div>
