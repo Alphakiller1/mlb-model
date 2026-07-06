@@ -131,6 +131,24 @@ jobs:
           else
             echo "Underdog: live fetch blocked — using committed snapshot"
           fi
+      - name: Fetch Sleeper pick'em lines
+        run: |
+          # Sleeper lines/available + players/mlb (id->name) — free, third pick'em source. Same
+          # snapshot pattern; a live fetch (both endpoints) upgrades it when it returns real lines.
+          cp deployment_data/sleeper_lines.json _deploy_data/sleeper_lines.json 2>/dev/null || true
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+          curl -s -m 30 --compressed -H "User-Agent: $UA" \
+            "https://api.sleeper.app/lines/available?dynasty=false" -o _deploy_data/sl_lines.json || true
+          curl -s -m 45 --compressed -H "User-Agent: $UA" \
+            "https://api.sleeper.app/v1/players/mlb" -o _deploy_data/sl_players.json || true
+          python -m mlbmodel.market.sleeper --from-raw-lines _deploy_data/sl_lines.json \
+            --from-raw-players _deploy_data/sl_players.json --cache /tmp/sl_live.json 2>/dev/null || true
+          if [ -s /tmp/sl_live.json ] && python -c "import json,sys; sys.exit(0 if len(json.load(open('/tmp/sl_live.json')))>0 else 1)" 2>/dev/null; then
+            cp /tmp/sl_live.json _deploy_data/sleeper_lines.json
+            echo "Sleeper: live fetch OK"
+          else
+            echo "Sleeper: live fetch blocked — using committed snapshot"
+          fi
       - name: Build static research dashboard
         env:
           MLBMODEL_CACHE_DIR: _deploy_data
