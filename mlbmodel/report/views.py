@@ -89,14 +89,14 @@ def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
  {edge_command}
  <div class=cards>
    <div class=card><div class=k>Games</div><div class=v>{n}</div></div>
-   <div class=card><div class=k>Slate</div><div class=v style="font-size:16px">{e(sd or "—")}</div></div>
+   <div class=card><div class=k>Slate</div><div class="v v-sm">{e(sd or "—")}</div></div>
    <div class=card><div class=k>With sharp signal</div><div class=v>{nsharp}</div></div>
-   <div class=card><div class=k>MLBMA sync</div><div class=v style="font-size:16px">{e(sync_label)}</div></div>
+   <div class=card><div class=k>MLBMA sync</div><div class="v v-sm">{e(sync_label)}</div></div>
  </div>
  <div class=cols>
    <div class=ca-board>{section_head("Slate", icon="slate")}<div class=body>
      <div class=table-scroll><table><tr><th>Game</th><th>Time</th><th>Win%(H)</th><th>Proj tot</th><th>Margin</th><th>Lean</th><th>Sharp</th></tr>{rows or '<tr><td class=mut colspan=7>No slate loaded.</td></tr>'}</table></div></div></div>
-   <div class=ca-board><h2>Biggest model leans</h2><div class=body>
+   <div class=ca-board>{section_head("Biggest model leans", icon="matchups")}<div class=body>
      <div class=table-scroll><table><tr><th>Lean</th><th>Margin</th><th>Win%</th><th>Tot</th></tr>{lrows or '<tr><td class=mut colspan=4>—</td></tr>'}</table></div>
      <div class=note>Ranked by projected run margin. Open in <b>Matchups</b> for fair vs market edge.</div></div></div>
  </div>"""
@@ -142,7 +142,7 @@ def _pickem_rows(pitchers, sources):
                 tone = "pos" if abs(p_over - 0.5) >= 0.08 else "mut"
                 variant = (
                     "" if line.get("odds_type") == "standard"
-                    else f' <span class="mut" style="font-size:9px">{e(str(line.get("odds_type")))}</span>'
+                    else f' <span class="mut odds-variant">{e(str(line.get("odds_type")))}</span>'
                 )
                 count += 1
                 rows += (
@@ -229,7 +229,7 @@ def portfolio(reader, gate, slate):
    <div class=card><div class=k>Open positions</div><div class=v>—</div></div>
    <div class=card><div class=k>Units at risk</div><div class=v>—</div></div>
    <div class=card><div class=k>Games exposed</div><div class=v>—</div></div>
-   <div class=card><div class=k>Auto sizing</div><div class=v style="font-size:16px">{sizing_state}</div></div>
+   <div class=card><div class=k>Auto sizing</div><div class="v v-sm">{sizing_state}</div></div>
  </div>
  <div class=empty>Portfolio store unavailable: {e(result.error)}. Apply the paper-portfolio migration and configure warehouse read access to enable this view.</div>"""
 
@@ -369,10 +369,10 @@ def results(reader):
    <div class=table-scroll><table class=sortable><tr><th>Bucket</th><th>n</th><th>Predicted</th><th>Actual</th><th>Gap</th></tr>{cal_rows}</table></div>
    <div class=note>Bucketed by model probability vs realized hit-rate once games finalize.</div>
  </div></div>
- <div class=ca-board><h2>By source</h2><div class=body>
+ <div class=ca-board>{section_head("By source", icon="results")}<div class=body>
    <div class=table-scroll><table><tr><th>Source</th><th>W</th><th>L</th><th>P</th><th>Hit%</th></tr>{src_rows}</table></div>
  </div></div>
- <div class=ca-board><h2>Recent leans</h2><div class=body>
+ <div class=ca-board>{section_head("Recent leans", icon="results")}<div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter leans…" data-filter-for="results-recent-table" aria-label="Filter results"></div>
    <div class=table-scroll><table id=results-recent-table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Entry</th><th>Lean</th><th>Edge</th><th>Result</th></tr>{recent}</table></div>
  </div></div>"""
@@ -477,7 +477,7 @@ def trends(reports):
    <div class=card><div class=k>Games analyzed</div><div class=v>{len(reports)}</div></div>
    <div class=card><div class=k>Dominant trends</div><div class=v>{total}</div></div>
    <div class=card><div class=k>Strongest signal</div><div class=v>{strongest:.1f}σ</div></div>
-   <div class=card><div class=k>Source</div><div class=v style="font-size:16px">MLBMA logs</div></div>
+   <div class=card><div class=k>Source</div><div class="v v-sm">MLBMA logs</div></div>
  </div>
  <div class=ca-board>{section_head("Dominant trend board", icon="trends")}<div class=body>
    <div class=table-scroll><table><tr><th>Game</th><th>Team</th><th>Type</th><th>Signal</th>

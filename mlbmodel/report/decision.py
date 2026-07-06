@@ -147,22 +147,22 @@ def markets_html(
                 f'<b>{e(mkt)} {e(play["sel"])}</b> <span class="pill side">{_num(play["price"])}</span>'
                 + (f' <span class=mut>{e(str(play["book"]))}</span>' if play["book"] else "")
                 + (
-                    f'<div class=mut style="font-size:11px">fair {_num(play["fair"])}</div>'
+                    f'<div class="mut meta-sub">fair {_num(play["fair"])}</div>'
                     if isinstance(play["fair"], int) else ""
                 )
             )
         else:
-            bet = f'<b>{e(mkt)} {e(play["sel"])}</b><div class=mut style="font-size:11px">no live #</div>'
+            bet = f'<b>{e(mkt)} {e(play["sel"])}</b><div class="mut meta-sub">no live #</div>'
         sharp = (
             f'<b class={edge_grade(play["div_pts"] / 100)}>+{play["div_pts"]:.1f}pt</b>'
-            f'<div class=mut style="font-size:11px">{play["sharp_p"]:.0f}% vs {play["soft_p"]:.0f}% pub</div>'
-            + ('<span class="pill warnc" style="font-size:10px">STEAM</span>' if play["steam"] else "")
+            f'<div class="mut meta-sub">{play["sharp_p"]:.0f}% vs {play["soft_p"]:.0f}% pub</div>'
+            + ('<span class="pill warnc hold-tag">STEAM</span>' if play["steam"] else "")
         )
         if play["medge"] is not None:
             ev_txt = f'{play["ev"] * 100:+.1f}% EV' if play["ev"] is not None else ""
             model = (
                 f'<b class={edge_grade(play["medge"] / 100)}>{play["medge"]:+.1f}pt</b>'
-                f'<div class=mut style="font-size:11px">model {play["model_p"]:.0f}% · {ev_txt}</div>'
+                f'<div class="mut meta-sub">model {play["model_p"]:.0f}% · {ev_txt}</div>'
             )
         elif play["model_p"] is not None:
             model = f'<span class=mut>{play["model_p"]:.0f}% · no live #</span>'
@@ -199,18 +199,18 @@ def markets_html(
         if thresholds.calibrated else ""
     )
     return f"""<h2>Markets · Where to bet</h2>
- <div class=ctx>Every play is graded on <b>three independent reads</b>: sharp-book money
+ <div class="ctx verdict-hint">Every play is graded on <b>three independent reads</b>: sharp-book money
    (de-vigged vs the public), the <b>model's</b> own edge vs the live number, and the price itself.
-   <b style="color:#2dd4bf">BET</b> = sharp and model agree the side is underpriced;
-   <b style="color:#f5b14c">LEAN</b> = right side, the number's gone;
-   <b style="color:#f87171">PASS</b> = they disagree.</div>
+   <span class=bet>BET</span> = sharp and model agree the side is underpriced;
+   <span class=lean>LEAN</span> = right side, the number's gone;
+   <span class=pass>PASS</span> = they disagree.</div>
  <div class=cards>
-   <div class=card><div class=k>Top play</div><div class=v style="font-size:17px">{e(top_txt)}</div>
-     <div class=mut style="font-size:11px">{e(top_sub)}</div></div>
+   <div class=card><div class=k>Top play</div><div class="v v-sm">{e(top_txt)}</div>
+     <div class="mut mut-sm">{e(top_sub)}</div></div>
    <div class=card><div class=k>Confirmed bets</div><div class=v>{n_bet}</div></div>
    <div class=card><div class=k>Leans</div><div class=v>{n_lean}</div></div>
    <div class=card><div class=k>Suggested exposure</div><div class=v>{exposure:.1f}u</div>
-     <div class=mut style="font-size:11px">{n_pass} pass</div></div>
+     <div class="mut mut-sm">{n_pass} pass</div></div>
  </div>
  <div class=ca-board>{section_head("Decision board", icon="markets")}<div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter game or bet…" data-filter-for="markets-table" aria-label="Filter markets"></div>

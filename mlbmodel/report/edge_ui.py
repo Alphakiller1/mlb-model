@@ -126,7 +126,7 @@ def edge_command_html(
 def clv_panel_html(clv_summary: dict | None) -> str:
     if not clv_summary:
         return (
-            '<div class=ca-board><h2>Closing line value (CLV)</h2><div class=body>'
+            f'<div class=ca-board>{section_head("Closing line value (CLV)", icon="results")}<div class=body>'
             '<div class=empty>No executable snapshot history with entry + close prices yet.</div></div></div>'
         )
     market_rows = "".join(
@@ -136,7 +136,7 @@ def clv_panel_html(clv_summary: dict | None) -> str:
     wr = clv_summary.get("win_rate")
     wr_txt = f'{wr:.1f}%' if wr is not None else "—"
     return f"""<div class=ca-board>{section_head("Closing line value (CLV)", icon="results")}<div class=body>
-  <div class=cards style="margin-bottom:12px">
+  <div class="cards cards--tight">
     <div class=card><div class=k>Mean CLV</div><div class=v>{clv_summary["clv_pts"]:+.1f}pt</div></div>
     <div class=card><div class=k>Sample</div><div class=v>{clv_summary["n"]}</div></div>
     <div class=card><div class=k>Win rate</div><div class=v>{wr_txt}</div></div>
@@ -150,7 +150,7 @@ def clv_panel_html(clv_summary: dict | None) -> str:
 def team_accuracy_html(teams: list[dict], *, title: str = "Teams we predict best") -> str:
     if not teams:
         return (
-            f'<div class=ca-board><h2>{e(title)}</h2><div class=body>'
+            f'<div class=ca-board>{section_head(title, icon="results")}<div class=body>'
             '<div class=empty>Need at least 3 settled moneyline leans per team.</div></div></div>'
         )
     rows = "".join(
@@ -167,7 +167,7 @@ def team_accuracy_html(teams: list[dict], *, title: str = "Teams we predict best
 def market_performance_html(markets: list[dict]) -> str:
     if not markets:
         return (
-            '<div class=ca-board><h2>Edge by market</h2><div class=body>'
+            f'<div class=ca-board>{section_head("Edge by market", icon="markets")}<div class=body>'
             '<div class=empty>Not enough settled leans per market type yet.</div></div></div>'
         )
     rows_out = []

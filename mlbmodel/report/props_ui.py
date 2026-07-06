@@ -53,7 +53,7 @@ def _pickem_rows_for_pitcher(row: dict, sources: list[tuple[str, dict]]) -> str:
             tone = "pos" if abs(p_over - 0.5) >= 0.08 else "mut"
             variant = (
                 "" if line.get("odds_type") == "standard"
-                else f' <span class="mut" style="font-size:9px">{e(str(line.get("odds_type")))}</span>'
+                else f' <span class="mut odds-variant">{e(str(line.get("odds_type")))}</span>'
             )
             rows += (
                 f'<tr><td><span class="pill mut">{e(label)}</span></td>'
@@ -152,14 +152,14 @@ def pitcher_prop_card(
       <span>Confidence <b>{e(str(row.get("confidence") or "low"))}</b></span>
       <span>Coverage <b>{row.get("data_coverage_pct", 0)}%</b></span>
     </div>
-    <div class=ca-board><h2>Market lines</h2><div class=body>
+    <div class="ca-board ca-board--inner"><div class=ca-subhead>Market lines</div><div class=body>
       <div class=table-scroll><table><tr><th>Prop</th><th>Bet</th><th>Best price</th>
         <th>Model</th><th>Market</th><th>Edge</th><th>EV</th><th>State</th></tr>{market_rows}</table></div>
     </div></div>
-    <div class=ca-board><h2>Pick&apos;em lines</h2><div class=body>
+    <div class="ca-board ca-board--inner"><div class=ca-subhead>Pick&apos;em lines</div><div class=body>
       <div class=table-scroll><table><tr><th>Book</th><th>Market</th><th>Line</th><th>Model</th><th>P(over)</th><th>Lean</th></tr>{pickem_rows}</table></div>
     </div></div>
-    <div class=ca-board><h2>Arsenal vs opponent</h2><div class=body>
+    <div class="ca-board ca-board--inner"><div class=ca-subhead>Arsenal vs opponent</div><div class=body>
       <div class=detail-strip>
         <span>{e(str(pitch_matchup.get("response_source") or "no response source"))}</span>
         <span>{pitch_matchup.get("coverage_pct", 0)}% arsenal covered</span>

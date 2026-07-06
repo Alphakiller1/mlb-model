@@ -56,7 +56,9 @@ def top_leans_html(
             onclick = f"openGame('{e(ctx)}')"
         cards.append(
             f'<div class=top-lean><div class=k>{e(view.title())}</div>'
-            f'<button type=button onclick="{onclick}"><span class=v>{e(label)}</span></button>'
-            f'<div class=mut>{e(ctx)} · {score:.1f}</div></div>'
+            f'<button type=button onclick="{onclick}">'
+            f'<span class=v>{e(label)}</span>'
+            f'<span class=edge-tag>{score:.1f} edge score · {e(ctx)}</span>'
+            f'</button></div>'
         )
     return '<div class=top-leans aria-label="Top model leans">' + "".join(cards) + "</div>"

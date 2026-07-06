@@ -1,0 +1,190 @@
+/**
+ * MLB Model shell — visual schema (Chase / MLBMA broadcast boards).
+ * Extends vendored mlbma_design_system.css; tokens only, no parallel palette.
+ */
+
+/* ── Density & rhythm ── */
+#main .ca-board + .ca-board,
+#main .edge-command + .cards,
+#main .cards + .cols,
+#main .cols + .ca-board { margin-top: 14px; }
+
+.card .v.v-sm,
+.edge-hero-stat b.v-sm { font-size: 17px; line-height: 1.15; }
+.card .mut.mut-sm { font-size: 11px; margin-top: 4px; }
+
+/* ── Subsection heads (inside boards) ── */
+.ca-subhead {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 14px 0 8px;
+}
+
+/* ── Edge command center ── */
+.edge-command { margin-bottom: 20px; }
+.edge-hero-stat::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--v-grad);
+  opacity: 0.75;
+}
+.edge-hero-stat { overflow: hidden; }
+.edge-command .ca-board { margin-top: 0; }
+
+/* ── Pitcher prop accordion — solid broadcast cards ── */
+.pitcher-prop-card {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.06), transparent 24%),
+    linear-gradient(180deg, var(--ca-board-top), var(--ca-board-bottom));
+  border: 2px solid var(--ca-panel-border, var(--border-violet));
+  border-radius: 16px;
+  box-shadow: var(--ca-card-shadow), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.pitcher-prop-card.on {
+  border-color: color-mix(in srgb, var(--ca-brand) 55%, var(--border-2));
+  box-shadow: var(--ca-glow-violet), var(--ca-card-shadow);
+}
+.pitcher-prop-head:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+}
+.pitcher-prop-body .ca-board--inner {
+  padding: 14px 16px;
+  margin-top: 10px;
+  border-radius: 12px;
+  background: rgba(6, 10, 18, 0.55);
+  border: 1px solid var(--border-2);
+}
+.pitcher-prop-body .ca-board--inner::before { display: none; }
+
+.prop-chip {
+  background: rgba(8, 12, 22, 0.72);
+  border-color: color-mix(in srgb, var(--ca-brand) 22%, var(--border-2));
+}
+.prop-chip > b { color: var(--ink); }
+
+/* ── Top leans strip (props header) ── */
+.top-leans {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin: 0 0 16px;
+}
+.top-lean {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05), transparent 22%),
+    linear-gradient(180deg, var(--ca-board-top), var(--ca-board-bottom));
+  border: 1.5px solid var(--ca-panel-border, var(--border-violet));
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: var(--ca-card-shadow);
+}
+.top-lean::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--v-grad);
+  opacity: 0.6;
+  border-radius: 12px 12px 0 0;
+}
+.top-lean .k {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+.top-lean .v { font: 800 14px var(--display); margin-top: 5px; color: var(--ink); }
+.top-lean .edge-tag {
+  display: block;
+  font-size: 10px;
+  color: var(--teal);
+  font-weight: 700;
+  margin-top: 3px;
+}
+.top-lean button {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.top-lean button:hover .v { color: var(--teal); }
+
+/* ── Premium tables inside app shell ── */
+#main .table-scroll {
+  border: 1.5px solid #37405A;
+  border-radius: 14px;
+  overflow: auto;
+  position: relative;
+  background: #10131F;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+#main .table-scroll::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #9A6BFF, #5B2BE0);
+  z-index: 3;
+  pointer-events: none;
+}
+#main .table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+#main .table-scroll thead th {
+  background: #0C0E18;
+  color: #AEB4C6;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 12px 14px;
+  border-bottom: 1.5px solid #37405A;
+  font-family: var(--display);
+}
+#main .table-scroll tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--ink2);
+}
+#main .table-scroll tbody tr:hover td {
+  background: rgba(124, 77, 255, 0.05);
+}
+#main .table-scroll tbody tr:last-child td { border-bottom: 0; }
+#main .table-scroll--spaced { margin-top: 12px; }
+
+/* ── Verdict / decision copy (no inline hex) ── */
+.verdict-hint .bet { color: var(--teal); font-weight: 700; }
+.verdict-hint .lean { color: var(--gold); font-weight: 700; }
+.verdict-hint .pass { color: var(--red); font-weight: 700; }
+.meta-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.hold-tag { font-size: 10px; color: var(--muted); }
+.odds-variant { font-size: 9px; color: var(--muted); }
+
+/* ── Matchup context grid ── */
+.matchup-context-grid .ca-subhead:first-child { margin-top: 4px; }
+
+/* ── Empty states inside boards ── */
+.ca-board .empty,
+.edge-command .empty {
+  border-radius: 12px;
+  background: rgba(6, 10, 18, 0.45);
+}
+
+/* ── Cards row variants ── */
+.cards.cards--tight { margin-bottom: 12px; }

@@ -28,6 +28,8 @@ def test_build_app_renders_all_views():
     assert "Matchup context" in html
     assert "edge-command" in html
     assert "Where we have edge today" in html
+    assert "model_ui.css" not in html  # inlined in shell
+    assert ".edge-hero-stat::before" in html or "edge-hero-stat" in html
     assert "ca-neon-icon" in html
 
 

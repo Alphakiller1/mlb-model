@@ -34,6 +34,7 @@ from mlbmodel.market.oddsmath import prob_to_american
 from mlbmodel.market.quotes import OddsBoard, load_board
 from mlbmodel.market.value import assess_value
 from mlbmodel.quant.promotion_gate import promotion_verdict
+from mlbmodel.report.html_fmt import section_head
 from mlbmodel.storage.supabase import SupabaseReader
 
 
@@ -672,7 +673,7 @@ def _graded_market_row(market, esc):
     hold = market.get("hold")
     if novig_fair is not None:
         hold_tag = (
-            f'<span class=mut style="font-size:10px"> {hold:.1f}% hold</span>'
+            f'<span class="mut hold-tag"> {hold:.1f}% hold</span>'
             if hold is not None else ""
         )
         novig_cell = f'{novig_fair:+d}{hold_tag}'
@@ -849,13 +850,13 @@ def _matchup_context_panel(gd, probability, context, esc):
         f'<span><b>SP hands</b>{esc(gd.away_sp)} ({esc(gd.away_hand)}HP) · {esc(gd.home_sp)} ({esc(gd.home_hand)}HP)</span>',
         f'<span><b>Coverage</b>{probability.data_coverage_pct}%</span>',
     ]
-    return f"""<div class=ca-board><h2>Matchup context</h2><div class=body>
+    return f"""<div class=ca-board>{section_head("Matchup context", icon="matchups")}<div class=body>
       <div class=matchup-env-strip>{"".join(env_bits)}</div>
       <div class=matchup-context-grid>
-        <div><h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 8px">Splits &amp; handedness</h3>
+        <div><div class=ca-subhead>Splits &amp; handedness</div>
           <div class=table-scroll><table><tr><th>Team</th><th>Platoon OSI</th><th>wOBA</th><th>OSI</th><th>Trend · pitch mix</th></tr>{splits_rows}</table></div>
         </div>
-        <div><h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 8px">Bullpen, workload &amp; inputs</h3>
+        <div><div class=ca-subhead>Bullpen, workload &amp; inputs</div>
           <div class=table-scroll><table><tr><th>Input</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th><th>Meaning</th></tr>{workload_rows}</table></div>
         </div>
       </div>
@@ -910,12 +911,12 @@ def _f5_panel(r, gd, esc):
             "these are model fair values.")
     f5_table = "".join(_graded_market_row(market, esc) for market in f5_rows)
     table_html = (
-        f'<div class=table-scroll style="margin-top:12px"><table><tr><th>Bet</th><th>Best</th>'
+        f'<div class="table-scroll table-scroll--spaced"><table><tr><th>Bet</th><th>Best</th>'
         f'<th>No-vig fair</th><th>Model fair</th><th>Model%</th><th>Edge</th><th>EV</th><th>State</th></tr>'
         f'{f5_table}</table></div>'
         if f5_table else ""
     )
-    return (f'<div class=ca-board><h2>First 5 innings (F5)</h2><div class=body>'
+    return (f'<div class=ca-board>{section_head("First 5 innings (F5)", icon="markets")}<div class=body>'
             f'<div class=availability>{"".join(parts)}</div>{sp_html}{table_html}'
             f'<div class=note>{note}</div></div></div>')
 
@@ -1053,7 +1054,7 @@ def report_body(r):
         )
         if not pitcher or not pitcher.get("projections"):
             return (
-                f'<div class=ca-board><h2>{esc(team)} starter</h2><div class=body>'
+                f'<div class=ca-board>{section_head(f"{esc(team)} starter", icon="props")}<div class=body>'
                 f'<div class=empty>No matched pitcher projection.</div></div></div>'
             )
         projections = pitcher["projections"]
@@ -1075,7 +1076,7 @@ def report_body(r):
                 "warnc" if pitcher["state"] == "LIMITED SAMPLE" else "side"
             )
         )
-        return f"""<div class=ca-board><h2>{esc(str(pitcher["pitcher"]))} vs {esc(str(pitcher["opponent"]))}</h2>
+        return f"""<div class=ca-board>{section_head(f'{esc(str(pitcher["pitcher"]))} vs {esc(str(pitcher["opponent"]))}', icon="props")}
           <div class=body>
             <div class=pitch-summary>
               <span><b>{projections["K"]["mean"]:.1f}</b>K <i>{projections["K"]["p10"]:.0f}–{projections["K"]["p90"]:.0f}</i></span>
@@ -1138,7 +1139,7 @@ def report_body(r):
     has_price = any(market.get("mkt") is not None for market in r["markets"])
     has_sharp = bool(r["sharp"])
     market_panel = (
-        f'<div class=ca-board><h2>Market report</h2><div class=body><div class=table-scroll>'
+        f'<div class=ca-board>{section_head("Market report", icon="markets")}<div class=body><div class=table-scroll>'
         f'<table><tr><th>Bet</th><th title="best available American price">Best</th>'
         f'<th title="book\'s price with its two-sided hold removed">No-vig fair</th>'
         f'<th title="model fair price from the projection">Model fair</th>'
@@ -1148,13 +1149,13 @@ def report_body(r):
         if has_price else ''
     )
     sharp_panel = (
-        f'<div class=ca-board><h2>Sharp market activity</h2><div class=body><table>'
+        f'<div class=ca-board>{section_head("Sharp market activity", icon="markets")}<div class=body><div class=table-scroll><table>'
         f'<tr><th>Market</th><th>Side</th><th>Sharp gap</th><th>Move</th></tr>{sharp_rows}</table>'
-        f'</div></div>'
+        f'</div></div></div>'
         if has_sharp else ''
     )
     advantage_panel = (
-        f'<div class=ca-board><h2>Matchup advantage</h2><div class=body><div class=table-scroll>'
+        f'<div class=ca-board>{section_head("Matchup advantage", icon="matchups")}<div class=body><div class=table-scroll>'
         f'<table><tr><th>Category</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th>'
         f'<th>League base</th><th>Edge</th></tr>{advantage_rows}</table></div>'
         f'<div class=note>Per team: value · Δ vs season baseline · percentile chip '
@@ -1183,7 +1184,7 @@ def report_body(r):
 
     <div class=decision-grid>
       {advantage_panel}
-      <div class=ca-board><h2>Biggest run impacts</h2><div class=body>
+      <div class=ca-board>{section_head("Biggest run impacts", icon="matchups")}<div class=body>
         <div class=table-scroll><table><tr><th>Factor</th><th>Impact</th><th>Affects</th><th>Trust</th></tr>{factor_rows}</table></div>
         <div class=missing-row><b>Waiting on</b>{missing}</div>
       </div></div>
@@ -1196,9 +1197,9 @@ def report_body(r):
     <div class=pitcher-grid>{pitcher_panels}</div>
 
     {sharp_panel}
-    <div class=ca-board><h2>What can break the projection</h2><div class=body><table>
+    <div class=ca-board>{section_head("What can break the projection", icon="research")}<div class=body><div class=table-scroll><table>
       <tr><th>Risk</th><th>Betting implication</th><th>Type</th></tr>{risk_rows}</table>
-    </div></div>
+    </div></div></div>
 
     <details class=model-details><summary>Model lineage and limits</summary>
       <p>Runs are built sequentially from team offense, handedness, posted lineup, official injuries,

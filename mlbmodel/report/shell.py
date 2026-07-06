@@ -1,7 +1,11 @@
 """App shell: navigation, layout CSS, and in-page view switching JS."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from mlbmodel.report.interactive import TABLE_UI_CSS, TABLE_UI_JS
+
+_STATIC = Path(__file__).resolve().parent / "static"
 
 NAV = [
     ("today", "Today"),
@@ -53,7 +57,7 @@ background:linear-gradient(135deg,rgba(124,77,255,.12),rgba(45,212,191,.04));col
 .empty{color:var(--muted);font-size:13px;padding:18px;border:1px dashed var(--border-2);border-radius:8px}
 .empty ul{margin:8px 0 0;padding-left:18px}.empty li{margin:3px 0}
 .pitcher-prop-deck{display:flex;flex-direction:column;gap:10px}
-.pitcher-prop-card{border:1px solid var(--border-2);border-radius:14px;background:var(--card);box-shadow:var(--ca-card-shadow);overflow:hidden}
+.pitcher-prop-card{border:2px solid var(--ca-panel-border,var(--border-violet));border-radius:16px;overflow:hidden}
 .pitcher-prop-head{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;background:transparent;color:inherit;
 font:inherit;text-align:left;cursor:pointer;transition:background .15s ease}
 .pitcher-prop-head:hover{background:rgba(124,77,255,.06)}
@@ -108,7 +112,8 @@ border:2px solid var(--ca-panel-border,var(--border-violet));border-radius:14px;
 
 
 def shell_css() -> str:
-    return _SHELL_BASE + TABLE_UI_CSS
+    model_ui = (_STATIC / "model_ui.css").read_text(encoding="utf-8")
+    return _SHELL_BASE + TABLE_UI_CSS + model_ui
 
 
 def shell_js() -> str:
