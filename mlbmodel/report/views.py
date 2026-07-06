@@ -11,6 +11,7 @@ from mlbmodel.portfolio.risk import summarize_positions
 from mlbmodel.report.decision import MKT_LABEL as _MKT_LABEL
 from mlbmodel.report.html_fmt import display as _display, edge_grade as _edge_grade, section_head
 from mlbmodel.report.matchup import _headshot, _logo
+from mlbmodel.report.props_ui import pitcher_prop_deck
 
 e = html.escape
 
@@ -150,131 +151,19 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top
     pp_board = pp_board or {}
     ud_board = ud_board or {}
     sl_board = sl_board or {}
+    pickem_sources = [
+        ("PrizePicks", pp_board),
+        ("Underdog", ud_board),
+        ("Sleeper", sl_board),
+    ]
 
-    def projection_cell(row, prop, model_only=False, label=""):
-        value = (row.get("projections") or {}).get(prop) or {}
-        if not value:
-            return f'<td class=mut data-label="{e(label or prop)}">—</td>'
-        report = next(
-            (item for item in row.get("market_report", []) if item["prop"] == prop),
-            None,
-        )
-        # Untrusted (thin-data) projections still show the line, but the edge is greyed —
-        # the model's edge there is not reliable enough to act on.
-        trusted = row.get("projection_trust") == "trusted"
-        edge_cls = _edge_grade(report.get("edge")) if (trusted and report) else "mut"
-        if model_only:
-            # Hits allowed and fantasy points are model projections (no book line surfaced here).
-            market = '<span class="prop-mkt mut">model proj</span>'
-        else:
-            market = (
-                f'<span class="prop-mkt">{report["side"][0].upper()} {report["line"]:g} '
-                f'{report["best_odds"]:+d} · '
-                f'<b class="{edge_cls}">'
-                f'{(report.get("edge") or 0) * 100:+.1f}pt</b></span>'
-                if report else '<span class="prop-mkt mut">no line</span>'
-            )
-        return (
-            f'<td class=prop-cell data-label="{e(label or prop)}"><b>{value["mean"]:.1f}</b>'
-            f'<span class=prop-range>range {value["p10"]:.0f}–{value["p90"]:.0f}</span>'
-            f'{market}</td>'
-        )
-
-    rows = ""
     all_markets = []
-    for index, row in enumerate(pitchers):
+    for row in pitchers:
         reports = row.get("market_report") or []
-        trusted = row.get("projection_trust") == "trusted"
-        # Only trusted projections feed the ranked edge board; thin-data pitchers would
-        # otherwise dominate it with phantom edges.
-        if trusted:
+        if row.get("projection_trust") == "trusted":
             all_markets.extend(
                 [{"pitcher": row.get("pitcher"), **report} for report in reports]
             )
-        state = row.get("state", "DATA GAP")
-        state_tone = "neg" if state == "REGRESSION" else (
-            "pos" if state == "PROGRESSION" else "side" if state == "STABLE" else "warnc"
-        )
-        best = reports[0] if reports else None
-        market_state = best.get("state") if best else row.get("market_state", "NO MARKET")
-        market_tone = "pos" if market_state in {"BET", "MONITOR"} else "mut"
-        if not trusted:
-            market_state = "THIN DATA"
-            market_tone = "warnc"
-        rows += (
-            f'<tr class=prop-main onclick="togglePitcher({index})">'
-            f'<td data-label="Starter"><div class=pitcher-cell>{_headshot(row.get("pitcher_id"))}'
-            f'<div><b>{e(str(row.get("pitcher") or "TBD"))}</b>'
-            f'<span>{_logo(row.get("team"), "tlogo sm")}{e(str(row.get("team") or ""))}</span>'
-            f'</div></div></td>'
-            f'<td data-label="vs"><span class=gcell>{_logo(row.get("opponent"), "tlogo sm")}'
-            f'{e(str(row.get("opponent") or ""))}</span></td>'
-            f'<td data-label="Performance"><span class="pill {state_tone}" title="Performance state from results versus underlying pitching skill">{e(state)}</span>'
-            f'<span class=prop-sub>{float(row.get("luck_runs") or 0):+.2f} runs</span></td>'
-            f'<td class=starter-base data-label="Baseline"><b>{_display(row.get("expected_ip"), digits=1)} IP</b>'
-            f'<span>{_display(row.get("skill_era"), digits=2)} runs/9</span></td>'
-            f'{projection_cell(row, "K", label="K")}{projection_cell(row, "BB", label="BB")}'
-            f'{projection_cell(row, "ER", label="ER")}{projection_cell(row, "Outs", label="Outs")}'
-            f'{projection_cell(row, "H", model_only=True, label="Hits")}'
-            f'{projection_cell(row, "Fantasy", model_only=True, label="DK Pts")}'
-            f'<td data-label="Market"><span class="pill {market_tone}">{e(str(market_state))}</span>'
-            f'<span class=prop-sub>{e(str(row.get("confidence") or "low"))} confidence</span></td></tr>'
-        )
-        pitch_rows = "".join(
-            f'<tr><td>{e(str(pitch.get("pitch") or ""))}</td>'
-            f'<td>{_display(pitch.get("usage_pct"), "%")}</td>'
-            f'<td>{_display(pitch.get("pitcher_whiff_pct"), "%")}</td>'
-            f'<td>{_display(pitch.get("lineup_whiff_pct"), "%")}</td>'
-            f'<td>{_display(pitch.get("pitcher_xwoba"), digits=3)}</td>'
-            f'<td>{_display(pitch.get("lineup_xwoba"), digits=3)}</td>'
-            f'<td class={"pos" if (pitch.get("k_delta") or 0) > 0 else "neg"}>'
-            f'{float(pitch.get("k_delta") or 0):+.2f} K%</td>'
-            f'<td class={"pos" if (pitch.get("er_factor_delta") or 0) < 0 else "neg"}>'
-            f'{float(pitch.get("er_factor_delta") or 0) * 100:+.1f}% runs</td>'
-            f'<td>{e(str(pitch.get("edge") or "neutral"))}</td></tr>'
-            for pitch in (row.get("pitch_matchup") or {}).get("pitches", [])[:6]
-        ) or '<tr><td class=mut colspan=9>No reliable pitch-overlap sample.</td></tr>'
-        market_rows = "".join(
-            f'<tr><td>{e(report["prop"])}</td><td>{e(report["side"].title())} {report["line"]:g}</td>'
-            f'<td>{report["best_odds"]:+d} · {e(report["best_book"])}</td>'
-            f'<td>{report["model_probability"] * 100:.1f}%</td>'
-            f'<td>{report["market_probability"] * 100:.1f}%</td>'
-            f'<td><b class={_edge_grade(report.get("edge"))}>'
-            f'{(report.get("edge") or 0) * 100:+.1f}pt</b></td>'
-            f'<td class={"pos" if (report.get("ev") or 0) > 0 else "neg"}>'
-            f'{(report.get("ev") or 0) * 100:+.1f}%</td>'
-            f'<td><span class="pill {"pos" if report["state"] == "MONITOR" else "mut"}">{e(report["state"])}</span></td></tr>'
-            for report in reports
-        ) or '<tr><td class=mut colspan=8>No paired prop price for this pitcher.</td></tr>'
-        pitch_matchup = row.get("pitch_matchup") or {}
-        lineup = row.get("lineup") or {}
-        rows += f"""<tr class=prop-detail id=prop-detail-{index}><td colspan=11>
-          <div class=prop-detail-grid>
-            <div class=ca-board><h2>Arsenal vs opponent production</h2><div class=body>
-              <div class=detail-strip>
-                <span><b>{e(str(row.get("lineup_status") or "unavailable"))}</b> lineup</span>
-                <span>{e(str(pitch_matchup.get("response_source") or "no response source"))}</span>
-                <span>{pitch_matchup.get("coverage_pct", 0)}% arsenal covered</span>
-                <span>{pitch_matchup.get("lineup_batters_matched", 0)}/9 batters matched</span>
-              </div>
-              <div class=table-scroll><table><tr><th>Pitch</th><th>Usage</th>
-                <th>Pitcher whiff</th><th>Opponent whiff</th>
-                <th title="Pitcher's expected weighted on-base average allowed">Pitcher contact</th>
-                <th title="Opponent expected weighted on-base average against this pitch">Opponent contact</th>
-                <th>K effect</th><th>Run effect</th><th>Who benefits</th></tr>{pitch_rows}</table></div>
-              <div class=note>Opponent values switch from team results to batting-order-weighted player results when at least six posted hitters match.</div>
-            </div></div>
-            <div class=ca-board><h2>Market report</h2><div class=body>
-              <div class=table-scroll><table><tr><th>Prop</th><th>Bet</th><th>Best price</th>
-                <th>Model</th><th>Market</th><th>Edge</th><th>EV</th><th>State</th></tr>{market_rows}</table></div>
-              <div class=detail-strip>
-                <span>Projected innings <b>{_display(row.get("expected_ip"), digits=1)}</b></span>
-                <span>Lineup score <b>{_display(lineup.get("score"), digits=1)}</b></span>
-                <span>Coverage <b>{row.get("data_coverage_pct", 0)}%</b></span>
-              </div>
-            </div></div>
-          </div>
-        </td></tr>"""
 
     all_markets.sort(key=lambda row: -(row.get("edge") or -1))
     report_rows = "".join(
@@ -291,38 +180,27 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top
         '<tr><td class=mut colspan=8>No paired pitcher-prop snapshot is loaded. '
         'Projections remain visible; price decisions remain NO MARKET.</td></tr>'
     )
-    pickem_rows, pickem_count = _pickem_rows(
-        pitchers,
-        [("PrizePicks", pp_board), ("Underdog", ud_board), ("Sleeper", sl_board)],
-    )
-    pickem_rows = pickem_rows or (
-        '<tr><td class=mut colspan=7>No PrizePicks / Underdog / Sleeper pitcher lines loaded '
-        '(off-hours or feed unavailable).</td></tr>'
-    )
+    _, pickem_count = _pickem_rows(pitchers, pickem_sources)
+    pitcher_deck = pitcher_prop_deck(pitchers, pickem_sources)
     confirmed = sum(1 for row in pitchers if row.get("lineup_status") == "confirmed")
     return f"""<h2>Pitcher Props</h2>
- <div class=ctx>Projection distributions, opponent pitch response, and executable price comparison.</div>
+ <div class=ctx>One card per starter — expand for projections, market lines, pick&apos;em boards, and pitch-mix breakdown.</div>
  {top_leans}
  <div class=cards>
    <div class=card><div class=k>Probable starters</div><div class=v>{len(pitchers)}</div></div>
    <div class=card><div class=k>Confirmed lineups</div><div class=v>{confirmed}/30</div></div>
    <div class=card><div class=k>Priced prop sides</div><div class=v>{len(all_markets)}</div></div>
-   <div class=card><div class=k>Price feed</div><div class=v style="font-size:16px">{"LIVE" if all_markets else "NO SNAPSHOT"}</div></div>
+   <div class=card><div class=k>Pick&apos;em lines</div><div class=v>{pickem_count}</div></div>
  </div>
  <div class=ca-board>{section_head("Prop market report", icon="props")}<div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter pitcher or prop…" data-filter-for="props-report-table" aria-label="Filter props report"></div>
    <div class=table-scroll><table id=props-report-table class=sortable><tr><th>Pitcher</th><th>Prop</th><th>Bet</th>
    <th>Best price</th><th>Model</th><th>Market</th><th>Edge</th><th>State</th></tr>
-   {report_rows}</table></div></div></div>
- <div class=ca-board><h2>Pick&apos;em boards <span class="mut" style="font-weight:600;font-size:11px">PrizePicks + Underdog + Sleeper · model vs line · {pickem_count} lines</span></h2><div class=body>
-   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter pitcher…" data-filter-for="pickem-table" aria-label="Filter pickem"></div>
-   <div class=table-scroll><table id=pickem-table class=sortable><tr><th>Pitcher</th><th>Book</th><th>Market</th><th>Line</th><th>Model</th><th>P(over)</th><th>Lean</th></tr>{pickem_rows}</table></div>
-   <div class=note>Fantasy score uses each book&apos;s pitcher formula (Out +1, K +3, ER −3, quality start +4, win +6 — win modeled; PrizePicks and Underdog scoring match). Hits / strikeouts / earned runs / outs / walks grade directly against the projection. P(over) is a normal approximation of the simulated distribution; leans ≥58% are highlighted. Not betting advice.</div>
- </div></div>
- <div class=ca-board><h2>Pitcher board</h2><div class="body prop-board">
-   <div class=table-scroll><table class=prop-table><tr><th>Starter</th><th>vs</th>
-   <th>Performance</th><th title="Projected innings and expected runs allowed per nine">Starter baseline</th><th>K</th><th>BB</th>
-   <th>ER</th><th>Outs</th><th title="Projected hits allowed">Hits</th><th title="DraftKings pitcher fantasy points: IP*2.25 + K*2 - ER*2 - H*0.6 - BB*0.6">DK Pts</th><th>Market</th></tr>{rows or '<tr><td class=mut colspan=11>No pitcher inputs loaded.</td></tr>'}</table></div>
+   {report_rows}</table></div>
+   <div class=note>Ranked edges across the slate. Open a pitcher card below for full lines and arsenal context.</div></div></div>
+ <div class=ca-board>{section_head("Pitcher breakdowns", icon="props")}<div class=body>
+   {pitcher_deck}
+   <div class=note>Pick&apos;em leans use each book&apos;s scoring formula where applicable. P(over) is a normal approximation of the simulated distribution; leans ≥58% are highlighted. Not betting advice.</div>
  </div></div>"""
 
 

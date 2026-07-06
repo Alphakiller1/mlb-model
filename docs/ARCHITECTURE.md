@@ -51,6 +51,17 @@ Markets: `decide()` thresholds default to fixed floors; when ≥25 settled sharp
 | Table | Writer | Reader |
 |-------|--------|--------|
 | `model_leans` | Pages build (`record_leans`) | Results view, `settle_leans` |
+
+Lean sources recorded at each build (idempotent upsert to `model_leans`):
+
+| Source | What gets logged |
+|--------|------------------|
+| `sharp` | Sharp+model fusion plays (STRONG/BET/LEAN) |
+| `matchup` | Full-game markets with positive model edge or BET/MONITOR state |
+| `f5` | First-5 markets (total, ML) with edge or actionable state |
+| `prop` | Sportsbook pitcher props with edge ≥0.5pt or BET/MONITOR |
+| `prizepicks` / `underdog` / `sleeper` | Pick'em lines incl. fantasy score (OVER/UNDER vs model) |
+| `projection` | Trusted pitcher projection means (K, ER, fantasy, F5_ER, etc.) |
 | `game_outcomes` | `build_game_results` | Settlement |
 | `sharp_observations` | `market/collect` | Research / settle |
 | `paper_positions` | (manual / future execution) | Portfolio view |

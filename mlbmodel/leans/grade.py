@@ -18,6 +18,8 @@ _PROP_KEYS = {
     "earned runs allowed": "er",
     "outs": "outs",
     "pitching outs": "outs",
+    "fantasy": "fantasy",
+    "fantasy_score": "fantasy",
 }
 
 
@@ -68,9 +70,9 @@ def grade_lean(
     winner = outcome.get("winner_team")
     margin = outcome.get("margin_home")
 
-    if market in {"ml", "moneyline", "h2h"}:
+    if market in {"ml", "moneyline", "h2h", "f5_ml"}:
         return str(winner or "").upper() == selection.upper(), False
-    if market in {"total", "totals"} and line is not None and total is not None:
+    if market in {"total", "totals", "f5_total"} and line is not None and total is not None:
         line_f = float(line)
         total_f = float(total)
         if total_f == line_f:

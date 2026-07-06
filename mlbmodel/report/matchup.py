@@ -665,6 +665,204 @@ def _f5_market_rows(gd, pitcher_rows, board, promotion, fallback_f5):
     ]
 
 
+def _graded_market_row(market, esc):
+    """One graded market line — shared by full-game and F5 tables."""
+    market_price = f'{market["mkt"]:+d}' if market.get("mkt") is not None else "—"
+    novig_fair = market.get("mkt_fair")
+    hold = market.get("hold")
+    if novig_fair is not None:
+        hold_tag = (
+            f'<span class=mut style="font-size:10px"> {hold:.1f}% hold</span>'
+            if hold is not None else ""
+        )
+        novig_cell = f'{novig_fair:+d}{hold_tag}'
+    else:
+        novig_cell = '<span class=mut>—</span>'
+    edge = f'{market["edge"]:+.1f}pt' if market.get("edge") is not None else "—"
+    ev = f'{market["ev"] * 100:+.1f}%' if market.get("ev") is not None else "—"
+    tone = "pos" if (market.get("edge") or 0) > 0 else (
+        "neg" if market.get("edge") is not None else "mut"
+    )
+    return (
+        f'<tr><td><b>{esc(market["label"])}</b></td><td>{market_price}</td>'
+        f'<td>{novig_cell}</td><td>{market["fair"]:+d}</td>'
+        f'<td>{market["model"]:.1f}%</td><td class={tone}>{edge}</td>'
+        f'<td class={tone}>{ev}</td><td><span class="pill {market["tone"]}">'
+        f'{esc(market["state"])}</span></td></tr>'
+    )
+
+
+def _weather_detail(weather) -> str:
+    if weather.get("status") == "dome":
+        return "Dome · neutral run environment"
+    temperature = weather.get("temp_f")
+    if temperature is None:
+        temperature = weather.get("temperature_f")
+    wind_out = weather.get("wind_out_mph")
+    rain = weather.get("precipitation_probability_pct")
+    wx_runs = (weather_run_factor(weather) - 1.0) * 100
+    wx_tag = f' · modeled runs {wx_runs:+.1f}%' if abs(wx_runs) >= 0.1 else ' · neutral'
+    if temperature is None:
+        return "Weather unavailable"
+    return (
+        f'{temperature:.0f}°F · wind {"out" if (wind_out or 0) >= 0 else "in"} '
+        f'{abs(wind_out or 0):.0f} mph · rain {rain or 0:.0f}%{wx_tag}'
+    )
+
+
+def _fmt_optional(value, *, digits=1, suffix=""):
+    if value is None:
+        return "—"
+    if isinstance(value, float):
+        return f'{value:.{digits}f}{suffix}'
+    return f'{value}{suffix}'
+
+
+def _workload_context_rows(gd, travel, esc):
+    away_starter = gd.away_starter_features
+    home_starter = gd.home_starter_features
+    away_pen = gd.away_bullpen_features
+    home_pen = gd.home_bullpen_features
+    away_line = gd.away_lineup_features
+    home_line = gd.home_lineup_features
+    away_travel = travel.get("away") or {}
+    home_travel = travel.get("home") or {}
+    away_injury = gd.away_injury_features
+    home_injury = gd.home_injury_features
+
+    def line_value(value):
+        if value.get("status") not in {"confirmed", "projected"}:
+            return "Not posted"
+        return (
+            f'{value.get("projected_osi", "—")} vs '
+            f'{value.get("team_baseline_osi", "—")} baseline · '
+            f'{value.get("matched_batters", 0)}/9 matched'
+        )
+
+    def travel_value(value):
+        if value.get("status") != "available":
+            return "No recent game"
+        return (
+            f'{value.get("rest_hours", 0):.1f}h rest · '
+            f'{value.get("travel_miles", 0):.0f} mi'
+        )
+
+    def injury_value(value):
+        players = value.get("impact_players") or []
+        if not players:
+            return "No quantified hitter loss"
+        return ", ".join(player["player"] for player in players[:3])
+
+    rows = [
+        (
+            "Starter expected level",
+            f'{away_starter.get("skill_fip", settings.LEAGUE_FIP):.2f} runs/9 scale',
+            f'{home_starter.get("skill_fip", settings.LEAGUE_FIP):.2f} runs/9 scale',
+            "Lower is better",
+        ),
+        (
+            "Starter workload",
+            f'{away_starter.get("expected_ip", 5.2):.1f} projected innings',
+            f'{home_starter.get("expected_ip", 5.2):.1f} projected innings',
+            "Shapes bullpen exposure and outs props",
+        ),
+        (
+            "Bullpen quality",
+            f'{away_pen.get("skill_fip", settings.LEAGUE_BULLPEN_ERA):.2f} skill · '
+            f'{away_pen.get("pitches_1d") or 0:.0f} pitches yesterday · '
+            f'{away_pen.get("pitches_2d") or 0:.0f} in 2d',
+            f'{home_pen.get("skill_fip", settings.LEAGUE_BULLPEN_ERA):.2f} skill · '
+            f'{home_pen.get("pitches_1d") or 0:.0f} pitches yesterday · '
+            f'{home_pen.get("pitches_2d") or 0:.0f} in 2d',
+            "Lower quality and fresher workload favor the offense",
+        ),
+        (
+            "Lineup vs starter hand",
+            line_value(away_line),
+            line_value(home_line),
+            f'{esc(gd.away)} vs {esc(gd.home_hand)}HP · {esc(gd.home)} vs {esc(gd.away_hand)}HP',
+        ),
+        (
+            "Unavailable hitters",
+            injury_value(away_injury),
+            injury_value(home_injury),
+            "Quantified before confirmed lineups",
+        ),
+        (
+            "Rest and travel",
+            travel_value(away_travel),
+            travel_value(home_travel),
+            "Short rest, distance, timezone",
+        ),
+    ]
+    return "".join(
+        f'<tr><td><b>{esc(label)}</b></td><td>{esc(away_value)}</td>'
+        f'<td>{esc(home_value)}</td><td class=mut>{context_note}</td></tr>'
+        for label, away_value, home_value, context_note in rows
+    )
+
+
+def _matchup_context_panel(gd, probability, context, esc):
+    """Environment, splits, and workload — always visible before market boards."""
+    weather = context.get("weather") or {}
+    lineups = context.get("lineups") or {}
+    umpire = context.get("umpire") or {}
+    travel = context.get("travel") or {}
+    away_lineup = (lineups.get("away") or {}).get("status", "unavailable")
+    home_lineup = (lineups.get("home") or {}).get("status", "unavailable")
+    umpire_label = (
+        umpire.get("umpire")
+        if umpire.get("status") == "announced"
+        else "Not announced"
+    )
+    park_pct = (gd.park_factor - 1.0) * 100
+    park_tone = "pos" if park_pct > 0.5 else ("neg" if park_pct < -0.5 else "mut")
+
+    def split_row(team, ctx, opposing_hand, arsenal):
+        platoon = ctx.platoon_osi
+        woba = ctx.woba
+        arsenal_note = ""
+        if arsenal.get("er_factor") is not None:
+            delta = (arsenal.get("er_factor") - 1.0) * 100
+            arsenal_note = (
+                f' · pitch-mix runs {delta:+.1f}%'
+                f' ({arsenal.get("batters_matched", 0)} batters)'
+            )
+        return (
+            f'<tr><td><b>{esc(team)}</b><span class=mut> vs {esc(opposing_hand)}HP</span></td>'
+            f'<td>{_fmt_optional(platoon)}</td>'
+            f'<td>{_fmt_optional(woba, digits=3)}</td>'
+            f'<td>{_fmt_optional(ctx.osi)}</td>'
+            f'<td class=mut>{esc(str(ctx.window_direction or "—"))}{arsenal_note}</td></tr>'
+        )
+
+    splits_rows = (
+        split_row(gd.away, gd.away_context, gd.home_hand, gd.away_arsenal_features)
+        + split_row(gd.home, gd.home_context, gd.away_hand, gd.home_arsenal_features)
+    )
+    workload_rows = _workload_context_rows(gd, travel, esc)
+    env_bits = [
+        f'<span><b>Park</b><i class={park_tone}>{gd.park_factor:.3f}</i> ({park_pct:+.1f}% runs)</span>',
+        f'<span><b>Weather</b>{esc(_weather_detail(weather))}</span>',
+        f'<span><b>Plate umpire</b>{esc(str(umpire_label))}</span>',
+        f'<span><b>Lineups</b>{esc(gd.away)} {esc(away_lineup)} · {esc(gd.home)} {esc(home_lineup)}</span>',
+        f'<span><b>SP hands</b>{esc(gd.away_sp)} ({esc(gd.away_hand)}HP) · {esc(gd.home_sp)} ({esc(gd.home_hand)}HP)</span>',
+        f'<span><b>Coverage</b>{probability.data_coverage_pct}%</span>',
+    ]
+    return f"""<div class=ca-board><h2>Matchup context</h2><div class=body>
+      <div class=matchup-env-strip>{"".join(env_bits)}</div>
+      <div class=matchup-context-grid>
+        <div><h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 8px">Splits &amp; handedness</h3>
+          <div class=table-scroll><table><tr><th>Team</th><th>Platoon OSI</th><th>wOBA</th><th>OSI</th><th>Trend · pitch mix</th></tr>{splits_rows}</table></div>
+        </div>
+        <div><h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 8px">Bullpen, workload &amp; inputs</h3>
+          <div class=table-scroll><table><tr><th>Input</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th><th>Meaning</th></tr>{workload_rows}</table></div>
+        </div>
+      </div>
+      <div class=note>Park, weather, umpire, rest/travel, bullpen workload, lineup-vs-hand, and pitch-mix factors feed the expected-runs model above.</div>
+    </div></div>"""
+
+
 def _f5_panel(r, gd, esc):
     """First-5-innings panel — congruent with the market report: same graded F5 rows, shown
     with the live price + edge when F5 odds are available, model fair value otherwise."""
@@ -710,8 +908,15 @@ def _f5_panel(r, gd, esc):
             "against the model — same as every other market." if priced else
             "F5 isolates the starters from the bullpens. No live F5 price in the feed right now — "
             "these are model fair values.")
+    f5_table = "".join(_graded_market_row(market, esc) for market in f5_rows)
+    table_html = (
+        f'<div class=table-scroll style="margin-top:12px"><table><tr><th>Bet</th><th>Best</th>'
+        f'<th>No-vig fair</th><th>Model fair</th><th>Model%</th><th>Edge</th><th>EV</th><th>State</th></tr>'
+        f'{f5_table}</table></div>'
+        if f5_table else ""
+    )
     return (f'<div class=ca-board><h2>First 5 innings (F5)</h2><div class=body>'
-            f'<div class=availability>{"".join(parts)}</div>{sp_html}'
+            f'<div class=availability>{"".join(parts)}</div>{sp_html}{table_html}'
             f'<div class=note>{note}</div></div></div>')
 
 
@@ -758,37 +963,9 @@ def report_body(r):
     lineups = context.get("lineups") or {}
     weather = context.get("weather") or {}
     umpire = context.get("umpire") or {}
-    travel = context.get("travel") or {}
 
     def market_row(market):
-        market_price = (
-            f'{market["mkt"]:+d}' if market["mkt"] is not None else "—"
-        )
-        # No-vig market fair price (book's two-sided hold removed) + the hold itself.
-        novig_fair = market.get("mkt_fair")
-        hold = market.get("hold")
-        if novig_fair is not None:
-            hold_tag = (
-                f'<span class=mut style="font-size:10px"> {hold:.1f}% hold</span>'
-                if hold is not None else ""
-            )
-            novig_cell = f'{novig_fair:+d}{hold_tag}'
-        else:
-            novig_cell = '<span class=mut>—</span>'
-        edge = (
-            f'{market["edge"]:+.1f}pt' if market["edge"] is not None else "—"
-        )
-        ev = f'{market["ev"] * 100:+.1f}%' if market["ev"] is not None else "—"
-        tone = "pos" if (market.get("edge") or 0) > 0 else (
-            "neg" if market.get("edge") is not None else "mut"
-        )
-        return (
-            f'<tr><td><b>{esc(market["label"])}</b></td><td>{market_price}</td>'
-            f'<td>{novig_cell}</td><td>{market["fair"]:+d}</td>'
-            f'<td>{market["model"]:.1f}%</td><td class={tone}>{edge}</td>'
-            f'<td class={tone}>{ev}</td><td><span class="pill {market["tone"]}">'
-            f'{esc(market["state"])}</span></td></tr>'
-        )
+        return _graded_market_row(market, esc)
 
     market_rows = "".join(market_row(market) for market in r["markets"])
     opportunity = max(
@@ -867,87 +1044,7 @@ def report_body(r):
         for item in probability.missing_context
     ) or '<span class="pill pos">core context loaded</span>'
 
-    def team_value_rows():
-        away_starter = gd.away_starter_features
-        home_starter = gd.home_starter_features
-        away_pen = gd.away_bullpen_features
-        home_pen = gd.home_bullpen_features
-        away_line = gd.away_lineup_features
-        home_line = gd.home_lineup_features
-        away_travel = travel.get("away") or {}
-        home_travel = travel.get("home") or {}
-        away_injury = gd.away_injury_features
-        home_injury = gd.home_injury_features
-
-        def line_value(value):
-            if value.get("status") not in {"confirmed", "projected"}:
-                return "Not posted"
-            return (
-                f'{value.get("projected_osi", "—")} vs '
-                f'{value.get("team_baseline_osi", "—")} baseline'
-            )
-
-        def travel_value(value):
-            if value.get("status") != "available":
-                return "No recent game"
-            return (
-                f'{value.get("rest_hours", 0):.1f}h rest · '
-                f'{value.get("travel_miles", 0):.0f} mi'
-            )
-
-        def injury_value(value):
-            players = value.get("impact_players") or []
-            if not players:
-                return "No quantified hitter loss"
-            return ", ".join(player["player"] for player in players[:3])
-
-        rows = [
-            (
-                "Starter expected level",
-                f'{away_starter.get("skill_fip", settings.LEAGUE_FIP):.2f} runs/9 scale',
-                f'{home_starter.get("skill_fip", settings.LEAGUE_FIP):.2f} runs/9 scale',
-                "Lower is better",
-            ),
-            (
-                "Starter workload",
-                f'{away_starter.get("expected_ip", 5.2):.1f} projected innings',
-                f'{home_starter.get("expected_ip", 5.2):.1f} projected innings',
-                "Shapes bullpen exposure and outs props",
-            ),
-            (
-                "Bullpen quality",
-                f'{away_pen.get("skill_fip", settings.LEAGUE_BULLPEN_ERA):.2f} · '
-                f'{away_pen.get("pitches_1d") or 0:.0f} pitches yesterday',
-                f'{home_pen.get("skill_fip", settings.LEAGUE_BULLPEN_ERA):.2f} · '
-                f'{home_pen.get("pitches_1d") or 0:.0f} pitches yesterday',
-                "Lower quality number and fresher workload are better",
-            ),
-            (
-                "Lineup vs starter hand",
-                line_value(away_line),
-                line_value(home_line),
-                "Posted batting order versus the opposing starter's hand",
-            ),
-            (
-                "Unavailable hitters",
-                injury_value(away_injury),
-                injury_value(home_injury),
-                "Only quantified before confirmed lineups; then lineup absorbs it",
-            ),
-            (
-                "Rest and travel",
-                travel_value(away_travel),
-                travel_value(home_travel),
-                "Short rest, distance, and timezone shift",
-            ),
-        ]
-        return "".join(
-            f'<tr><td><b>{esc(label)}</b></td><td>{esc(away_value)}</td>'
-            f'<td>{esc(home_value)}</td><td class=mut>{esc(context_note)}</td></tr>'
-            for label, away_value, home_value, context_note in rows
-        )
-
-    matchup_rows = team_value_rows()
+    context_panel = _matchup_context_panel(gd, probability, context, esc)
 
     def pitcher_panel(team):
         pitcher = next(
@@ -1082,6 +1179,8 @@ def report_body(r):
     </div>
     {availability}
 
+    {context_panel}
+
     <div class=decision-grid>
       {advantage_panel}
       <div class=ca-board><h2>Biggest run impacts</h2><div class=body>
@@ -1100,11 +1199,6 @@ def report_body(r):
     <div class=ca-board><h2>What can break the projection</h2><div class=body><table>
       <tr><th>Risk</th><th>Betting implication</th><th>Type</th></tr>{risk_rows}</table>
     </div></div>
-
-    <details class=model-details><summary>Matchup inputs (detail)</summary>
-      <div class=table-scroll><table><tr><th>What matters</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th><th>Betting meaning</th></tr>
-      {matchup_rows}</table></div>
-    </details>
 
     <details class=model-details><summary>Model lineage and limits</summary>
       <p>Runs are built sequentially from team offense, handedness, posted lineup, official injuries,

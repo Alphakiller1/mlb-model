@@ -1,6 +1,11 @@
 from mlbmodel.leans.calibration import calibration_buckets, summarize_record
 from mlbmodel.leans.grade import grade_lean
-from mlbmodel.leans.record import collect_leans, record_leans, _row
+from mlbmodel.leans.record import (
+    collect_leans,
+    edge_points,
+    record_leans,
+    _row,
+)
 
 
 def test_collect_leans_dedupes_market_and_prop():
@@ -18,9 +23,9 @@ def test_collect_leans_dedupes_market_and_prop():
     pickem = [{
         "lean": "OVER",
         "book": "prizepicks",
-        "prop": "K",
-        "line": 5.5,
-        "projection": 6.2,
+        "prop": "Fantasy",
+        "line": 35.5,
+        "projection": 38.0,
         "p_over": 0.62,
         "edge_pts": 12.0,
         "game_pk": 1,
@@ -49,7 +54,100 @@ def test_collect_leans_dedupes_market_and_prop():
     sharp = next(r for r in rows if r["source"] == "sharp")
     assert sharp["line"] == 8.5
     assert sharp["entry_odds"] == -110
-    assert next(r for r in rows if r["source"] == "prizepicks")["pitcher_name"] == "Gerrit Cole"
+    fantasy = next(r for r in rows if r["source"] == "prizepicks")
+    assert fantasy["pitcher_name"] == "Gerrit Cole"
+    assert fantasy["market"] == "fantasy_score"
+    assert fantasy["lean"] == "OVER"
+
+
+def test_collect_leans_matchup_and_f5_markets():
+    matchup_markets = {
+        1: [
+            {
+                "market": "total",
+                "side": "over",
+                "line": 8.5,
+                "model": 56.0,
+                "edge": 2.5,
+                "state": "MONITOR",
+                "mkt": -105,
+            },
+            {
+                "market": "f5_total",
+                "side": "under",
+                "line": 4.5,
+                "model": 54.0,
+                "edge": 1.2,
+                "state": "MONITOR",
+                "mkt": -110,
+            },
+            {
+                "market": "f5_ml",
+                "side": "NYY",
+                "line": None,
+                "model": 58.0,
+                "edge": 3.0,
+                "state": "BET",
+                "mkt": 120,
+            },
+        ],
+    }
+    rows = collect_leans(
+        slate_date="2026-07-06",
+        market_plays=[],
+        pickem_rows=[],
+        prop_reports=[],
+        matchup_markets_by_pk=matchup_markets,
+    )
+    assert len(rows) == 3
+    assert {r["source"] for r in rows} == {"matchup", "f5"}
+    f5_total = next(r for r in rows if r["market"] == "f5_total")
+    assert f5_total["source"] == "f5"
+    assert f5_total["selection"] == "under"
+    assert f5_total["entry_odds"] == -110
+
+
+def test_collect_leans_pitcher_projections():
+    pitchers = [{
+        "pitcher": "Gerrit Cole",
+        "game_pk": 1,
+        "projection_trust": "trusted",
+        "projections": {
+            "K": {"mean": 6.2, "sd": 1.5},
+            "ER": {"mean": 2.1, "sd": 1.0},
+            "PP_Fantasy": {"mean": 36.5, "sd": 8.0},
+        },
+    }]
+    rows = collect_leans(
+        slate_date="2026-07-06",
+        market_plays=[],
+        pickem_rows=[],
+        prop_reports=[],
+        pitchers=pitchers,
+    )
+    assert len(rows) == 3
+    assert all(r["source"] == "projection" for r in rows)
+    assert all(r["lean"] == "PROJECTION" for r in rows)
+    fantasy = next(r for r in rows if r["market"] == "fantasy_score")
+    assert fantasy["model_value"] == 36.5
+
+
+def test_collect_leans_skips_matchup_without_edge():
+    rows = collect_leans(
+        slate_date="2026-07-06",
+        market_plays=[],
+        pickem_rows=[],
+        prop_reports=[],
+        matchup_markets_by_pk={
+            1: [{"market": "total", "side": "over", "line": 8.5, "model": 50.0, "edge": None, "state": "NO EDGE"}],
+        },
+    )
+    assert rows == []
+
+
+def test_edge_points_normalizes_fraction_and_points():
+    assert edge_points(0.04) == 4.0
+    assert edge_points(4.0) == 4.0
 
 
 def test_grade_lean_runline_uses_stored_line():

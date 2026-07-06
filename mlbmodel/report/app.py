@@ -181,6 +181,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         for m in rows
         if str(m.get("market") or "").startswith("f5_")
     ]
+    matchup_markets_by_pk = dict(model_by_pk)
     cal_result = reader.get(
         "model_leans?settled=eq.true&select=edge,won,push,source,settled&limit=2000"
     )
@@ -220,11 +221,21 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 market_plays=market_plays,
                 pickem_rows=pickem_rows,
                 prop_reports=flat_props,
+                matchup_markets_by_pk=matchup_markets_by_pk,
+                pitchers=pitchers,
                 pkmap=pkmap,
             )
             written = record_leans(lean_rows)
             if written:
-                log.info("recorded %s model leans for %s", written, sd)
+                sources = {}
+                for row in lean_rows:
+                    sources[row["source"]] = sources.get(row["source"], 0) + 1
+                log.info(
+                    "recorded %s model leans for %s (%s)",
+                    written,
+                    sd,
+                    ", ".join(f"{k}={v}" for k, v in sorted(sources.items())),
+                )
             elif lean_rows and os.getenv("SUPABASE_URL"):
                 log.error(
                     "model lean record wrote 0 rows (%s candidates); check SUPABASE_KEY and migrations",

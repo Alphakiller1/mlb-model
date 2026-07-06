@@ -24,7 +24,8 @@ def test_build_app_renders_all_views():
     assert "sortable" in html
     assert "function show(k)" in html
     assert "location.hash" in html
-    assert "prop-board" in html
+    assert "pitcher-prop-deck" in html
+    assert "Matchup context" in html
     assert "ca-neon-icon" in html
 
 

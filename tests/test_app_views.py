@@ -58,7 +58,9 @@ def test_props_board_has_distributions_pitch_context_and_market_state():
     assert "NO MARKET" in rendered
     assert "5.4" in rendered
     assert "3–8" in rendered
-    assert "Arsenal vs opponent production" in rendered
+    assert "pitcher-prop-deck" in rendered
+    assert "pitcher-prop-card" in rendered
+    assert "Arsenal vs opponent" in rendered
     assert "posted lineup, batting-order weighted" in rendered
 
 

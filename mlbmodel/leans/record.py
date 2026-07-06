@@ -10,6 +10,13 @@ from mlbmodel.storage.supabase import SupabaseWriter
 log = logging.getLogger(__name__)
 MODEL_VERSION = settings.MODEL_VERSION
 
+# Minimum model edge (percentage points) to record as a lean.
+MIN_EDGE_PTS = 0.5
+# Pick'em rows below this distance from 50% are still stored but tagged WATCH.
+PICKEM_LEAN_PTS = 8.0
+
+_PROJECTION_PROPS = ("K", "BB", "ER", "Outs", "H", "Fantasy", "F5_ER", "PP_Fantasy")
+
 
 def _row(
     *,
@@ -48,6 +55,17 @@ def _row(
     return row
 
 
+def edge_points(edge) -> float | None:
+    """Normalize edge to percentage points (model% − market%)."""
+    if edge is None:
+        return None
+    try:
+        value = float(edge)
+    except (TypeError, ValueError):
+        return None
+    return value * 100 if abs(value) <= 1 else value
+
+
 def _market_line(play: dict) -> float | None:
     raw = play.get("market_line")
     if raw is None:
@@ -68,18 +86,19 @@ def _entry_odds(play: dict) -> float | None:
         return None
 
 
-def collect_leans(
-    *,
-    slate_date: str,
-    market_plays: list[dict],
-    pickem_rows: list[dict],
-    prop_reports: list[dict],
-    pkmap: dict[int, str] | None = None,
-) -> list[dict]:
-    """Gather lean dicts from markets board, pick'em, and prop edges."""
-    pkmap = pkmap or {}
-    rows: list[dict] = []
+def _lean_label(state: str, edge_pts: float | None) -> str:
+    state = str(state or "").upper()
+    if state in {"BET", "MONITOR", "STRONG", "LEAN"}:
+        return state
+    if edge_pts is not None and edge_pts >= 2.0:
+        return "LEAN"
+    if edge_pts is not None and edge_pts >= MIN_EDGE_PTS:
+        return "EDGE"
+    return "WATCH"
 
+
+def _collect_sharp_plays(slate_date: str, market_plays: list[dict]) -> list[dict]:
+    rows: list[dict] = []
     for play in market_plays:
         verdict = str(play.get("verdict") or "")
         if verdict not in {"STRONG", "BET", "LEAN"}:
@@ -95,56 +114,172 @@ def collect_leans(
                 line=_market_line(play),
                 entry_odds=_entry_odds(play),
                 model_value=play.get("model_p"),
-                model_prob=play.get("model_p"),
+                model_prob=(
+                    float(play["model_p"]) / 100
+                    if play.get("model_p") is not None else None
+                ),
                 edge=play.get("medge"),
                 lean=verdict,
             )
         )
+    return rows
 
+
+def _collect_matchup_markets(
+    slate_date: str,
+    matchup_markets_by_pk: dict[int, list[dict]],
+) -> list[dict]:
+    """Model-graded game and F5 markets with a positive edge or actionable state."""
+    rows: list[dict] = []
+    for pk, markets in (matchup_markets_by_pk or {}).items():
+        game_pk = int(pk) if pk is not None else None
+        for market in markets or []:
+            state = str(market.get("state") or "")
+            edge_pts = edge_points(market.get("edge"))
+            actionable = state in {"BET", "MONITOR"}
+            has_edge = edge_pts is not None and edge_pts >= MIN_EDGE_PTS
+            if not actionable and not has_edge:
+                continue
+            market_type = str(market.get("market") or "market").lower()
+            source = "f5" if market_type.startswith("f5_") else "matchup"
+            model_pct = market.get("model")
+            rows.append(
+                _row(
+                    slate_date=slate_date,
+                    game_pk=game_pk,
+                    source=source,
+                    market=market_type,
+                    selection=str(market.get("side") or ""),
+                    line=float(market["line"]) if market.get("line") is not None else None,
+                    model_value=model_pct,
+                    model_prob=(
+                        float(model_pct) / 100
+                        if model_pct is not None else None
+                    ),
+                    edge=edge_pts,
+                    lean=_lean_label(state, edge_pts),
+                    entry_odds=(
+                        float(market["mkt"])
+                        if isinstance(market.get("mkt"), int) else None
+                    ),
+                )
+            )
+    return rows
+
+
+def _collect_pickem(slate_date: str, pickem_rows: list[dict]) -> list[dict]:
+    rows: list[dict] = []
     for item in pickem_rows:
         lean = str(item.get("lean") or "").upper()
         if lean not in {"OVER", "UNDER"}:
             continue
+        edge_pts = item.get("edge_pts")
+        if edge_pts is None and item.get("p_over") is not None:
+            edge_pts = abs(float(item["p_over"]) - 0.5) * 100
+        lean_tag = lean if (edge_pts or 0) >= PICKEM_LEAN_PTS else "WATCH"
+        prop = str(item.get("prop") or "prop")
+        market = prop.lower().replace(" ", "_")
+        if market == "fantasy":
+            market = "fantasy_score"
         rows.append(
             _row(
                 slate_date=slate_date,
                 game_pk=item.get("game_pk"),
                 source=str(item.get("book") or "pickem"),
-                market=str(item.get("prop") or "prop"),
+                market=market,
                 selection=lean.lower(),
                 line=float(item["line"]) if item.get("line") is not None else None,
                 model_value=item.get("projection"),
                 model_prob=item.get("p_over"),
-                edge=item.get("edge_pts"),
-                lean=lean,
+                edge=edge_pts,
+                lean=lean_tag,
                 pitcher_name=str(item.get("pitcher") or "") or None,
             )
         )
+    return rows
 
+
+def _collect_prop_edges(slate_date: str, prop_reports: list[dict]) -> list[dict]:
+    rows: list[dict] = []
     for item in prop_reports:
+        edge_pts = edge_points(item.get("edge"))
         state = str(item.get("state") or "")
-        if state not in {"BET", "MONITOR"}:
-            continue
-        edge = item.get("edge")
-        if edge is None or float(edge) < 0.01:
+        actionable = state in {"BET", "MONITOR"}
+        has_edge = edge_pts is not None and edge_pts >= MIN_EDGE_PTS
+        if not actionable and not has_edge:
             continue
         rows.append(
             _row(
                 slate_date=slate_date,
                 game_pk=item.get("game_pk"),
                 source="prop",
-                market=str(item.get("prop") or "prop"),
+                market=str(item.get("prop") or "prop").lower(),
                 selection=str(item.get("side") or ""),
                 line=float(item["line"]) if item.get("line") is not None else None,
                 model_value=item.get("model_mean"),
                 model_prob=item.get("model_probability"),
-                edge=float(edge) * 100 if abs(float(edge)) <= 1 else float(edge),
-                lean=state,
-                entry_odds=float(item["best_odds"]) if item.get("best_odds") is not None else None,
+                edge=edge_pts,
+                lean=_lean_label(state, edge_pts),
+                entry_odds=(
+                    float(item["best_odds"])
+                    if item.get("best_odds") is not None else None
+                ),
                 pitcher_name=str(item.get("pitcher") or "") or None,
             )
         )
+    return rows
 
+
+def _collect_pitcher_projections(slate_date: str, pitchers: list[dict]) -> list[dict]:
+    """Log trusted model projection means for each pitcher stat."""
+    rows: list[dict] = []
+    for pitcher in pitchers:
+        if pitcher.get("projection_trust") != "trusted":
+            continue
+        projections = pitcher.get("projections") or {}
+        for prop in _PROJECTION_PROPS:
+            dist = projections.get(prop)
+            if not dist or dist.get("mean") is None:
+                continue
+            market = prop.lower()
+            if market == "pp_fantasy":
+                market = "fantasy_score"
+            rows.append(
+                _row(
+                    slate_date=slate_date,
+                    game_pk=pitcher.get("game_pk"),
+                    source="projection",
+                    market=market,
+                    selection="model",
+                    line=None,
+                    model_value=float(dist["mean"]),
+                    model_prob=None,
+                    edge=None,
+                    lean="PROJECTION",
+                    pitcher_name=str(pitcher.get("pitcher") or "") or None,
+                )
+            )
+    return rows
+
+
+def collect_leans(
+    *,
+    slate_date: str,
+    market_plays: list[dict],
+    pickem_rows: list[dict],
+    prop_reports: list[dict],
+    matchup_markets_by_pk: dict[int, list[dict]] | None = None,
+    pitchers: list[dict] | None = None,
+    pkmap: dict[int, str] | None = None,
+) -> list[dict]:
+    """Gather lean dicts from sharp fusion, matchup/F5, props, pick'em, and projections."""
+    _ = pkmap  # reserved for future game-key enrichment
+    rows: list[dict] = []
+    rows.extend(_collect_sharp_plays(slate_date, market_plays))
+    rows.extend(_collect_matchup_markets(slate_date, matchup_markets_by_pk or {}))
+    rows.extend(_collect_pickem(slate_date, pickem_rows))
+    rows.extend(_collect_prop_edges(slate_date, prop_reports))
+    rows.extend(_collect_pitcher_projections(slate_date, pitchers or []))
     return rows
 
 
