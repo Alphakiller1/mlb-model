@@ -714,6 +714,42 @@ def _f5_panel(r, gd, esc):
             f'<div class=note>{note}</div></div></div>')
 
 
+def matchup_summary_html(report: dict) -> str:
+    """Compact matchup card for non-featured games (smaller HTML than full terminal)."""
+    esc = html.escape
+    gd, probs = report["gd"], report["probs"]
+    away, home = report["away"], report["home"]
+    lean = home if probs.exp_margin > 0 else away
+    markets = report.get("markets") or []
+    mrows = ""
+    for market in markets[:4]:
+        edge = market.get("edge")
+        edge_cls = "pos" if (edge or 0) > 0 else "mut"
+        mkt = esc(str(market.get("label") or market.get("market") or ""))
+        edge_cell = (
+            f'<span class="{edge_cls}">{edge:+.1f}pt</span>'
+            if edge is not None else '<span class=mut>—</span>'
+        )
+        mrows += (
+            f'<tr><td>{mkt}</td><td>{esc(str(market.get("side") or ""))}</td>'
+            f'<td>{market.get("model", "—")}%</td><td>{edge_cell}</td></tr>'
+        )
+    if not mrows:
+        mrows = '<tr><td class=mut colspan=4>No priced markets on this slate.</td></tr>'
+    return f"""<div class=matchup-summary>
+ <div class=ctx>Compact view · full terminal loads for the featured game at build time.</div>
+ <div class=cards>
+   <div class=card><div class=k>Proj total</div><div class=v>{probs.exp_total:.1f}</div></div>
+   <div class=card><div class=k>Margin</div><div class=v>{probs.exp_margin:+.1f}</div></div>
+   <div class=card><div class=k>Win% (H)</div><div class=v>{probs.p_home_win * 100:.0f}%</div></div>
+   <div class=card><div class=k>Lean</div><div class=v>{esc(lean)}</div></div>
+ </div>
+ <div class=sec><h2>{esc(away)} @ {esc(home)}</h2><div class=body>
+   <div class=table-scroll><table><tr><th>Market</th><th>Side</th><th>Model%</th><th>Edge</th></tr>{mrows}</table></div>
+   <div class=note>SP: {esc(gd.away_sp)} vs {esc(gd.home_sp)}. Rebuild with <code>--game {esc(away)}@{esc(home)}</code> for the full matchup terminal.</div>
+ </div></div></div>"""
+
+
 def report_body(r):
     """Render a matchup as a betting decision surface, not a written report."""
     gd, probability, esc = r["gd"], r["probs"], html.escape

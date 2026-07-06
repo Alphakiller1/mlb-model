@@ -4,8 +4,16 @@ from __future__ import annotations
 from pathlib import Path
 
 from mlbmodel.report.app import _NAV, build_app
+from mlbmodel.report.matchup import build_report, matchup_summary_html
 
 DATA = Path(__file__).resolve().parents[1] / "deployment_data"
+
+
+def test_matchup_summary_html_compact():
+    report = build_report("HOU", "DET", fetch=False, data_dir=DATA)
+    html = matchup_summary_html(report)
+    assert "matchup-summary" in html
+    assert "HOU" in html and "DET" in html
 
 
 def test_build_app_renders_all_views():
