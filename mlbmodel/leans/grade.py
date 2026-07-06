@@ -3,7 +3,26 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from mlbmodel.sources.pitcher_box_scores import fetch_pitcher_stats_for_date, lookup_pitcher_stats
 from mlbmodel.storage.supabase import SupabaseReader, SupabaseWriter
+
+_PROP_KEYS = {
+    "k": "k",
+    "strikeouts": "k",
+    "pitcher strikeouts": "k",
+    "bb": "bb",
+    "walks": "bb",
+    "walks allowed": "bb",
+    "er": "er",
+    "earned runs": "er",
+    "earned runs allowed": "er",
+    "outs": "outs",
+    "pitching outs": "outs",
+}
+
+
+def _prop_key(market: str) -> str | None:
+    return _PROP_KEYS.get(str(market or "").strip().lower())
 
 
 def grade_lean(
@@ -17,20 +36,18 @@ def grade_lean(
     selection = str(lean.get("selection") or "").lower()
     line = lean.get("line")
     source = str(lean.get("source") or "").lower()
+    prop_key = _prop_key(market)
 
-    if market in {"k", "bb", "er", "outs", "prop"} or source in {
-        "prizepicks", "underdog", "sleeper", "pickem", "prop",
-    }:
+    if prop_key or source in {"prizepicks", "underdog", "sleeper", "pickem", "prop"}:
         if pitcher_stats is None or line is None:
             return None, False
-        prop = market if market in {"k", "bb", "er", "outs"} else str(lean.get("market") or "")
         actual_map = {
             "k": pitcher_stats.get("strikeouts"),
             "bb": pitcher_stats.get("walks"),
             "er": pitcher_stats.get("earned_runs"),
             "outs": pitcher_stats.get("outs"),
         }
-        actual = actual_map.get(prop.lower())
+        actual = actual_map.get(prop_key or "")
         if actual is None:
             return None, False
         try:
@@ -47,13 +64,12 @@ def grade_lean(
     if outcome is None:
         return None, False
 
-    home_runs = outcome.get("home_runs")
     total = outcome.get("total_runs")
     winner = outcome.get("winner_team")
     margin = outcome.get("margin_home")
 
     if market in {"ml", "moneyline", "h2h"}:
-        return winner == selection.upper(), False
+        return str(winner or "").upper() == selection.upper(), False
     if market in {"total", "totals"} and line is not None and total is not None:
         line_f = float(line)
         total_f = float(total)
@@ -61,11 +77,13 @@ def grade_lean(
             return None, True
         over = total_f > line_f
         return (over if selection == "over" else not over), False
-    if market in {"runline", "spread", "spreads"} and margin is not None and home_runs is not None:
+    if market in {"runline", "spread", "spreads", "run_line"} and margin is not None:
         team = selection.upper()
         home = str(outcome.get("home_team") or "").upper()
         team_margin = float(margin) if team == home else -float(margin)
-        runline = -1.5
+        runline = float(line) if line is not None else -1.5
+        if team_margin + runline == 0:
+            return None, True
         return team_margin + runline > 0, False
 
     return None, False
@@ -79,7 +97,7 @@ def settle_leans(*, reader: SupabaseReader | None = None, writer: SupabaseWriter
 
     pending = reader.get(
         "model_leans?settled=eq.false&select=lean_id,slate_date,game_pk,source,"
-        "market,selection,line&limit=5000"
+        "market,selection,line,pitcher_name&limit=5000"
     )
     if pending.error:
         raise RuntimeError(pending.error)
@@ -87,7 +105,7 @@ def settle_leans(*, reader: SupabaseReader | None = None, writer: SupabaseWriter
     outcomes = reader.get(
         "game_outcomes?select=game_pk,home_runs,away_runs,total_runs,margin_home,winner_team"
     )
-    games = reader.get("games?select=game_pk,home_team,away_team")
+    games = reader.get("games?select=game_pk,home_team,away_team,game_date")
     if outcomes.error or games.error:
         raise RuntimeError(outcomes.error or games.error)
 
@@ -98,11 +116,23 @@ def settle_leans(*, reader: SupabaseReader | None = None, writer: SupabaseWriter
             row["home_team"] = game_by_pk[pk]["home_team"]
             row["away_team"] = game_by_pk[pk]["away_team"]
 
+    dates = sorted({str(row.get("slate_date") or "")[:10] for row in pending.rows if row.get("slate_date")})
+    stats_by_date: dict[str, dict[str, dict]] = {}
+    for day in dates:
+        if day:
+            stats_by_date[day] = fetch_pitcher_stats_for_date(day)
+
     settled = 0
     for lean in pending.rows:
         pk = lean.get("game_pk")
         outcome = outcome_by_pk.get(int(pk)) if pk is not None else None
-        won, push = grade_lean(lean, outcome=outcome)
+        slate_date = str(lean.get("slate_date") or "")[:10]
+        pitcher_stats = lookup_pitcher_stats(
+            stats_by_date,
+            slate_date=slate_date,
+            pitcher_name=lean.get("pitcher_name"),
+        )
+        won, push = grade_lean(lean, outcome=outcome, pitcher_stats=pitcher_stats)
         if won is None and not push:
             continue
         writer.update(

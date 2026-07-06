@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import argparse
 import html
-import math
+import logging
 import os
 
 from mlbmodel.baseball.model import model_probabilities
@@ -21,6 +21,7 @@ from mlbmodel.baseball.repository import DataRepository
 from mlbmodel.market.props import load_prop_board, market_report
 from mlbmodel.market.quotes import load_board
 from mlbmodel.market import prizepicks, underdog, sleeper
+from mlbmodel.market.probability import p_over_line_erf
 from mlbmodel import settings
 from mlbmodel.portfolio.risk import summarize_positions
 from mlbmodel.props.model import build_pitcher_board
@@ -42,9 +43,10 @@ from mlbmodel.report.top_leans import top_leans_html
 from mlbmodel.storage.supabase import SupabaseReader
 
 e = html.escape
+log = logging.getLogger(__name__)
 
 
-def _slate(repo):
+def _slate(repo, pitcher_rows=None):
     m = repo.slate()
     if m is None or "Away" not in m.columns:
         return [], None
@@ -55,7 +57,11 @@ def _slate(repo):
         a, h = str(row["Away"]).upper().strip(), str(row["Home"]).upper().strip()
         rec = {"away": a, "home": h, "time": str(row.get("Time", "") or "")}
         try:
-            gd = repo.load_game(a, h)
+            game_pitchers = [
+                row for row in (pitcher_rows or [])
+                if row.get("team") in {a, h}
+            ]
+            gd = repo.load_game(a, h, pitcher_rows=game_pitchers or None)
             pr = model_probabilities(gd, anchors)
             rec.update({"ph": pr.p_home_win, "total": pr.exp_total, "margin": pr.exp_margin,
                         "asp": gd.away_sp, "hsp": gd.home_sp,
@@ -199,6 +205,8 @@ def _decide(s, model_rows):
         "sharp_p": sharp_p, "soft_p": soft_p,
         "model_p": model_p, "medge": medge, "ev": ev,
         "price": price, "fair": fair, "book": book,
+        "market_line": m.get("line") if m else None,
+        "entry_odds": price if isinstance(price, int) else None,
         "n_sharp": s.get("n_sharp_books"), "n_soft": s.get("n_soft_books"),
         "steam": bool(s.get("steam_flag")),
     }
@@ -319,14 +327,8 @@ def _edge_grade(edge_fraction):
 
 
 def _p_over(line, mean, sd):
-    """P(stat > line) via a normal approximation of the simulated distribution.
-
-    PrizePicks lines sit on the half-point so there is no push; the sim's own sd captures the
-    right spread (fantasy score is a sum → near-normal; counts are close enough for a lean).
-    """
-    if sd is None or sd <= 0:
-        return 1.0 if mean > line else (0.0 if mean < line else 0.5)
-    return 1.0 - 0.5 * (1.0 + math.erf((line - mean) / (sd * math.sqrt(2))))
+    """P(stat > line) via a normal approximation of the simulated distribution."""
+    return p_over_line_erf(line, mean, sd or 0)
 
 
 # Order the pick'em board surfaces PrizePicks pitcher markets (fantasy first, then the rest).
@@ -631,7 +633,8 @@ def _portfolio(reader, gate, slate):
  </div>
  {concentration}
  <div class=sec><h2>Open paper positions</h2><div class=body>
-   <div class=table-scroll><table><tr><th>Game</th><th>Market</th><th>Selection</th>
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter positions…" data-filter-for="portfolio-table" aria-label="Filter portfolio"></div>
+   <div class=table-scroll><table id=portfolio-table class=sortable><tr><th>Game</th><th>Market</th><th>Selection</th>
    <th>Entry</th><th>Model</th><th>Market</th><th>Risk</th><th>Entered</th></tr>
    {rows or '<tr><td class=mut colspan=8>No open paper positions.</td></tr>'}</table></div>
    <div class=note>{e(gate_note)} Live-money execution is outside this model.</div>
@@ -692,7 +695,8 @@ def _results(reader):
    <div class=table-scroll><table><tr><th>Source</th><th>W</th><th>L</th><th>P</th><th>Hit%</th></tr>{src_rows}</table></div>
  </div></div>
  <div class=sec><h2>Recent leans</h2><div class=body>
-   <div class=table-scroll><table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Lean</th><th>Result</th></tr>{recent}</table></div>
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter leans…" data-filter-for="results-recent-table" aria-label="Filter results"></div>
+   <div class=table-scroll><table id=results-recent-table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Lean</th><th>Result</th></tr>{recent}</table></div>
  </div></div>"""
 
 
@@ -856,23 +860,6 @@ _NAV = [("today", "Today"), ("matchups", "Matchups"), ("trends", "Trends"), ("ma
 
 _SHELL_CSS = """
 body{padding:0;min-height:100vh}
-#appshell{display:flex;min-height:calc(100vh - 68px)}
-/* --- sidebar nav: glass rail with an accent-bar active state --- */
-#nav{width:214px;flex:0 0 214px;background:linear-gradient(180deg,rgba(20,23,34,.94),rgba(8,11,19,.98));
-border-right:1px solid var(--border);padding:20px 12px;position:sticky;top:68px;height:calc(100vh - 68px);overflow:auto;
-backdrop-filter:blur(8px)}
-#nav .brand{font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:.01em;
-background:linear-gradient(90deg,var(--teal),var(--v-light));
--webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px}
-#nav .tagline{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.14em;margin-bottom:18px}
-.navb{position:relative;display:block;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:10px;
-color:var(--muted);font:600 13.5px var(--sans);padding:11px 12px 11px 15px;margin:3px 0;cursor:pointer;min-height:44px;
-transition:color .15s ease,background .15s ease}
-.navb:hover{color:var(--ink);background:rgba(124,77,255,.09)}
-.navb.on{color:var(--ink);background:linear-gradient(135deg,rgba(124,77,255,.22),rgba(45,212,191,.06));
-border-color:var(--border-violet);box-shadow:0 6px 20px rgba(124,77,255,.14)}
-.navb.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;
-background:linear-gradient(180deg,var(--v-light),var(--teal))}
 #main{max-width:1240px;margin:0 auto;padding:26px 28px 72px}
 .view{display:none}.view.on{display:block;animation:viewin .28s ease both}
 @keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -881,7 +868,6 @@ background:linear-gradient(180deg,var(--v-light),var(--teal))}
 letter-spacing:-.02em;margin:0 0 5px;line-height:1.05}
 .ctx{color:var(--muted);font-size:13px;margin-bottom:18px}
 .note{color:var(--muted);font-size:11.5px;margin-top:10px}
-/* --- stat tiles: glass panel, gradient accent hairline, hover lift --- */
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:16px}
 .card{position:relative;background:var(--ca-panel-glass);border:1px solid var(--border-2);border-radius:14px;
 padding:15px 16px 14px;overflow:hidden;box-shadow:var(--ca-card-shadow);
@@ -908,7 +894,7 @@ background:linear-gradient(135deg,rgba(124,77,255,.12),rgba(45,212,191,.04));col
 .deployment-notice::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--v-light),var(--teal))}
 .empty{color:var(--muted);font-size:13px;padding:18px;border:1px dashed var(--border-2);border-radius:8px}
 .empty ul{margin:8px 0 0;padding-left:18px}.empty li{margin:3px 0}
-.prop-table{min-width:960px}.prop-main{cursor:pointer}.prop-main:hover{background:rgba(124,77,255,.06)}
+.prop-table{min-width:720px}.prop-main{cursor:pointer}.prop-main:hover{background:rgba(124,77,255,.06)}
 .prop-table th:first-child,.prop-table td:first-child{position:sticky;left:0;z-index:2;background:var(--card)}
 .prop-table th:first-child{z-index:3}.prop-main:hover td:first-child{background:#181A27}
 .pitcher-cell{display:flex;align-items:center;gap:9px;min-width:190px}.pitcher-cell .phead{width:40px;height:40px;flex:0 0 40px}
@@ -930,8 +916,8 @@ background:linear-gradient(135deg,rgba(124,77,255,.12),rgba(45,212,191,.04));col
 .trend-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
 .trend-list li{font-size:12.5px;line-height:1.5;color:var(--ink2);padding-left:2px}
 .trend-list .pill{margin-right:6px;vertical-align:middle}
-@media(max-width:760px){#appshell{flex-direction:column}#nav{width:100%;height:auto;position:static;display:flex;flex-wrap:wrap;gap:4px}
-#nav .brand,#nav .tagline{width:100%}.navb{width:auto}.cards{grid-template-columns:repeat(2,1fr)}}
+.chase-nav-link:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+@media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}.prop-table{min-width:100%}}
 """ + TABLE_UI_CSS
 
 
@@ -960,7 +946,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             prop_prices,
             promotion_status=promotion_status,
         )
-    slate, sd = _slate(repo)
+    slate, sd = _slate(repo, pitchers)
     sync = repo.sync_manifest()
     games = [f'{g["away"]}@{g["home"]}' for g in slate if not g.get("err")]
     if games and featured_game.upper() not in games:
@@ -1085,15 +1071,17 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
 
     if sd:
         try:
-            record_leans(collect_leans(
+            written = record_leans(collect_leans(
                 slate_date=str(sd)[:10],
                 market_plays=market_plays,
                 pickem_rows=pickem_rows,
                 prop_reports=flat_props,
                 pkmap=pkmap,
             ))
-        except Exception:
-            pass
+            if written:
+                log.info("recorded %s model leans for %s", written, sd)
+        except Exception as exc:
+            log.warning("model lean record failed: %s", exc)
 
     views = {
         "today": _today(slate, sd, sharp_by_pk, sync, top_leans),
@@ -1120,6 +1108,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     js = ("function show(k){document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));"
           "document.getElementById('v-'+k).classList.add('on');"
           "document.querySelectorAll('.chase-nav-link').forEach(b=>b.classList.toggle('active',b.dataset.v===k));"
+          "if(location.hash!=='#'+k)history.replaceState(null,'','#'+k);"
           "window.scrollTo(0,0);}"
           "function switchGame(g){document.querySelectorAll('.matchup-report').forEach(x=>"
           "x.classList.toggle('on',x.dataset.game===g));const s=document.getElementById('gameSelect');"
@@ -1139,6 +1128,8 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
           "var n=btns[(i+1)%btns.length];if(n)n.click();}"
           "if(ev.key==='ArrowUp'||ev.key==='ArrowLeft'){ev.preventDefault();"
           "var p=btns[(i-1+btns.length)%btns.length];if(p)p.click();}});"
+          "var boot=(location.hash||'').replace(/^#/,'');"
+          "if(boot&&document.getElementById('v-'+boot))show(boot);"
           + TABLE_UI_JS)
     chase_nav = chase_theme.nav_html(nav_items, "today", "MLB Model", status=(sd or "Live"))
     return (f'<!DOCTYPE html><html lang=en class=view-opening><head><meta charset=utf-8>'

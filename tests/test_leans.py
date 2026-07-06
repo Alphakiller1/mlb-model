@@ -9,6 +9,8 @@ def test_collect_leans_dedupes_market_and_prop():
         "pk": 1,
         "mkt_type": "total",
         "sel": "over",
+        "market_line": 8.5,
+        "entry_odds": -110,
         "price": -110,
         "model_p": 55.0,
         "medge": 3.0,
@@ -22,6 +24,7 @@ def test_collect_leans_dedupes_market_and_prop():
         "p_over": 0.62,
         "edge_pts": 12.0,
         "game_pk": 1,
+        "pitcher": "Gerrit Cole",
     }]
     props = [{
         "state": "BET",
@@ -32,6 +35,8 @@ def test_collect_leans_dedupes_market_and_prop():
         "model_probability": 0.58,
         "model_mean": 6.0,
         "game_pk": 1,
+        "pitcher": "Gerrit Cole",
+        "best_odds": -115,
     }]
     rows = collect_leans(
         slate_date="2026-07-06",
@@ -41,6 +46,19 @@ def test_collect_leans_dedupes_market_and_prop():
     )
     assert len(rows) == 3
     assert {r["source"] for r in rows} == {"sharp", "prizepicks", "prop"}
+    sharp = next(r for r in rows if r["source"] == "sharp")
+    assert sharp["line"] == 8.5
+    assert sharp["entry_odds"] == -110
+    assert next(r for r in rows if r["source"] == "prizepicks")["pitcher_name"] == "Gerrit Cole"
+
+
+def test_grade_lean_runline_uses_stored_line():
+    won, push = grade_lean(
+        {"market": "runline", "selection": "NYY", "line": -1.5},
+        outcome={"margin_home": -2, "home_team": "BOS", "away_team": "NYY"},
+    )
+    assert won is True
+    assert push is False
 
 
 def test_record_leans_skips_without_credentials(monkeypatch):

@@ -374,24 +374,6 @@ def _promotion(reader):
     return promotion_verdict(result.rows)
 
 
-def _arsenal_for(team, pitcher_rows):
-    """Lift the opposing starter's bounded pitch-mix er_factor, keyed to the team it suppresses.
-
-    The pitcher board already ran the arsenal-vs-lineup response for each starter; the row whose
-    ``opponent`` is this team is the pitcher facing it. Returns {} (neutral) when absent so the
-    game model stays unchanged for slates without a pitcher board.
-    """
-    for row in pitcher_rows or []:
-        if str(row.get("opponent") or "").upper() == str(team).upper():
-            matchup = row.get("pitch_matchup") or {}
-            if isinstance(matchup.get("er_factor"), (int, float)):
-                return {
-                    "er_factor": matchup.get("er_factor"),
-                    "coverage_pct": matchup.get("coverage_pct"),
-                    "batters_matched": matchup.get("lineup_batters_matched"),
-                    "pitcher": row.get("pitcher"),
-                }
-    return {}
 
 
 def build_report(
@@ -407,11 +389,8 @@ def build_report(
 ):
     repo = DataRepository(data_dir)
     anchors = repo.anchors()
-    gd = repo.load_game(away, home)
-    # A team's runs are suppressed by the OTHER team's starter, so key each side's arsenal
-    # response (already computed by the pitcher board) to the run-scoring team it applies to.
-    gd.away_arsenal_features = _arsenal_for(away, pitcher_rows)
-    gd.home_arsenal_features = _arsenal_for(home, pitcher_rows)
+    gd = repo.load_game(away, home, pitcher_rows=pitcher_rows)
+    # Arsenal attached inside load_game when pitcher_rows are supplied.
     probs = model_probabilities(gd, anchors)
     simulation = simulate_game(
         probs,

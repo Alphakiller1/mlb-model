@@ -1,12 +1,12 @@
-"""Chase Analytics shared visual layer — the REAL vendored design system, self-contained output.
+"""Chase Analytics shared visual layer — vendored design system, self-contained output.
 
-These are byte-for-byte copies of the production Chase Analytics dashboard styles from
-mlbma-pipeline/dashboard/ (mlbma_design_system.css, theme.css, chase_nav.css,
-mlbma_backgrounds.css + brand icon). The model report renders with the *same* header, wordmark,
-tokens, typography, and gradient broadcast background as
-chase-analytics.com — not an approximation. Everything is inlined so each generated HTML page
-stays fully self-contained (no external CSS/asset fetches), while remaining a faithful port of
-the source. Resync by re-copying the four CSS files + the background asset if the source changes.
+Copies production Chase Analytics dashboard styles from mlbma-pipeline/dashboard/
+(mlbma_design_system.css, theme.css, chase_nav.css, chase_tokens, chase_components).
+The model report uses the same header, wordmark, tokens, and typography as chase-analytics.com.
+
+**Backgrounds:** ``mlbma_backgrounds.css`` in this tree is an MLB-Model-only fork — gradient
+broadcast scrim only, no stadium photo layers (smaller self-contained HTML). Do **not** overwrite
+it from mlbma-pipeline/dashboard/; chase-analytics.com keeps the full stadium photo treatment.
 """
 from __future__ import annotations
 
@@ -35,9 +35,7 @@ def theme_css() -> str:
     """The full production Chase Analytics stylesheet, inlined and self-contained.
 
     Load order mirrors the site: design-system tokens/components → theme extensions →
-    header/nav → stadium backgrounds. The model's small vendored token/grade-chip files are
-    appended last so shell-specific tokens (glass panels, grade chips) resolve; duplicates share
-    the source values so the cascade is unchanged.
+    header/nav → broadcast gradient backgrounds (MLB Model fork; no stadium photos).
     """
     design = (_STATIC / "mlbma_design_system.css").read_text(encoding="utf-8")
     # The vendored copy is standalone: drop the responsive.css @import (not vendored) and add

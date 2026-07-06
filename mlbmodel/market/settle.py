@@ -1,7 +1,11 @@
 """Settle sharp observations against final MLB outcomes through Supabase REST."""
 from __future__ import annotations
 
+import logging
+
 from mlbmodel.storage.supabase import SupabaseReader, SupabaseWriter
+
+log = logging.getLogger(__name__)
 
 
 def grade(observation: dict, game: dict, outcome: dict) -> tuple[bool | None, bool | None]:
@@ -75,7 +79,8 @@ def run_all() -> tuple[int, int]:
         from mlbmodel.leans.grade import settle_leans
 
         lean_settled = settle_leans(reader=SupabaseReader(), writer=SupabaseWriter())
-    except Exception:
+    except Exception as exc:
+        log.warning("model lean settlement failed: %s", exc)
         lean_settled = 0
     return sharp_settled, lean_settled
 

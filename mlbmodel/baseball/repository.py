@@ -18,6 +18,7 @@ from mlbmodel.baseball.features import (
     normalize_name,
     starter_features,
 )
+from mlbmodel.baseball.arsenal import attach_arsenal
 from mlbmodel.baseball.model import GameData, TeamContext, clip
 
 
@@ -173,7 +174,7 @@ class DataRepository:
             factor *= 1 + settings.BULLPEN_IR_SENSITIVITY * (ir - 28.0)
         return clip(factor, *settings.PITCH_FACTOR_CLIP)
 
-    def load_game(self, away: str, home: str) -> GameData:
+    def load_game(self, away: str, home: str, *, pitcher_rows: list[dict] | None = None) -> GameData:
         away, home = away.upper().strip(), home.upper().strip()
         slate = self.slate()
         if slate is None:
@@ -351,7 +352,7 @@ class DataRepository:
         )
         coverage, missing = context_coverage(live_context)
 
-        return GameData(
+        gd = GameData(
             game_pk=game_pk,
             game_date=game_date,
             start_time=str(game.get("Time") or ""),
@@ -389,3 +390,6 @@ class DataRepository:
             context_coverage_pct=coverage,
             missing_context=missing,
         )
+        if pitcher_rows:
+            attach_arsenal(gd, pitcher_rows)
+        return gd

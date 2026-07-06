@@ -84,4 +84,5 @@ border:1px solid var(--border-2);border-radius:8px;padding:10px 12px}
 .pickem-books .best{border:1px solid var(--teal);color:var(--teal)}
 @media (prefers-reduced-motion:reduce){.table-scroll table.sortable th{transition:none}}
 #nav .navb:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.chase-nav-link:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 """

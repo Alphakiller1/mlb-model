@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 import json
-import math
 from pathlib import Path
 
-from mlbmodel.baseball.model import normal_cdf
 from mlbmodel.market import prizepicks
+from mlbmodel.market.probability import p_over_line_erf, p_over_line_normal
 from mlbmodel import settings
 
 PICKEM_BOOKS = ("prizepicks", "underdog", "sleeper")
@@ -26,16 +25,11 @@ def _load_cache(path: Path | None) -> list[dict]:
 
 
 def _p_over(mean: float, sd: float, line: float) -> float:
-    if sd <= 0:
-        sd = max(mean * 0.2, 0.5)
-    return 1.0 - normal_cdf(line, mean, sd)
+    return p_over_line_normal(line, mean, sd)
 
 
 def _p_over_erf(line: float, mean: float, sd: float) -> float:
-    """Match app._p_over for PrizePicks half-point lines."""
-    if sd is None or sd <= 0:
-        return 1.0 if mean > line else (0.0 if mean < line else 0.5)
-    return 1.0 - 0.5 * (1.0 + math.erf((line - mean) / (sd * math.sqrt(2))))
+    return p_over_line_erf(line, mean, sd)
 
 def build_pickem_rows_from_boards(
     pitchers: list[dict],

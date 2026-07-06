@@ -1,11 +1,13 @@
 """Persist model leans from a report build (idempotent upsert)."""
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 
 from mlbmodel import settings
 from mlbmodel.storage.supabase import SupabaseWriter
 
+log = logging.getLogger(__name__)
 MODEL_VERSION = settings.MODEL_VERSION
 
 
@@ -21,8 +23,10 @@ def _row(
     model_prob: float | None,
     edge: float | None,
     lean: str,
+    entry_odds: float | None = None,
+    pitcher_name: str | None = None,
 ) -> dict:
-    return {
+    row = {
         "slate_date": slate_date,
         "game_pk": game_pk,
         "source": source,
@@ -37,6 +41,31 @@ def _row(
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "settled": False,
     }
+    if entry_odds is not None:
+        row["entry_odds"] = entry_odds
+    if pitcher_name:
+        row["pitcher_name"] = pitcher_name
+    return row
+
+
+def _market_line(play: dict) -> float | None:
+    raw = play.get("market_line")
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _entry_odds(play: dict) -> float | None:
+    raw = play.get("entry_odds", play.get("price"))
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
 
 
 def collect_leans(
@@ -63,7 +92,8 @@ def collect_leans(
                 source="sharp",
                 market=str(play.get("mkt_type") or "market"),
                 selection=str(play.get("sel") or ""),
-                line=float(play["price"]) if play.get("price") is not None else None,
+                line=_market_line(play),
+                entry_odds=_entry_odds(play),
                 model_value=play.get("model_p"),
                 model_prob=play.get("model_p"),
                 edge=play.get("medge"),
@@ -87,6 +117,7 @@ def collect_leans(
                 model_prob=item.get("p_over"),
                 edge=item.get("edge_pts"),
                 lean=lean,
+                pitcher_name=str(item.get("pitcher") or "") or None,
             )
         )
 
@@ -109,6 +140,8 @@ def collect_leans(
                 model_prob=item.get("model_probability"),
                 edge=float(edge) * 100 if abs(float(edge)) <= 1 else float(edge),
                 lean=state,
+                entry_odds=float(item["best_odds"]) if item.get("best_odds") is not None else None,
+                pitcher_name=str(item.get("pitcher") or "") or None,
             )
         )
 
