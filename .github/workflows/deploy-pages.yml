@@ -2,18 +2,19 @@ name: deploy-pages
 
 on:
   push:
+    # Only `main` publishes. Feature branches (e.g. codex/*) build via PR checks but must
+    # never deploy — otherwise a stale branch overwrites the live site on the shared Pages env.
     branches:
       - main
-      - codex/unified-model-foundation
   repository_dispatch:
     types:
       - mlbma-pipeline-complete
   schedule:
-    # The Odds API free tier is 500 credits/month; a game-odds fetch costs ~6 credits, so an
-    # hourly cron (24/day) would drain it in ~3 days. The mlbma-pipeline dispatch already
-    # rebuilds on each pipeline run, so the cron is only a safety net — a few pregame refreshes
-    # (UTC) covering the afternoon and evening slates is plenty and keeps the key alive a month.
-    - cron: "17 16,20,23 * * *"
+    # The Odds API free tier is 500 credits/month. A cheap game-line fetch is ~6 credits; a
+    # full player-props fetch is ~50. Two pregame refreshes (UTC) cover the afternoon and
+    # evening slates; the credit guard in the fetch step (below) keeps either from draining the
+    # key. The mlbma-pipeline dispatch rebuilds on each pipeline run, so this is mostly a net.
+    - cron: "17 16,23 * * *"
   workflow_dispatch:
 
 permissions:
@@ -23,7 +24,10 @@ permissions:
 
 concurrency:
   group: github-pages
-  cancel-in-progress: true
+  # false, not true: a Pages deploy that's mid-publish must finish. Cancelling it produces
+  # GitHub's "Deployment failed, try again later" — which is exactly what kept main from
+  # publishing. Overlapping runs queue instead.
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -52,11 +56,36 @@ jobs:
           # Caches live prop lines + game-line odds into _deploy_data so the static build can
           # show over/under prop leans AND the sharp-vs-soft Markets board. Non-fatal: a missing
           # key or fetch error just leaves those sections empty rather than failing the deploy.
+          #
+          # Credit guard: the /v4/sports endpoint is FREE (no credit cost) but returns the
+          # x-requests-remaining header, so we read the month's remaining budget up front and
+          # spend it deliberately — cheap game lines first (they power the market/decision
+          # board), expensive props only when the budget is healthy. This makes a single build
+          # incapable of draining the key; props degrade to model-only projections when low.
           if [ -n "$ODDS_API_KEY" ]; then
-            python -m mlbmodel.market.props --cache _deploy_data/prop_odds_latest.json \
-              || echo "WARNING: prop odds fetch failed; props stay NO MARKET"
-            python -m mlbmodel.market.collect --data-dir _deploy_data \
-              || echo "WARNING: game odds fetch failed; sharp board stays empty"
+            REMAINING=$(curl -s -D - -o /dev/null \
+              "https://api.the-odds-api.com/v4/sports/?apiKey=$ODDS_API_KEY" \
+              | tr -d '\r' | awk -F': ' 'tolower($1)=="x-requests-remaining"{print $2}')
+            REMAINING=${REMAINING:-0}
+            echo "Odds API credits remaining this month: $REMAINING"
+
+            # Game-line board (~6 credits) — powers Markets/decision board. Refresh whenever
+            # there's any real budget left.
+            if [ "$REMAINING" -ge 20 ]; then
+              python -m mlbmodel.market.collect --data-dir _deploy_data \
+                || echo "WARNING: game odds fetch failed; sharp board stays empty"
+            else
+              echo "Skipping game-line fetch — only $REMAINING credits left (preserving budget)."
+            fi
+
+            # Player props (~50 credits) — only when the month's budget is healthy so no single
+            # build can exhaust the key. Below the floor, props show model projections only.
+            if [ "$REMAINING" -ge 150 ]; then
+              python -m mlbmodel.market.props --cache _deploy_data/prop_odds_latest.json \
+                || echo "WARNING: prop odds fetch failed; props stay NO MARKET"
+            else
+              echo "Skipping prop-odds fetch — only $REMAINING credits left (props need ~50); showing model projections. Upgrade the Odds API plan for always-on props."
+            fi
           else
             echo "ODDS_API_KEY not set; skipping odds fetch (props + sharp stay empty)"
           fi
