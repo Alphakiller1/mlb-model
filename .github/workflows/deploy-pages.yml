@@ -91,10 +91,12 @@ jobs:
           fi
       - name: Fetch PrizePicks pick'em lines
         run: |
-          # PrizePicks public MLB projections (league 2) — free, no Odds-API credits. The edge
-          # (Cloudflare) challenges datacenter IPs, so send a full browser header set. Non-fatal:
-          # any failure just leaves the pick'em board empty. Prints the response head to diagnose
-          # a challenge page vs real JSON.
+          # PrizePicks uses PerimeterX bot protection that challenges datacenter IPs (GitHub
+          # runners get a JS-challenge JSON, not the data), so the committed snapshot — refreshed
+          # from an allowed/residential IP via `python -m mlbmodel.market.prizepicks` — is the
+          # base. A live fetch is still attempted and only replaces the snapshot when it returns
+          # real lines, so this upgrades automatically the day it runs behind an allowed IP/proxy.
+          cp deployment_data/prizepicks_lines.json _deploy_data/prizepicks_lines.json 2>/dev/null || true
           curl -s -m 30 --compressed \
             -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
             -H "Accept: application/json, text/plain, */*" \
@@ -102,11 +104,14 @@ jobs:
             -H "Origin: https://app.prizepicks.com" \
             -H "Referer: https://app.prizepicks.com/" \
             "https://api.prizepicks.com/projections?league_id=2&per_page=1000" \
-            -o _deploy_data/pp_raw.json || echo "curl failed"
-          echo "PrizePicks response head:"; head -c 180 _deploy_data/pp_raw.json 2>/dev/null; echo
-          python -m mlbmodel.market.prizepicks --from-raw _deploy_data/pp_raw.json \
-            --cache _deploy_data/prizepicks_lines.json \
-            || echo "WARNING: PrizePicks parse failed; pick'em board stays empty"
+            -o _deploy_data/pp_raw.json || true
+          python -m mlbmodel.market.prizepicks --from-raw _deploy_data/pp_raw.json --cache /tmp/pp_live.json 2>/dev/null || true
+          if [ -s /tmp/pp_live.json ] && python -c "import json,sys; sys.exit(0 if len(json.load(open('/tmp/pp_live.json')))>0 else 1)" 2>/dev/null; then
+            cp /tmp/pp_live.json _deploy_data/prizepicks_lines.json
+            echo "PrizePicks: live fetch OK"
+          else
+            echo "PrizePicks: live fetch blocked (PerimeterX) — using committed snapshot"
+          fi
       - name: Build static research dashboard
         env:
           MLBMODEL_CACHE_DIR: _deploy_data
