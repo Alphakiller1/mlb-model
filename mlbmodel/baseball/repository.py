@@ -19,6 +19,13 @@ from mlbmodel.baseball.features import (
     starter_features,
 )
 from mlbmodel.baseball.arsenal import attach_arsenal
+from mlbmodel.baseball.metrics import (
+    bullpen_allowed_adjustment,
+    bullpen_platoon_adjustment,
+    opponent_offense_strength,
+    pitcher_allowed_skill_adjustment,
+    sp_split_skill_adjustment,
+)
 from mlbmodel.baseball.model import GameData, TeamContext, clip
 
 
@@ -153,10 +160,22 @@ class DataRepository:
             proj_osi=_number(row.get("proj_osi")),
             osi_l7=_number(row.get("osi_l7")),
             osi_l14=_number(row.get("osi_l14")),
+            abq_l7=_number(row.get("abq_l7")),
+            abq_l14=_number(row.get("abq_l14")),
+            rcv_l7=_number(row.get("rcv_l7")),
+            rcv_l14=_number(row.get("rcv_l14")),
+            oor=_number(row.get("oor")),
             woba=_number(row.get(f"{venue}_woba")),
             platoon_osi=_number(row.get(f"osi_vs_{suffix}")),
+            abq_vs_lhp=_number(row.get("abq_vs_lhp")),
+            abq_vs_rhp=_number(row.get("abq_vs_rhp")),
+            rcv_vs_lhp=_number(row.get("rcv_vs_lhp")),
+            rcv_vs_rhp=_number(row.get("rcv_vs_rhp")),
+            obr_vs_lhp=_number(row.get("obr_vs_lhp")),
+            obr_vs_rhp=_number(row.get("obr_vs_rhp")),
             bullpen_era=_number(row.get("bullpen_era")),
             bullpen_high_lev_era=_number(row.get("bullpen_high_lev_era")),
+            bullpen_osi_allowed=_number(row.get("bullpen_osi_allowed")),
             avg_pitching_score=_number(row.get("avg_pitching_score")),
             window_direction=str(row.get("window_direction") or "").strip() or None,
         )
@@ -266,7 +285,7 @@ class DataRepository:
         for rows in game_logs_by_name.values():
             rows.sort(key=lambda value: str(value.get("date") or ""))
 
-        def pitcher_inputs(name: str, team: str, side: str) -> dict:
+        def pitcher_inputs(name: str, team: str, side: str) -> tuple[dict, dict | None]:
             candidates = sp_by_name.get(normalize_name(name), [])
             team_candidates = [
                 row for row in candidates
@@ -295,7 +314,7 @@ class DataRepository:
             )
             if profile is fallback_profile and fallback_profile:
                 features["source"] = "MLB Stats API season fallback"
-            return features
+            return features, profile
 
         bullpen_frame = self.load("bullpen_unit.csv")
         bullpen_rows = bullpen_frame.to_dict("records") if bullpen_frame is not None else []
@@ -309,8 +328,35 @@ class DataRepository:
             relievers_by_team.setdefault(
                 str(row.get("pitcher_team") or "").upper(), []
             ).append(row)
-        away_starter = pitcher_inputs(str(game.get("Away_SP") or ""), away, "away")
-        home_starter = pitcher_inputs(str(game.get("Home_SP") or ""), home, "home")
+        split_frame = self.load("sp_metric_splits.csv")
+        split_rows = split_frame.to_dict("records") if split_frame is not None else []
+
+        away_starter, away_sp_profile = pitcher_inputs(
+            str(game.get("Away_SP") or ""), away, "away"
+        )
+        home_starter, home_sp_profile = pitcher_inputs(
+            str(game.get("Home_SP") or ""), home, "home"
+        )
+
+        home_offense_strength = opponent_offense_strength(
+            self._context(home_profile, "home", away_hand),
+            _number(game.get("Home_OSI")),
+        )
+        away_offense_strength = opponent_offense_strength(
+            self._context(away_profile, "away", home_hand),
+            _number(game.get("Away_OSI")),
+        )
+        away_starter["skill_multiplier"] = round(
+            pitcher_allowed_skill_adjustment(away_sp_profile, home_offense_strength)
+            * sp_split_skill_adjustment(away_sp_profile, split_rows, away_hand),
+            4,
+        )
+        home_starter["skill_multiplier"] = round(
+            pitcher_allowed_skill_adjustment(home_sp_profile, away_offense_strength)
+            * sp_split_skill_adjustment(home_sp_profile, split_rows, home_hand),
+            4,
+        )
+
         away_bullpen = bullpen_features(
             bullpen_index.get(away),
             relievers_by_team.get(away, []),
@@ -322,6 +368,24 @@ class DataRepository:
             relievers_by_team.get(home, []),
             venue="home",
             game_date=game_date,
+        )
+        away_pen_row = bullpen_index.get(away)
+        home_pen_row = bullpen_index.get(home)
+        away_ctx = self._context(away_profile, "away", home_hand)
+        home_ctx = self._context(home_profile, "home", away_hand)
+        away_bullpen["pen_multiplier"] = round(
+            bullpen_platoon_adjustment(away_pen_row, home_hand)
+            * bullpen_allowed_adjustment(
+                away_ctx.bullpen_osi_allowed, home_offense_strength
+            ),
+            4,
+        )
+        home_bullpen["pen_multiplier"] = round(
+            bullpen_platoon_adjustment(home_pen_row, away_hand)
+            * bullpen_allowed_adjustment(
+                home_ctx.bullpen_osi_allowed, away_offense_strength
+            ),
+            4,
         )
 
         batter_frame = self.load("batter_profiles.csv")
@@ -387,6 +451,8 @@ class DataRepository:
             home_lineup_features=home_lineup,
             away_injury_features=away_injuries,
             home_injury_features=home_injuries,
+            away_starter_profile=dict(away_sp_profile or {}),
+            home_starter_profile=dict(home_sp_profile or {}),
             context_coverage_pct=coverage,
             missing_context=missing,
         )

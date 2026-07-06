@@ -22,6 +22,11 @@ from mlbmodel.baseball.context import (
     umpire_run_factor,
     weather_run_factor,
 )
+from mlbmodel.baseball.metrics import (
+    opponent_offense_strength,
+    pitcher_allowed_skill_adjustment,
+    sp_split_skill_adjustment,
+)
 from mlbmodel.baseball.repository import DataRepository
 
 LG_BABIP = 0.295
@@ -162,6 +167,7 @@ class PitcherProjectionEngine:
         for row in self.team_mix:
             team = str(row.get("team_abbr") or "").upper()
             self.team_mix_by_team.setdefault(team, []).append(row)
+        self.sp_metric_splits = _rows(repo.load("sp_metric_splits.csv"))
         self.pitch_baselines = self._pitch_baselines()
 
     def _preferred_mix(self, recent: str, season: str, key: str) -> list[dict]:
@@ -299,6 +305,10 @@ class PitcherProjectionEngine:
             if row is None:
                 continue
             score = _number(row.get("projOSI")) or _number(row.get("OSI"))
+            abq = _number(row.get("ABQ")) or _number(row.get("abq"))
+            rcv = _number(row.get("RCV")) or _number(row.get("rcv"))
+            if score is not None and abq is not None and rcv is not None:
+                score = 0.55 * score + 0.25 * abq + 0.20 * rcv
             if score is None:
                 continue
             weight = float(ORDER_WEIGHTS[min(index, len(ORDER_WEIGHTS) - 1)])
@@ -566,6 +576,13 @@ class PitcherProjectionEngine:
             * umpire_run_factor(context.get("umpire"))
             * travel_offense_factor(travel)
             * injury_factor
+        )
+        opp_ctx = game.home_context if side == "away" else game.away_context
+        opp_osi = game.home_osi if side == "away" else game.away_osi
+        opp_strength = opponent_offense_strength(opp_ctx, opp_osi)
+        run_factor *= pitcher_allowed_skill_adjustment(profile, opp_strength)
+        run_factor *= sp_split_skill_adjustment(
+            profile, self.sp_metric_splits, pitcher_hand
         )
         era = _number(profile.get("ERA")) or skill_era
         blended_era = skill_era * 0.70 + era * 0.30

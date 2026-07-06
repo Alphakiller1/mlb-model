@@ -196,6 +196,10 @@ def lineup_features(
         if row is None:
             continue
         score = number(row.get("projOSI")) or number(row.get("OSI"))
+        abq = number(row.get("ABQ")) or number(row.get("abq"))
+        rcv = number(row.get("RCV")) or number(row.get("rcv"))
+        if score is not None and abq is not None and rcv is not None:
+            score = 0.55 * score + 0.25 * abq + 0.20 * rcv
         if score is None:
             continue
         order_weight = max(0.88, 1.11 - index * 0.025)

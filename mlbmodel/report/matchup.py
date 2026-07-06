@@ -392,6 +392,12 @@ def build_report(
     anchors = repo.anchors()
     gd = repo.load_game(away, home, pitcher_rows=pitcher_rows)
     # Arsenal attached inside load_game when pitcher_rows are supplied.
+    try:
+        from mlbmodel.trends.report import trend_features_for_game
+
+        gd.trend_features = trend_features_for_game(repo, away, home)
+    except Exception:
+        gd.trend_features = {}
     probs = model_probabilities(gd, anchors)
     simulation = simulate_game(
         probs,
