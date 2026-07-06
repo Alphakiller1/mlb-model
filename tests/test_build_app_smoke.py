@@ -26,6 +26,8 @@ def test_build_app_renders_all_views():
     assert "location.hash" in html
     assert "pitcher-prop-deck" in html
     assert "Matchup context" in html
+    assert "edge-command" in html
+    assert "Where we have edge today" in html
     assert "ca-neon-icon" in html
 
 

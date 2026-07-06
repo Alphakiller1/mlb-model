@@ -7,6 +7,16 @@ from mlbmodel.baseball.model import model_probabilities
 from mlbmodel.market import prizepicks
 from mlbmodel.market.probability import p_over_line_erf
 from mlbmodel.leans.calibration import calibration_buckets, summarize_record
+from mlbmodel.analytics.edge_intel import (
+    clv_from_snapshots,
+    market_type_record,
+    team_prediction_record,
+)
+from mlbmodel.report.edge_ui import (
+    clv_panel_html,
+    market_performance_html,
+    team_accuracy_html,
+)
 from mlbmodel.portfolio.risk import summarize_positions
 from mlbmodel.report.decision import MKT_LABEL as _MKT_LABEL
 from mlbmodel.report.html_fmt import display as _display, edge_grade as _edge_grade, section_head
@@ -45,7 +55,7 @@ def slate(repo, pitcher_rows=None):
 
 
 # ── sections (each = context -> conclusion -> evidence; honest empty states) ──
-def today(slate, sd, sharp_by_pk, sync=None, top_leans=""):
+def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
     rows = ""
     for g in slate:
         if g.get("err"):
@@ -75,8 +85,8 @@ def today(slate, sd, sharp_by_pk, sync=None, top_leans=""):
         f'<td>{abs(g["margin"]):.1f} R</td><td>{max(g["ph"],1-g["ph"])*100:.0f}%</td>'
         f'<td>{g["total"]:.1f}</td></tr>' for g in leans)
     return f"""<h2>Today</h2>
- <div class=ctx>Open a matchup for model, market, risk, and freshness details.</div>
- {top_leans}
+ <div class=ctx>Model edge vs live lines — where we beat the market, what we&apos;re projecting, and historical CLV.</div>
+ {edge_command}
  <div class=cards>
    <div class=card><div class=k>Games</div><div class=v>{n}</div></div>
    <div class=card><div class=k>Slate</div><div class=v style="font-size:16px">{e(sd or "—")}</div></div>
@@ -285,16 +295,25 @@ def portfolio(reader, gate, slate):
 
 def results(reader):
     result = reader.get(
-        "model_leans?select=lean_id,slate_date,source,market,selection,line,model_prob,"
-        "edge,lean,won,push,settled,recorded_at&order=recorded_at.desc&limit=2000"
+        "model_leans?select=lean_id,slate_date,game_pk,source,market,selection,line,"
+        "model_prob,model_value,edge,lean,won,push,settled,entry_odds,recorded_at"
+        "&order=recorded_at.desc&limit=2000"
     )
     if result.error:
-        return f"""<h2>Results</h2><div class=ctx>Self-tracked model leans — record, settle, calibrate.</div>
+        return f"""<h2>Results</h2><div class=ctx>Track record, CLV, calibration, and where the model finds value.</div>
  <div class=empty>Lean warehouse unavailable: {e(result.error)}. Apply migration
  <code>0003_model_leans.sql</code> and configure <code>SUPABASE_URL</code> +
  <code>SUPABASE_KEY</code> in GitHub Actions secrets.</div>"""
 
     rows = result.rows
+    clv_result = reader.get(
+        "prediction_market_snapshots?settled=eq.true&won=not.is.null"
+        "&entry_prob=not.is.null&implied_probability=not.is.null"
+        "&select=market_type,entry_prob,implied_probability,won&limit=5000"
+    )
+    clv_summary = clv_from_snapshots(clv_result.rows if not clv_result.error else [])
+    teams = team_prediction_record(rows)
+    market_perf = market_type_record(rows)
     summary = summarize_record(rows)
     cal = calibration_buckets(rows)
     hit = summary.get("hit_rate")
@@ -312,22 +331,39 @@ def results(reader):
         for src, v in sorted((summary.get("by_source") or {}).items())
     ) or '<tr><td class=mut colspan=5>—</td></tr>'
 
-    recent = "".join(
-        f'<tr><td>{e(str(r.get("slate_date") or ""))}</td>'
-        f'<td>{e(str(r.get("source") or ""))}</td>'
-        f'<td>{e(str(r.get("market") or ""))} {e(str(r.get("selection") or ""))}</td>'
-        f'<td>{e(str(r.get("lean") or ""))}</td>'
-        f'<td>{"W" if r.get("won") else ("P" if r.get("push") else ("L" if r.get("settled") else "—"))}</td></tr>'
-        for r in rows[:25]
-    ) or '<tr><td class=mut colspan=5>No leans recorded yet.</td></tr>'
+    rows_html = []
+    for r in rows[:40]:
+        edge_cell = f'{float(r["edge"]):+.1f}pt' if r.get("edge") is not None else "—"
+        entry_cell = str(int(r["entry_odds"])) if r.get("entry_odds") is not None else "—"
+        line_suffix = f' {_display(r.get("line"), digits=1)}' if r.get("line") is not None else ""
+        result_cell = "W" if r.get("won") else ("P" if r.get("push") else ("L" if r.get("settled") else "—"))
+        rows_html.append(
+            f'<tr><td>{e(str(r.get("slate_date") or ""))}</td>'
+            f'<td>{e(str(r.get("source") or ""))}</td>'
+            f'<td>{e(str(r.get("market") or ""))} {e(str(r.get("selection") or ""))}{line_suffix}</td>'
+            f'<td class=num>{entry_cell}</td>'
+            f'<td>{e(str(r.get("lean") or ""))}</td>'
+            f'<td class=num>{edge_cell}</td>'
+            f'<td>{result_cell}</td></tr>'
+        )
+    recent = "".join(rows_html) or '<tr><td class=mut colspan=7>No leans recorded yet.</td></tr>'
+
+    clv_panel = clv_panel_html(clv_summary)
+    team_panel = team_accuracy_html(teams)
+    market_panel = market_performance_html(market_perf)
 
     return f"""<h2>Results</h2>
- <div class=ctx>Accumulating track record from persisted model leans. Calibration is the honest headline.</div>
+ <div class=ctx>Honest track record: CLV vs closing lines, calibration, team accuracy, and market-level edge.</div>
  <div class=cards>
    <div class=card><div class=k>Record</div><div class=v>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</div></div>
    <div class=card><div class=k>Hit rate</div><div class=v>{hit_txt}</div></div>
+   <div class=card><div class=k>Historical CLV</div><div class=v>{(f'{clv_summary["clv_pts"]:+.1f}pt' if clv_summary else "—")}</div></div>
    <div class=card><div class=k>Leans logged</div><div class=v>{len(rows)}</div></div>
-   <div class=card><div class=k>Settled</div><div class=v>{summary["total"]}</div></div>
+ </div>
+ {clv_panel}
+ <div class=cols>
+   {team_panel}
+   {market_panel}
  </div>
  <div class=ca-board>{section_head("Calibration", icon="results")}<div class=body>
    <div class=table-scroll><table class=sortable><tr><th>Bucket</th><th>n</th><th>Predicted</th><th>Actual</th><th>Gap</th></tr>{cal_rows}</table></div>
@@ -338,7 +374,7 @@ def results(reader):
  </div></div>
  <div class=ca-board><h2>Recent leans</h2><div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter leans…" data-filter-for="results-recent-table" aria-label="Filter results"></div>
-   <div class=table-scroll><table id=results-recent-table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Lean</th><th>Result</th></tr>{recent}</table></div>
+   <div class=table-scroll><table id=results-recent-table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Entry</th><th>Lean</th><th>Edge</th><th>Result</th></tr>{recent}</table></div>
  </div></div>"""
 
 
@@ -450,7 +486,7 @@ def trends(reports):
  {cards}"""
 
 
-def research(reader, pv, f5_board=None):
+def research(reader, pv, f5_board=None, clv_summary=None):
     cal_result = reader.get(
         "v_pm_calibration?select=price_bucket,n,avg_price,actual_win_rate,gap"
         "&order=price_bucket&limit=12"
@@ -484,9 +520,11 @@ def research(reader, pv, f5_board=None):
                 f'<div class=table-scroll><table><tr><th>Game</th><th>Market</th><th>Side</th>'
                 f'<th>Model%</th><th>Price</th><th>Edge</th><th>State</th></tr>{f5rows}</table></div>'
                 f'<div class=note>{f5_note}</div></div></div>')
+    clv_panel = clv_panel_html(clv_summary)
 
     return f"""<h2>Research</h2>
- <div class=ctx>Model + data health. Not part of the betting workflow — promotion is gated here.</div>
+ <div class=ctx>Model health, CLV backbone, and promotion gate — evidence before sizing.</div>
+ {clv_panel}
  <div class=ca-board>{section_head("Promotion gate", icon="research")}<div class=body>
    <div class="vbar {tone}"><b>{pv['verdict']}</b><span>{e('; '.join(pv.get('reasons', [])))}</span></div>
 	   <div class=note>Promotion also requires an executable signal timestamp and entry price. Open-to-close hindsight cannot qualify.</div></div></div>

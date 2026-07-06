@@ -33,6 +33,8 @@ from mlbmodel.report.matchup import (
     report_body,
 )
 from mlbmodel.report.decision import collect_market_plays as _collect_market_plays, markets_html as _markets
+from mlbmodel.analytics.edge_intel import clv_from_snapshots, collect_slate_opportunities
+from mlbmodel.report.edge_ui import edge_command_html
 from mlbmodel.leans.decision_calibration import thresholds_from_leans
 from mlbmodel.leans.record import collect_leans, record_leans
 from mlbmodel.market.pickem import build_pickem_rows, build_pickem_rows_from_boards
@@ -208,6 +210,22 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 **report,
                 "model_mean": (pitcher.get("projections") or {}).get(report.get("prop"), {}).get("mean"),
             })
+
+    clv_result = reader.get(
+        "prediction_market_snapshots?settled=eq.true&won=not.is.null"
+        "&entry_prob=not.is.null&implied_probability=not.is.null"
+        "&select=market_type,entry_prob,implied_probability,won&limit=5000"
+    )
+    clv_summary = clv_from_snapshots(clv_result.rows if not clv_result.error else [])
+
+    opportunities = collect_slate_opportunities(
+        pkmap=pkmap,
+        market_plays=market_plays,
+        model_by_pk=model_by_pk,
+        prop_reports=flat_props,
+        pickem_rows=pickem_rows,
+    )
+    edge_command = edge_command_html(opportunities, clv_summary=clv_summary)
     top_leans = top_leans_html(
         market_plays=market_plays,
         pickem_rows=pickem_rows,
@@ -245,14 +263,14 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             log.error("model lean record failed: %s", exc)
 
     views = {
-        "today": _today(slate, sd, sharp_by_pk, sync, top_leans),
+        "today": _today(slate, sd, sharp_by_pk, sync, edge_command),
         "matchups": matchups,
         "trends": _trends(slate_reports),
         "markets": _markets(slate, sharp_by_pk, model_by_pk, decision_thresholds),
         "props": _props(pitchers, prop_prices, pp_board, ud_board, sl_board, top_leans),
         "portfolio": _portfolio(reader, gate, slate),
         "results": _results(reader),
-        "research": _research(reader, gate, f5_board),
+        "research": _research(reader, gate, f5_board, clv_summary),
     }
     nav_items = [(k, lbl, f"show('{k}')") for k, lbl in _NAV]
     sections = "".join(

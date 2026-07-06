@@ -62,6 +62,8 @@ Lean sources recorded at each build (idempotent upsert to `model_leans`):
 | `prop` | Sportsbook pitcher props with edge ≥0.5pt or BET/MONITOR |
 | `prizepicks` / `underdog` / `sleeper` | Pick'em lines incl. fantasy score (OVER/UNDER vs model) |
 | `projection` | Trusted pitcher projection means (K, ER, fantasy, F5_ER, etc.) |
+
+**Edge command center (Today):** ranks all slate opportunities — sharp fusion, game/F5 markets, props, pick'em — with live line, model%, and edge pts. **Results** adds CLV (Kalshi snapshots), team ML accuracy, and edge-by-market tables.
 | `game_outcomes` | `build_game_results` | Settlement |
 | `sharp_observations` | `market/collect` | Research / settle |
 | `paper_positions` | (manual / future execution) | Portfolio view |

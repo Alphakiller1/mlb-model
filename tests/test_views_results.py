@@ -6,10 +6,16 @@ from mlbmodel.storage.supabase import ReadResult
 
 
 class StaticReader:
-    def __init__(self, rows=None, error=None):
+    def __init__(self, rows=None, error=None, extra=None):
         self.result = ReadResult(rows or [], error)
+        self.extra = extra or {}
 
-    def get(self, _path):
+    def get(self, path):
+        if self.result.error:
+            return self.result
+        for prefix, rows in self.extra.items():
+            if path.startswith(prefix):
+                return ReadResult(rows)
         return self.result
 
 
@@ -40,10 +46,20 @@ def test_results_view_renders_calibration_board():
             "recorded_at": "2026-07-05T12:00:00Z",
         },
     ]
-    html = results(StaticReader(rows))
+    html = results(StaticReader(rows, extra={
+        "prediction_market_snapshots": [{
+            "market_type": "ml",
+            "entry_prob": 0.45,
+            "implied_probability": 0.50,
+            "won": True,
+        }],
+    }))
     assert "Results" in html
     assert "ca-section-head" in html
     assert "Calibration" in html
+    assert "Closing line value" in html
+    assert "Teams we predict best" in html
+    assert "Edge by market" in html
     assert "1-1-0" in html
 
 
