@@ -69,4 +69,6 @@ Requires `SUPABASE_URL` + `SUPABASE_KEY` secrets for lean recording. Apply migra
 
 `mlbmodel/report/static/mlbma_backgrounds.css` is an **MLB Model fork** (gradient-only). Do not overwrite from `mlbma-pipeline/dashboard/` — chase-analytics.com keeps stadium photo backgrounds.
 
-Major panels use **`.ca-board`** from the vendored design system (opaque broadcast boards). Resync dashboard CSS with `python scripts/sync_chase_css.py --source ../mlbma-pipeline --check` (or `--write`).
+Major panels use **`.ca-board`** from the vendored design system (opaque broadcast boards). Neon section icons are vendored SVGs in `static/assets/icons/` (sync via `scripts/sync_chase_icons.py`); `publish_assets()` copies them beside `index.html` on build.
+
+Resync dashboard CSS with `python scripts/sync_chase_css.py --source ../mlbma-pipeline --check` (or `--write`).

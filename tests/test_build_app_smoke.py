@@ -25,6 +25,7 @@ def test_build_app_renders_all_views():
     assert "function show(k)" in html
     assert "location.hash" in html
     assert "prop-board" in html
+    assert "ca-neon-icon" in html
 
 
 def test_build_app_matchup_switch_hybrid_terminals():

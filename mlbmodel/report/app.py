@@ -15,6 +15,7 @@ import argparse
 import html
 import logging
 import os
+from pathlib import Path
 
 from mlbmodel.baseball.repository import DataRepository
 from mlbmodel.market.props import load_prop_board, market_report
@@ -47,6 +48,8 @@ from mlbmodel.report.views import (
     trends as _trends,
 )
 from mlbmodel.storage.supabase import SupabaseReader
+
+from mlbmodel.report.static_assets import publish_assets
 
 e = html.escape
 log = logging.getLogger(__name__)
@@ -272,10 +275,14 @@ def main():  # pragma: no cover
     ap.add_argument("--no-fetch", action="store_true")
     ap.add_argument("--data-dir")
     args = ap.parse_args()
-    open(args.out, "w", encoding="utf-8").write(
-        build_app(args.game, fetch=not args.no_fetch, data_dir=args.data_dir)
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        build_app(args.game, fetch=not args.no_fetch, data_dir=args.data_dir),
+        encoding="utf-8",
     )
-    print(f"wrote {args.out}")
+    published = publish_assets(out.parent)
+    print(f"wrote {out}" + (f" (+{published} icons)" if published else ""))
 
 
 if __name__ == "__main__":

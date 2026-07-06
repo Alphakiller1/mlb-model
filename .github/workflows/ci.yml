@@ -29,3 +29,6 @@ jobs:
       - name: chase css drift
         if: steps.mlbma.outcome == 'success'
         run: python scripts/sync_chase_css.py --source mlbma-pipeline --check
+      - name: chase icon drift
+        if: steps.mlbma.outcome == 'success'
+        run: python scripts/sync_chase_icons.py --source mlbma-pipeline --check

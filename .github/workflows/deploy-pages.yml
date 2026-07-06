@@ -175,7 +175,10 @@ jobs:
               assert f'id=\"v-{key}\"' in html, key
           assert 'ca-board' in html
           assert 'matchup-full-src' in html
-          print(f'OK: {size_kb} KB, all views present')
+          assert 'ca-section-head' in html
+          icons = list(Path('_site/assets/icons').glob('*.svg'))
+          assert len(icons) >= 8, f'expected vendored icons, got {len(icons)}'
+          print(f'OK: {size_kb} KB, all views present, {len(icons)} icons')
           "
       - name: Configure Pages
         uses: actions/configure-pages@v5
