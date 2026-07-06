@@ -51,6 +51,14 @@ def test_trend_run_factor_maps_feature_row():
     assert factor > 1.0
 
 
+def test_signal_confidence_modifier():
+    from mlbmodel.baseball.metrics import signal_confidence_modifier
+
+    signals = [{"fired": True}] * 4
+    assert signal_confidence_modifier(signals, "NYY", "BOS", "medium") == "high"
+    assert signal_confidence_modifier([], "NYY", "BOS", "high") == "high"
+
+
 def test_model_applies_offense_depth_when_metrics_present():
     game = GameData(
         game_pk=1,

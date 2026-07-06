@@ -27,6 +27,7 @@ from mlbmodel.baseball.model import (
     pitch_factor,
 )
 from mlbmodel.baseball.context import weather_run_factor
+from mlbmodel.baseball.metrics import signal_edge_adjustment
 from mlbmodel.baseball.repository import DataRepository
 from mlbmodel.baseball.risk import risk_signals
 from mlbmodel.baseball.simulation import simulate_game
@@ -247,6 +248,21 @@ def _advantage(gd, anchors, repo):
     return rows
 
 
+def _signal_boost(gd, market: str, side) -> float:
+    market = str(market).lower()
+    if market == "total":
+        return (
+            signal_edge_adjustment(gd.game_signals, side="away")
+            + signal_edge_adjustment(gd.game_signals, side="home")
+        ) / 2
+    side_key = (
+        "away"
+        if str(side).upper() in {gd.away, "AWAY"}
+        else "home"
+    )
+    return signal_edge_adjustment(gd.game_signals, side=side_key)
+
+
 def _market_row(market, side, line, ou, gd, probs, anchors, quote, promotion):
     probability, description = market_probability(market, side, line, gd, probs, anchors, ou)
     probability = max(0.02, min(0.98, probability))
@@ -255,6 +271,7 @@ def _market_row(market, side, line, ou, gd, probs, anchors, quote, promotion):
         quote.best_odds if quote else None,
         quote.vigfree_probability if quote else None,
         promotion_status=promotion,
+        signal_edge_boost=_signal_boost(gd, market, side),
     )
     tone = {
         "BET": "pos",
@@ -391,13 +408,8 @@ def build_report(
     repo = DataRepository(data_dir)
     anchors = repo.anchors()
     gd = repo.load_game(away, home, pitcher_rows=pitcher_rows)
-    # Arsenal attached inside load_game when pitcher_rows are supplied.
-    try:
-        from mlbmodel.trends.report import trend_features_for_game
-
-        gd.trend_features = trend_features_for_game(repo, away, home)
-    except Exception:
-        gd.trend_features = {}
+  # Arsenal attached inside load_game when pitcher_rows are supplied.
+    repo.enrich_trends(gd, away, home)
     probs = model_probabilities(gd, anchors)
     simulation = simulate_game(
         probs,

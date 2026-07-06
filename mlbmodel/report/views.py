@@ -41,6 +41,7 @@ def slate(repo, pitcher_rows=None):
                 if row.get("team") in {a, h}
             ]
             gd = repo.load_game(a, h, pitcher_rows=game_pitchers or None)
+            repo.enrich_trends(gd, a, h)
             pr = model_probabilities(gd, anchors)
             rec.update({"ph": pr.p_home_win, "total": pr.exp_total, "margin": pr.exp_margin,
                         "asp": gd.away_sp, "hsp": gd.home_sp,

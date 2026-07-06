@@ -14,6 +14,7 @@ from mlbmodel.baseball.context import (
 from mlbmodel.baseball.metrics import (
     offense_depth_factor,
     platoon_metric_factor,
+    signal_confidence_modifier,
     trend_run_factor,
 )
 from mlbmodel.market.oddsmath import prob_to_american
@@ -98,6 +99,9 @@ class GameData:
     trend_features: dict = field(default_factory=dict)
     away_starter_profile: dict = field(default_factory=dict)
     home_starter_profile: dict = field(default_factory=dict)
+    away_defense_factor: float = 1.0
+    home_defense_factor: float = 1.0
+    game_signals: list = field(default_factory=list)
     context_coverage_pct: int = 0
     missing_context: list[str] = field(default_factory=list)
 
@@ -348,12 +352,24 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
     exp_away = apply_side(
         exp_away, away_pitch, name=f"{gd.home} starter and bullpen",
         side=gd.away, markets="Away runs / Total / ML", confidence="medium",
-        source="MLBMA starter season/L14 + bullpen quality/workload",
+        source="MLBMA starter season/L14 + bullpen quality/workload/roles",
     )
     exp_home_pre_hfa = apply_side(
         exp_home_pre_hfa, home_pitch, name=f"{gd.away} starter and bullpen",
         side=gd.home, markets="Home runs / Total / ML", confidence="medium",
-        source="MLBMA starter season/L14 + bullpen quality/workload",
+        source="MLBMA starter season/L14 + bullpen quality/workload/roles",
+    )
+    exp_away = apply_side(
+        exp_away, gd.home_defense_factor, name=f"{gd.home} fielding / run prevention",
+        side=gd.away, markets="Away runs / Total / ML", confidence="low",
+        source="MLBMA team run prevention + optional defensive ratings",
+        include=gd.home_defense_factor != 1.0,
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, gd.away_defense_factor, name=f"{gd.away} fielding / run prevention",
+        side=gd.home, markets="Home runs / Total / ML", confidence="low",
+        source="MLBMA team run prevention + optional defensive ratings",
+        include=gd.away_defense_factor != 1.0,
     )
     away_arsenal = arsenal_factor(gd.away_arsenal_features)
     home_arsenal = arsenal_factor(gd.home_arsenal_features)
@@ -430,6 +446,12 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         int(gd.away_starter_features.get("starts") or 0),
         int(gd.home_starter_features.get("starts") or 0),
     )
+    confidence = signal_confidence_modifier(
+        gd.game_signals,
+        gd.away,
+        gd.home,
+        confidence_from_coverage(gd.context_coverage_pct, starts),
+    )
     return Probabilities(
         exp_away_runs=round(exp_away, 2),
         exp_home_runs=round(exp_home, 2),
@@ -440,7 +462,7 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         factors=factors,
         data_coverage_pct=gd.context_coverage_pct,
         missing_context=list(gd.missing_context),
-        confidence=confidence_from_coverage(gd.context_coverage_pct, starts),
+        confidence=confidence,
     )
 
 

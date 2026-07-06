@@ -277,6 +277,64 @@ def trend_run_factor(features: dict | None, side: str) -> float:
     return _regress(_clip(raw, *settings.TREND_FACTOR_CLIP))
 
 
+def fielding_defense_factor(team_row) -> float:
+    """Runs allowed multiplier from fielding / run-prevention profile (<1 = elite defense)."""
+    if team_row is None:
+        return 1.0
+    get = team_row.get if hasattr(team_row, "get") else lambda _k, _d=None: None
+    for col in ("defense_rating", "team_oaa", "oaa", "fld_pct"):
+        value = _number(get(col))
+        if value is not None:
+            if col in {"oaa", "team_oaa"}:
+                value = LEAGUE_AVG + value * 5.0
+            return _regress(
+                _clip(1 - (value - LEAGUE_AVG) * 0.003, *settings.DEFENSE_FACTOR_CLIP)
+            )
+    era = _number(get("team_era"))
+    if era is not None:
+        return _regress(_clip(era / settings.LEAGUE_TEAM_ERA, *settings.DEFENSE_FACTOR_CLIP))
+    allowed = _number(get("bullpen_osi_allowed"))
+    if allowed is not None:
+        return _regress(
+            _clip(1 + (allowed - LEAGUE_AVG) * 0.0015, *settings.DEFENSE_FACTOR_CLIP)
+        )
+    return 1.0
+
+
+def signal_edge_adjustment(signals: list[dict], *, side: str) -> float:
+    """Additive edge boost from fired MLBMA signals for a lineup side."""
+    boost = 0.0
+    for row in signals:
+        if not row.get("fired"):
+            continue
+        if str(row.get("side") or "").lower() != side:
+            continue
+        magnitude = float(row.get("magnitude") or 0.0)
+        direction = str(row.get("direction") or "").lower()
+        sign = 1.0 if direction in {"boost", "over", "up", "positive", "bullish"} else (
+            -1.0 if direction in {"fade", "under", "down", "negative", "bearish"} else 0.0
+        )
+        boost += sign * magnitude * settings.SIGNAL_EDGE_SCALE
+    return _clip(boost, -settings.SIGNAL_EDGE_CAP, settings.SIGNAL_EDGE_CAP)
+
+
+def signal_confidence_modifier(
+    signals: list[dict],
+    away: str,
+    home: str,
+    confidence: str,
+) -> str:
+    """Bump model confidence when MLBMA signal convergence supports the projection."""
+    if not signals:
+        return confidence
+    fired = sum(1 for row in signals if row.get("fired"))
+    if fired >= settings.SIGNAL_HIGH_CONVERGENCE and confidence == "medium":
+        return "high"
+    if fired == 0 and confidence == "high":
+        return "medium"
+    return confidence
+
+
 def _number(value) -> float | None:
     try:
         if value is None or value == "":

@@ -96,6 +96,7 @@ def bullpen_features(
     *,
     venue: str,
     game_date: str,
+    team_profile: dict | None = None,
 ) -> dict:
     if not row:
         return {
@@ -137,12 +138,38 @@ def bullpen_features(
     inherited = number(row.get("overall_inherited_runners_scored_pct"))
     if inherited is not None:
         skill *= max(0.97, min(1.03, 1 + (inherited - 28) * 0.001))
+
+    role_factor = 1.0
+    profile = team_profile or {}
+    closer = normalize_name(profile.get("closer_name"))
+    setup = normalize_name(profile.get("primary_setup"))
+    for role_name in (closer, setup):
+        if not role_name:
+            continue
+        role_pitches = 0.0
+        for log in reliever_logs:
+            if normalize_name(log.get("pitcher_name")) != role_name:
+                continue
+            try:
+                age = (slate - dt.date.fromisoformat(str(log.get("date"))[:10])).days
+            except ValueError:
+                continue
+            if age in (0, 1, 2):
+                role_pitches += number(log.get("pitches")) or 0.0
+        if role_pitches >= 40:
+            role_factor *= 1.025
+        elif role_pitches <= 8 and role_name == closer:
+            role_factor *= 0.985
+    workload = round(workload * role_factor, 4)
+    workload = max(1.0, min(1.05, workload))
+
     return {
         "skill_fip": round(max(2.3, min(6.5, skill)), 3),
         "workload_factor": round(workload, 4),
+        "role_factor": round(role_factor, 4),
         "pitches_1d": round(pitches_1d),
         "pitches_2d": round(pitches_2d),
-        "source": "MLBMA bullpen unit + reliever workload",
+        "source": "MLBMA bullpen unit + reliever workload + closer/setup roles",
     }
 
 

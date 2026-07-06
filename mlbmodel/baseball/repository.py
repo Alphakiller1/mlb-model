@@ -1,6 +1,7 @@
 """Point-in-time MLBMA CSV access with explicit freshness and fallbacks."""
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import json
 import math
@@ -22,6 +23,7 @@ from mlbmodel.baseball.arsenal import attach_arsenal
 from mlbmodel.baseball.metrics import (
     bullpen_allowed_adjustment,
     bullpen_platoon_adjustment,
+    fielding_defense_factor,
     opponent_offense_strength,
     pitcher_allowed_skill_adjustment,
     sp_split_skill_adjustment,
@@ -55,6 +57,8 @@ class DataRepository:
     def __init__(self, data_dir: Path | str | None = None):
         self.data_dir = Path(data_dir or settings.DATA_DIR)
         self._cache: dict[str, pd.DataFrame | None] = {}
+        self._game_cache: dict[tuple[str, str], GameData] = {}
+        self._trend_cache: dict[tuple[str, str], dict] = {}
 
     def load(self, filename: str) -> pd.DataFrame | None:
         if filename not in self._cache:
@@ -193,8 +197,40 @@ class DataRepository:
             factor *= 1 + settings.BULLPEN_IR_SENSITIVITY * (ir - 28.0)
         return clip(factor, *settings.PITCH_FACTOR_CLIP)
 
+    def signals_today(self) -> list[dict]:
+        frame = self.load("signals_today.csv")
+        return frame.to_dict("records") if frame is not None else []
+
+    def trend_features(self, away: str, home: str) -> dict:
+        """Cached situational-trend feature row (one parse per game per repo)."""
+        key = (away.upper().strip(), home.upper().strip())
+        if key not in self._trend_cache:
+            try:
+                from mlbmodel.trends.report import trend_features_for_game
+
+                self._trend_cache[key] = trend_features_for_game(self, away, home)
+            except Exception:
+                self._trend_cache[key] = {}
+        return self._trend_cache[key]
+
+    def enrich_trends(self, gd: GameData, away: str, home: str) -> None:
+        gd.trend_features = self.trend_features(away, home)
+
     def load_game(self, away: str, home: str, *, pitcher_rows: list[dict] | None = None) -> GameData:
         away, home = away.upper().strip(), home.upper().strip()
+        key = (away, home)
+        if key not in self._game_cache:
+            self._game_cache[key] = self._build_game_data(away, home)
+        gd = (
+            copy.deepcopy(self._game_cache[key])
+            if pitcher_rows
+            else self._game_cache[key]
+        )
+        if pitcher_rows:
+            attach_arsenal(gd, pitcher_rows)
+        return gd
+
+    def _build_game_data(self, away: str, home: str) -> GameData:
         slate = self.slate()
         if slate is None:
             raise FileNotFoundError(
@@ -362,12 +398,14 @@ class DataRepository:
             relievers_by_team.get(away, []),
             venue="away",
             game_date=game_date,
+            team_profile=away_profile.to_dict() if away_profile is not None else None,
         )
         home_bullpen = bullpen_features(
             bullpen_index.get(home),
             relievers_by_team.get(home, []),
             venue="home",
             game_date=game_date,
+            team_profile=home_profile.to_dict() if home_profile is not None else None,
         )
         away_pen_row = bullpen_index.get(away)
         home_pen_row = bullpen_index.get(home)
@@ -387,6 +425,15 @@ class DataRepository:
             ),
             4,
         )
+
+        away_defense = fielding_defense_factor(away_profile)
+        home_defense = fielding_defense_factor(home_profile)
+        game_signals = [
+            row
+            for row in self.signals_today()
+            if str(row.get("away") or "").upper() == away
+            and str(row.get("home") or "").upper() == home
+        ]
 
         batter_frame = self.load("batter_profiles.csv")
         batter_rows = batter_frame.to_dict("records") if batter_frame is not None else []
@@ -453,9 +500,10 @@ class DataRepository:
             home_injury_features=home_injuries,
             away_starter_profile=dict(away_sp_profile or {}),
             home_starter_profile=dict(home_sp_profile or {}),
+            away_defense_factor=away_defense,
+            home_defense_factor=home_defense,
+            game_signals=game_signals,
             context_coverage_pct=coverage,
             missing_context=missing,
         )
-        if pitcher_rows:
-            attach_arsenal(gd, pitcher_rows)
         return gd
