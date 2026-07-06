@@ -2,18 +2,19 @@ name: deploy-pages
 
 on:
   push:
+    # Only `main` publishes. Feature branches (e.g. codex/*) build via PR checks but must
+    # never deploy — otherwise a stale branch overwrites the live site on the shared Pages env.
     branches:
       - main
-      - codex/unified-model-foundation
   repository_dispatch:
     types:
       - mlbma-pipeline-complete
   schedule:
-    # The Odds API free tier is 500 credits/month; a game-odds fetch costs ~6 credits, so an
-    # hourly cron (24/day) would drain it in ~3 days. The mlbma-pipeline dispatch already
-    # rebuilds on each pipeline run, so the cron is only a safety net — a few pregame refreshes
-    # (UTC) covering the afternoon and evening slates is plenty and keeps the key alive a month.
-    - cron: "17 16,20,23 * * *"
+    # The Odds API free tier is 500 credits/month. A cheap game-line fetch is ~6 credits; a
+    # full player-props fetch is ~50. Two pregame refreshes (UTC) cover the afternoon and
+    # evening slates; the credit guard in the fetch step (below) keeps either from draining the
+    # key. The mlbma-pipeline dispatch rebuilds on each pipeline run, so this is mostly a net.
+    - cron: "17 16,23 * * *"
   workflow_dispatch:
 
 permissions:
@@ -23,6 +24,9 @@ permissions:
 
 concurrency:
   group: github-pages
+  # false, not true: a Pages deploy that's mid-publish must finish. Cancelling it produces
+  # GitHub's "Deployment failed, try again later" — which is exactly what kept main from
+  # publishing. Overlapping runs queue instead.
   cancel-in-progress: false
 
 jobs:
@@ -52,22 +56,107 @@ jobs:
           # Caches live prop lines + game-line odds into _deploy_data so the static build can
           # show over/under prop leans AND the sharp-vs-soft Markets board. Non-fatal: a missing
           # key or fetch error just leaves those sections empty rather than failing the deploy.
+          #
+          # Credit guard: the /v4/sports endpoint is FREE (no credit cost) but returns the
+          # x-requests-remaining header, so we read the month's remaining budget up front and
+          # spend it deliberately — cheap game lines first (they power the market/decision
+          # board), expensive props only when the budget is healthy. This makes a single build
+          # incapable of draining the key; props degrade to model-only projections when low.
           if [ -n "$ODDS_API_KEY" ]; then
-            python -m mlbmodel.market.props --cache _deploy_data/prop_odds_latest.json \
-              || echo "WARNING: prop odds fetch failed; props stay NO MARKET"
-            python -m mlbmodel.market.collect --data-dir _deploy_data \
-              || echo "WARNING: game odds fetch failed; sharp board stays empty"
+            REMAINING=$(curl -s -D - -o /dev/null \
+              "https://api.the-odds-api.com/v4/sports/?apiKey=$ODDS_API_KEY" \
+              | tr -d '\r' | awk -F': ' 'tolower($1)=="x-requests-remaining"{print $2}')
+            REMAINING=${REMAINING:-0}
+            echo "Odds API credits remaining this month: $REMAINING"
+
+            # Game-line board (~6 credits) — powers Markets/decision board. Refresh whenever
+            # there's any real budget left.
+            if [ "$REMAINING" -ge 20 ]; then
+              python -m mlbmodel.market.collect --data-dir _deploy_data \
+                || echo "WARNING: game odds fetch failed; sharp board stays empty"
+            else
+              echo "Skipping game-line fetch — only $REMAINING credits left (preserving budget)."
+            fi
+
+            # Player props (~50 credits) — only when the month's budget is healthy so no single
+            # build can exhaust the key. Below the floor, props show model projections only.
+            if [ "$REMAINING" -ge 150 ]; then
+              python -m mlbmodel.market.props --cache _deploy_data/prop_odds_latest.json \
+                || echo "WARNING: prop odds fetch failed; props stay NO MARKET"
+            else
+              echo "Skipping prop-odds fetch — only $REMAINING credits left (props need ~50); showing model projections. Upgrade the Odds API plan for always-on props."
+            fi
           else
             echo "ODDS_API_KEY not set; skipping odds fetch (props + sharp stay empty)"
+          fi
+      - name: Fetch PrizePicks pick'em lines
+        run: |
+          # PrizePicks uses PerimeterX bot protection that challenges datacenter IPs (GitHub
+          # runners get a JS-challenge JSON, not the data), so the committed snapshot — refreshed
+          # from an allowed/residential IP via `python -m mlbmodel.market.prizepicks` — is the
+          # base. A live fetch is still attempted and only replaces the snapshot when it returns
+          # real lines, so this upgrades automatically the day it runs behind an allowed IP/proxy.
+          cp deployment_data/prizepicks_lines.json _deploy_data/prizepicks_lines.json 2>/dev/null || true
+          curl -s -m 30 --compressed \
+            -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
+            -H "Accept: application/json, text/plain, */*" \
+            -H "Accept-Language: en-US,en;q=0.9" \
+            -H "Origin: https://app.prizepicks.com" \
+            -H "Referer: https://app.prizepicks.com/" \
+            "https://api.prizepicks.com/projections?league_id=2&per_page=1000" \
+            -o _deploy_data/pp_raw.json || true
+          python -m mlbmodel.market.prizepicks --from-raw _deploy_data/pp_raw.json --cache /tmp/pp_live.json 2>/dev/null || true
+          if [ -s /tmp/pp_live.json ] && python -c "import json,sys; sys.exit(0 if len(json.load(open('/tmp/pp_live.json')))>0 else 1)" 2>/dev/null; then
+            cp /tmp/pp_live.json _deploy_data/prizepicks_lines.json
+            echo "PrizePicks: live fetch OK"
+          else
+            echo "PrizePicks: live fetch blocked (PerimeterX) — using committed snapshot"
+          fi
+      - name: Fetch Underdog pick'em lines
+        run: |
+          # Underdog over/under lines — free, second pick'em source. Same snapshot pattern as
+          # PrizePicks (datacenter IPs may be blocked): committed snapshot is the base; a live
+          # fetch replaces it only when it returns real lines. Non-fatal.
+          cp deployment_data/underdog_lines.json _deploy_data/underdog_lines.json 2>/dev/null || true
+          curl -s -m 30 --compressed \
+            -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
+            -H "Accept: application/json, text/plain, */*" \
+            -H "Accept-Language: en-US,en;q=0.9" \
+            "https://api.underdogfantasy.com/beta/v5/over_under_lines" \
+            -o _deploy_data/ud_raw.json || true
+          python -m mlbmodel.market.underdog --from-raw _deploy_data/ud_raw.json --cache /tmp/ud_live.json 2>/dev/null || true
+          if [ -s /tmp/ud_live.json ] && python -c "import json,sys; sys.exit(0 if len(json.load(open('/tmp/ud_live.json')))>0 else 1)" 2>/dev/null; then
+            cp /tmp/ud_live.json _deploy_data/underdog_lines.json
+            echo "Underdog: live fetch OK"
+          else
+            echo "Underdog: live fetch blocked — using committed snapshot"
+          fi
+      - name: Fetch Sleeper pick'em lines
+        run: |
+          # Sleeper lines/available + players/mlb (id->name) — free, third pick'em source. Same
+          # snapshot pattern; a live fetch (both endpoints) upgrades it when it returns real lines.
+          cp deployment_data/sleeper_lines.json _deploy_data/sleeper_lines.json 2>/dev/null || true
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+          curl -s -m 30 --compressed -H "User-Agent: $UA" \
+            "https://api.sleeper.app/lines/available?dynasty=false" -o _deploy_data/sl_lines.json || true
+          curl -s -m 45 --compressed -H "User-Agent: $UA" \
+            "https://api.sleeper.app/v1/players/mlb" -o _deploy_data/sl_players.json || true
+          python -m mlbmodel.market.sleeper --from-raw-lines _deploy_data/sl_lines.json \
+            --from-raw-players _deploy_data/sl_players.json --cache /tmp/sl_live.json 2>/dev/null || true
+          if [ -s /tmp/sl_live.json ] && python -c "import json,sys; sys.exit(0 if len(json.load(open('/tmp/sl_live.json')))>0 else 1)" 2>/dev/null; then
+            cp /tmp/sl_live.json _deploy_data/sleeper_lines.json
+            echo "Sleeper: live fetch OK"
+          else
+            echo "Sleeper: live fetch blocked — using committed snapshot"
           fi
       - name: Build static research dashboard
         env:
           MLBMODEL_CACHE_DIR: _deploy_data
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           MLB_MODEL_DEPLOYMENT_NOTICE: >-
             Synchronized MLBMA research build with live pitcher-prop lines.
             No displayed state is a wager instruction.
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           mkdir -p _site
           python -m mlbmodel.report.app \

@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 from mlbmodel.baseball.model import normal_cdf
+from mlbmodel.market import prizepicks
 from mlbmodel import settings
 
 PICKEM_BOOKS = ("prizepicks", "underdog", "sleeper")
+_PICKEM_ORDER = ["PP_Fantasy", "K", "Outs", "ER", "H", "BB"]
 
 
 def _load_cache(path: Path | None) -> list[dict]:
@@ -26,6 +29,51 @@ def _p_over(mean: float, sd: float, line: float) -> float:
     if sd <= 0:
         sd = max(mean * 0.2, 0.5)
     return 1.0 - normal_cdf(line, mean, sd)
+
+
+def _p_over_erf(line: float, mean: float, sd: float) -> float:
+    """Match app._p_over for PrizePicks half-point lines."""
+    if sd is None or sd <= 0:
+        return 1.0 if mean > line else (0.0 if mean < line else 0.5)
+    return 1.0 - 0.5 * (1.0 + math.erf((line - mean) / (sd * math.sqrt(2))))
+
+def build_pickem_rows_from_boards(
+    pitchers: list[dict],
+    sources: list[tuple[str, dict]],
+) -> list[dict]:
+    """Structured pick'em rows from PrizePicks/Underdog/Sleeper boards (main app parity)."""
+    rows: list[dict] = []
+    for row in pitchers:
+        name_key = prizepicks.normalize_name(row.get("pitcher"))
+        projections = row.get("projections") or {}
+        game_pk = row.get("game_pk")
+        for label, board in sources:
+            lines = board.get(name_key, {})
+            if not lines:
+                continue
+            book = label.lower()
+            for key in _PICKEM_ORDER:
+                line, proj = lines.get(key), projections.get(key)
+                if not line or not proj:
+                    continue
+                mean, sd = proj.get("mean"), proj.get("sd")
+                p_over = _p_over_erf(line["line"], mean, sd or 0)
+                lean = "OVER" if p_over >= 0.5 else "UNDER"
+                prop = prizepicks.STAT_LABEL.get(key, key)
+                rows.append({
+                    "pitcher": str(row.get("pitcher") or ""),
+                    "team": str(row.get("team") or ""),
+                    "opponent": str(row.get("opponent") or ""),
+                    "game_pk": game_pk,
+                    "book": book,
+                    "prop": prop,
+                    "line": float(line["line"]),
+                    "projection": float(mean),
+                    "p_over": round(p_over, 4),
+                    "lean": lean,
+                    "edge_pts": abs(p_over - 0.5) * 100,
+                })
+    return rows
 
 
 def build_pickem_rows(

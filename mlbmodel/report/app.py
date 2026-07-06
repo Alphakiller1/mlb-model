@@ -13,12 +13,15 @@ from __future__ import annotations
 
 import argparse
 import html
+import math
 import os
 
 from mlbmodel.baseball.model import model_probabilities
 from mlbmodel.baseball.repository import DataRepository
 from mlbmodel.market.props import load_prop_board, market_report
 from mlbmodel.market.quotes import load_board
+from mlbmodel.market import prizepicks, underdog, sleeper
+from mlbmodel import settings
 from mlbmodel.portfolio.risk import summarize_positions
 from mlbmodel.props.model import build_pitcher_board
 from mlbmodel.report import chase_theme
@@ -33,7 +36,7 @@ from mlbmodel.report.matchup import (
 )
 from mlbmodel.leans.calibration import calibration_buckets, summarize_record
 from mlbmodel.leans.record import collect_leans, record_leans
-from mlbmodel.market.pickem import build_pickem_rows, group_cross_book
+from mlbmodel.market.pickem import build_pickem_rows, build_pickem_rows_from_boards
 from mlbmodel.report.interactive import TABLE_UI_CSS, TABLE_UI_JS
 from mlbmodel.report.top_leans import top_leans_html
 from mlbmodel.storage.supabase import SupabaseReader
@@ -67,18 +70,6 @@ def _slate(repo):
 
 
 # ── sections (each = context -> conclusion -> evidence; honest empty states) ──
-def _collect_market_plays(slate, sharp_by_pk, model_by_pk):
-    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
-    plays = []
-    for pk, sigs in sharp_by_pk.items():
-        for s in sigs:
-            d = _decide(s, model_by_pk.get(pk))
-            d["pk"], d["game"] = pk, pkmap.get(pk, str(pk))
-            plays.append(d)
-    plays.sort(key=lambda d: -d["score"])
-    return plays
-
-
 def _today(slate, sd, sharp_by_pk, sync=None, top_leans=""):
     rows = ""
     for g in slate:
@@ -213,6 +204,18 @@ def _decide(s, model_rows):
     }
 
 
+def _collect_market_plays(slate, sharp_by_pk, model_by_pk):
+    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
+    plays = []
+    for pk, sigs in sharp_by_pk.items():
+        for s in sigs:
+            d = _decide(s, model_by_pk.get(pk))
+            d["pk"], d["game"] = pk, pkmap.get(pk, str(pk))
+            plays.append(d)
+    plays.sort(key=lambda d: -d["score"])
+    return plays
+
+
 def _markets(slate, sharp_by_pk, model_by_pk=None):
     plays = _collect_market_plays(slate, sharp_by_pk, model_by_pk or {})
 
@@ -290,49 +293,6 @@ def _markets(slate, sharp_by_pk, model_by_pk=None):
  </div></div>"""
 
 
-def _pickem(pickem_groups):
-    if not pickem_groups:
-        return """<div class=sec><h2>Pick'em board</h2><div class=body>
-          <div class=empty>No DFS pick'em lines loaded. Cache <code>pickem_odds_latest.json</code>
-          in the deploy data dir, or run with live prop snapshots.</div></div></div>"""
-
-    def book_cells(books: dict) -> str:
-        parts = []
-        lines = [(b, d.get("line")) for b, d in books.items() if d.get("line") is not None]
-        best_over = max(lines, key=lambda x: x[1])[0] if lines else None
-        best_under = min(lines, key=lambda x: x[1])[0] if lines else None
-        for book, data in sorted(books.items()):
-            line = data.get("line")
-            lean = data.get("lean") or "—"
-            cls = "best" if book in {best_over, best_under} and len(books) > 1 else ""
-            if line is not None:
-                parts.append(
-                    f'<span class="{cls}">{e(book)}: {line:g} {e(str(lean))}</span>'
-                )
-            else:
-                parts.append(f"<span>{e(book)}: —</span>")
-        return '<div class=pickem-books>' + "".join(parts) + "</div>"
-
-    row_parts = []
-    for grp in pickem_groups:
-        pitcher = str(grp.get("pitcher") or "")
-        prop = str(grp.get("prop") or "")
-        proj = grp.get("projection")
-        proj_cell = f"{proj:.1f}" if proj is not None else "—"
-        row_parts.append(
-            f"<tr><td>{e(pitcher)}</td><td>{e(prop)}</td><td>{proj_cell}</td>"
-            f"<td>{book_cells(grp.get('books') or {})}</td></tr>"
-        )
-    rows = "".join(row_parts)
-
-    return f"""<div class=sec><h2>Pick'em · cross-book lines</h2><div class=body>
-   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter pitcher…" data-filter-for="pickem-table" aria-label="Filter pickem"></div>
-   <div class=table-scroll><table id=pickem-table class=sortable><tr><th>Pitcher</th><th>Market</th>
-   <th>Model</th><th>Books</th></tr>{rows}</table></div>
-   <div class=note>Highlighted book shows best over (highest line) or under (lowest line) when books disagree.</div>
- </div></div>"""
-
-
 def _display(value, suffix="", digits=1):
     if value is None:
         return "—"
@@ -358,8 +318,74 @@ def _edge_grade(edge_fraction):
     return "c-poor"
 
 
-def _props(pitchers, prop_board, top_leans="", pickem_panel=""):
-    def projection_cell(row, prop):
+def _p_over(line, mean, sd):
+    """P(stat > line) via a normal approximation of the simulated distribution.
+
+    PrizePicks lines sit on the half-point so there is no push; the sim's own sd captures the
+    right spread (fantasy score is a sum → near-normal; counts are close enough for a lean).
+    """
+    if sd is None or sd <= 0:
+        return 1.0 if mean > line else (0.0 if mean < line else 0.5)
+    return 1.0 - 0.5 * (1.0 + math.erf((line - mean) / (sd * math.sqrt(2))))
+
+
+# Order the pick'em board surfaces PrizePicks pitcher markets (fantasy first, then the rest).
+_PICKEM_ORDER = ["PP_Fantasy", "K", "Outs", "ER", "H", "BB"]
+
+
+def _pickem_rows(pitchers, sources):
+    """Grade each pitcher's model projection against pick'em lines from one or more books.
+
+    ``sources`` is a list of (book_label, board) where board maps normalized-name -> proj_key ->
+    line. Rows are grouped by pitcher, then book, with a Book column so the same market can be
+    compared across books.
+    """
+    rows = ""
+    count = 0
+    for row in pitchers:
+        name_key = prizepicks.normalize_name(row.get("pitcher"))
+        projections = row.get("projections") or {}
+        pitcher_cell = (
+            f'<td><div class=pitcher-cell>{_headshot(row.get("pitcher_id"))}'
+            f'<div><b>{e(str(row.get("pitcher") or "TBD"))}</b>'
+            f'<span>{_logo(row.get("team"), "tlogo sm")}{e(str(row.get("team") or ""))}</span>'
+            f'</div></div></td>'
+        )
+        for label, board in sources:
+            lines = board.get(name_key, {})
+            if not lines:
+                continue
+            for key in _PICKEM_ORDER:
+                line, proj = lines.get(key), projections.get(key)
+                if not line or not proj:
+                    continue
+                mean, sd = proj.get("mean"), proj.get("sd")
+                p_over = _p_over(line["line"], mean, sd or 0)
+                lean = "OVER" if p_over >= 0.5 else "UNDER"
+                tone = "pos" if abs(p_over - 0.5) >= 0.08 else "mut"
+                variant = (
+                    "" if line.get("odds_type") == "standard"
+                    else f' <span class="mut" style="font-size:9px">{e(str(line.get("odds_type")))}</span>'
+                )
+                count += 1
+                rows += (
+                    f'<tr>{pitcher_cell}'
+                    f'<td><span class="pill mut">{e(label)}</span></td>'
+                    f'<td>{prizepicks.STAT_LABEL.get(key, key)}{variant}</td>'
+                    f'<td><b>{line["line"]:g}</b></td>'
+                    f'<td>{mean:.1f}</td>'
+                    f'<td>{p_over * 100:.0f}%</td>'
+                    f'<td><span class="pill {tone}">{lean}</span></td></tr>'
+                )
+    return rows, count
+
+
+def _props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top_leans=""):
+    pp_board = pp_board or {}
+    ud_board = ud_board or {}
+    sl_board = sl_board or {}
+
+    def projection_cell(row, prop, model_only=False):
         value = (row.get("projections") or {}).get(prop) or {}
         if not value:
             return '<td class=mut>—</td>'
@@ -371,13 +397,17 @@ def _props(pitchers, prop_board, top_leans="", pickem_panel=""):
         # the model's edge there is not reliable enough to act on.
         trusted = row.get("projection_trust") == "trusted"
         edge_cls = _edge_grade(report.get("edge")) if (trusted and report) else "mut"
-        market = (
-            f'<span class="prop-mkt">{report["side"][0].upper()} {report["line"]:g} '
-            f'{report["best_odds"]:+d} · '
-            f'<b class="{edge_cls}">'
-            f'{(report.get("edge") or 0) * 100:+.1f}pt</b></span>'
-            if report else '<span class="prop-mkt mut">no line</span>'
-        )
+        if model_only:
+            # Hits allowed and fantasy points are model projections (no book line surfaced here).
+            market = '<span class="prop-mkt mut">model proj</span>'
+        else:
+            market = (
+                f'<span class="prop-mkt">{report["side"][0].upper()} {report["line"]:g} '
+                f'{report["best_odds"]:+d} · '
+                f'<b class="{edge_cls}">'
+                f'{(report.get("edge") or 0) * 100:+.1f}pt</b></span>'
+                if report else '<span class="prop-mkt mut">no line</span>'
+            )
         return (
             f'<td class=prop-cell><b>{value["mean"]:.1f}</b>'
             f'<span class=prop-range>range {value["p10"]:.0f}–{value["p90"]:.0f}</span>'
@@ -419,6 +449,8 @@ def _props(pitchers, prop_board, top_leans="", pickem_panel=""):
             f'<span>{_display(row.get("skill_era"), digits=2)} runs/9</span></td>'
             f'{projection_cell(row, "K")}{projection_cell(row, "BB")}'
             f'{projection_cell(row, "ER")}{projection_cell(row, "Outs")}'
+            f'{projection_cell(row, "H", model_only=True)}'
+            f'{projection_cell(row, "Fantasy", model_only=True)}'
             f'<td><span class="pill {market_tone}">{e(str(market_state))}</span>'
             f'<span class=prop-sub>{e(str(row.get("confidence") or "low"))} confidence</span></td></tr>'
         )
@@ -493,6 +525,14 @@ def _props(pitchers, prop_board, top_leans="", pickem_panel=""):
         '<tr><td class=mut colspan=8>No paired pitcher-prop snapshot is loaded. '
         'Projections remain visible; price decisions remain NO MARKET.</td></tr>'
     )
+    pickem_rows, pickem_count = _pickem_rows(
+        pitchers,
+        [("PrizePicks", pp_board), ("Underdog", ud_board), ("Sleeper", sl_board)],
+    )
+    pickem_rows = pickem_rows or (
+        '<tr><td class=mut colspan=7>No PrizePicks / Underdog / Sleeper pitcher lines loaded '
+        '(off-hours or feed unavailable).</td></tr>'
+    )
     confirmed = sum(1 for row in pitchers if row.get("lineup_status") == "confirmed")
     return f"""<h2>Pitcher Props</h2>
  <div class=ctx>Projection distributions, opponent pitch response, and executable price comparison.</div>
@@ -504,16 +544,20 @@ def _props(pitchers, prop_board, top_leans="", pickem_panel=""):
    <div class=card><div class=k>Price feed</div><div class=v style="font-size:16px">{"LIVE" if all_markets else "NO SNAPSHOT"}</div></div>
  </div>
  <div class=sec><h2>Prop market report</h2><div class=body>
-   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter pitcher or prop…" data-filter-for="props-report-table" aria-label="Filter props"></div>
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter pitcher or prop…" data-filter-for="props-report-table" aria-label="Filter props report"></div>
    <div class=table-scroll><table id=props-report-table class=sortable><tr><th>Pitcher</th><th>Prop</th><th>Bet</th>
    <th>Best price</th><th>Model</th><th>Market</th><th>Edge</th><th>State</th></tr>
    {report_rows}</table></div></div></div>
+ <div class=sec><h2>Pick&apos;em boards <span class="mut" style="font-weight:600;font-size:11px">PrizePicks + Underdog + Sleeper · model vs line · {pickem_count} lines</span></h2><div class=body>
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter pitcher…" data-filter-for="pickem-table" aria-label="Filter pickem"></div>
+   <div class=table-scroll><table id=pickem-table class=sortable><tr><th>Pitcher</th><th>Book</th><th>Market</th><th>Line</th><th>Model</th><th>P(over)</th><th>Lean</th></tr>{pickem_rows}</table></div>
+   <div class=note>Fantasy score uses each book&apos;s pitcher formula (Out +1, K +3, ER −3, quality start +4, win +6 — win modeled; PrizePicks and Underdog scoring match). Hits / strikeouts / earned runs / outs / walks grade directly against the projection. P(over) is a normal approximation of the simulated distribution; leans ≥58% are highlighted. Not betting advice.</div>
+ </div></div>
  <div class=sec><h2>Pitcher board</h2><div class=body>
    <div class=table-scroll><table class=prop-table><tr><th>Starter</th><th>vs</th>
    <th>Performance</th><th title="Projected innings and expected runs allowed per nine">Starter baseline</th><th>K</th><th>BB</th>
-   <th>ER</th><th>Outs</th><th>Market</th></tr>{rows or '<tr><td class=mut colspan=9>No pitcher inputs loaded.</td></tr>'}</table></div>
- </div></div>
- {pickem_panel}"""
+   <th>ER</th><th>Outs</th><th title="Projected hits allowed">Hits</th><th title="DraftKings pitcher fantasy points: IP*2.25 + K*2 - ER*2 - H*0.6 - BB*0.6">DK Pts</th><th>Market</th></tr>{rows or '<tr><td class=mut colspan=11>No pitcher inputs loaded.</td></tr>'}</table></div>
+ </div></div>"""
 
 
 def _portfolio(reader, gate, slate):
@@ -813,36 +857,55 @@ _NAV = [("today", "Today"), ("matchups", "Matchups"), ("trends", "Trends"), ("ma
 _SHELL_CSS = """
 body{padding:0;min-height:100vh}
 #appshell{display:flex;min-height:calc(100vh - 68px)}
-#nav{width:208px;flex:0 0 208px;background:linear-gradient(160deg,rgba(17,24,39,.96),rgba(8,13,22,.98));
-border-right:1px solid var(--border);padding:18px 12px;position:sticky;top:68px;height:calc(100vh - 68px);overflow:auto}
-#nav .brand{font-family:var(--display);font-weight:800;font-size:17px;background:linear-gradient(90deg,var(--teal),var(--v-light));
+/* --- sidebar nav: glass rail with an accent-bar active state --- */
+#nav{width:214px;flex:0 0 214px;background:linear-gradient(180deg,rgba(20,23,34,.94),rgba(8,11,19,.98));
+border-right:1px solid var(--border);padding:20px 12px;position:sticky;top:68px;height:calc(100vh - 68px);overflow:auto;
+backdrop-filter:blur(8px)}
+#nav .brand{font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:.01em;
+background:linear-gradient(90deg,var(--teal),var(--v-light));
 -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px}
-#nav .tagline{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px}
-.navb{display:block;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:8px;
-color:var(--muted);font:600 13.5px var(--sans);padding:11px;margin:3px 0;cursor:pointer;min-height:44px}
-.navb:hover{color:var(--ink);background:rgba(124,77,255,.08)}
-.navb.on{color:var(--ink);background:linear-gradient(135deg,rgba(124,77,255,.2),rgba(45,212,191,.07));border-color:var(--border-violet)}
-#main{flex:1;min-width:0;overflow:auto;padding:24px 26px 70px}
-.view{display:none}.view.on{display:block}
-#main>.view>h2:first-child{font-family:var(--display);font-weight:800;font-size:26px;margin:0 0 4px}
-.ctx{color:var(--muted);font-size:13px;margin-bottom:16px}
+#nav .tagline{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.14em;margin-bottom:18px}
+.navb{position:relative;display:block;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:10px;
+color:var(--muted);font:600 13.5px var(--sans);padding:11px 12px 11px 15px;margin:3px 0;cursor:pointer;min-height:44px;
+transition:color .15s ease,background .15s ease}
+.navb:hover{color:var(--ink);background:rgba(124,77,255,.09)}
+.navb.on{color:var(--ink);background:linear-gradient(135deg,rgba(124,77,255,.22),rgba(45,212,191,.06));
+border-color:var(--border-violet);box-shadow:0 6px 20px rgba(124,77,255,.14)}
+.navb.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;
+background:linear-gradient(180deg,var(--v-light),var(--teal))}
+#main{max-width:1240px;margin:0 auto;padding:26px 28px 72px}
+.view{display:none}.view.on{display:block;animation:viewin .28s ease both}
+@keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.view.on{animation:none}.card{transition:none}}
+#main>.view>h2:first-child{font-family:var(--display);font-weight:800;font-size:30px;font-variation-settings:'wdth' 125;
+letter-spacing:-.02em;margin:0 0 5px;line-height:1.05}
+.ctx{color:var(--muted);font-size:13px;margin-bottom:18px}
 .note{color:var(--muted);font-size:11.5px;margin-top:10px}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:12px}
-.card{background:linear-gradient(160deg,rgba(31,34,47,.7),rgba(16,18,27,.85));border:1px solid var(--border-2);border-radius:8px;padding:12px 15px}
-.card .k{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:800}
-.card .v{color:var(--ink);font-family:var(--display);font-weight:800;font-size:22px;margin-top:3px}
+/* --- stat tiles: glass panel, gradient accent hairline, hover lift --- */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:16px}
+.card{position:relative;background:var(--ca-panel-glass);border:1px solid var(--border-2);border-radius:14px;
+padding:15px 16px 14px;overflow:hidden;box-shadow:var(--ca-card-shadow);
+transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--v-grad);opacity:.7}
+.card:hover{transform:translateY(-2px);border-color:var(--ca-panel-border);
+box-shadow:0 10px 34px rgba(0,0,0,.5),0 0 0 1px rgba(196,176,255,.12)}
+.card .k{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:800}
+.card .v{color:var(--ink);font-family:var(--display);font-weight:800;font-size:26px;font-variation-settings:'wdth' 120;
+margin-top:4px;line-height:1.05;letter-spacing:-.01em}
 .cols{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;align-items:start}
 @media(max-width:880px){.cols{grid-template-columns:1fr}}
 .gcell{display:inline-flex;align-items:center;gap:5px}
 .gamepick{border:0;background:none;color:inherit;font:inherit;padding:0;cursor:pointer;text-align:left}
 .gamepick:hover b{color:var(--teal)}
-.pagehead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:14px}
-.pagehead h2{font-family:var(--display);font-size:26px;margin:0 0 4px}
+.pagehead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px}
+.pagehead h2{font-family:var(--display);font-weight:800;font-size:30px;font-variation-settings:'wdth' 125;letter-spacing:-.02em;margin:0 0 5px;line-height:1.05}
 .pagehead .ctx{margin:0}
-.pagehead select{min-width:180px;background:var(--card);color:var(--ink);border:1px solid var(--border-2);border-radius:8px;padding:9px 12px;font:600 13px var(--sans)}
+.pagehead select{min-width:180px;background:var(--card);color:var(--ink);border:1px solid var(--border-2);border-radius:10px;padding:10px 13px;font:600 13px var(--sans);transition:border-color .15s ease}
+.pagehead select:hover{border-color:var(--ca-panel-border)}
 .matchup-report{display:none}.matchup-report.on{display:block}
-.deployment-notice{border:1px solid var(--border-violet);border-radius:8px;padding:10px 12px;
-background:rgba(124,77,255,.08);color:var(--ink2);font-size:12px;margin-bottom:16px}
+.deployment-notice{position:relative;border:1px solid var(--border-violet);border-radius:12px;padding:11px 14px 11px 16px;
+background:linear-gradient(135deg,rgba(124,77,255,.12),rgba(45,212,191,.04));color:var(--ink2);font-size:12px;margin-bottom:18px;overflow:hidden}
+.deployment-notice::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--v-light),var(--teal))}
 .empty{color:var(--muted);font-size:13px;padding:18px;border:1px dashed var(--border-2);border-radius:8px}
 .empty ul{margin:8px 0 0;padding-left:18px}.empty li{margin:3px 0}
 .prop-table{min-width:960px}.prop-main{cursor:pointer}.prop-main:hover{background:rgba(124,77,255,.06)}
@@ -877,6 +940,15 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     reader = SupabaseReader()
     board = load_board(fetch=fetch)
     prop_prices = load_prop_board(fetch=fetch)
+    pp_board = prizepicks.board_by_player(
+        prizepicks.load_lines(settings.CACHE_DIR / "prizepicks_lines.json")
+    )
+    ud_board = prizepicks.board_by_player(
+        underdog.load_lines(settings.CACHE_DIR / "underdog_lines.json")
+    )
+    sl_board = prizepicks.board_by_player(
+        sleeper.load_lines(settings.CACHE_DIR / "sleeper_lines.json")
+    )
     gate = _promotion(reader)
     pitchers = build_pitcher_board(repo)
     promotion_status = (
@@ -987,10 +1059,15 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         for m in rows
         if str(m.get("market") or "").startswith("f5_")
     ]
-
     market_plays = _collect_market_plays(slate, sharp_by_pk, model_by_pk)
-    pickem_rows = build_pickem_rows(pitchers)
-    pickem_groups = group_cross_book(pickem_rows)
+    pickem_sources = [
+        ("prizepicks", pp_board),
+        ("underdog", ud_board),
+        ("sleeper", sl_board),
+    ]
+    pickem_rows = build_pickem_rows_from_boards(pitchers, pickem_sources)
+    if not pickem_rows:
+        pickem_rows = build_pickem_rows(pitchers)
     flat_props = []
     for pitcher in pitchers:
         for report in pitcher.get("market_report") or []:
@@ -1005,7 +1082,6 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         pickem_rows=pickem_rows,
         prop_reports=flat_props,
     )
-    pickem_panel = _pickem(pickem_groups)
 
     if sd:
         try:
@@ -1024,14 +1100,14 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "matchups": matchups,
         "trends": _trends(slate_reports),
         "markets": _markets(slate, sharp_by_pk, model_by_pk),
-        "props": _props(pitchers, prop_prices, top_leans, pickem_panel),
+        "props": _props(pitchers, prop_prices, pp_board, ud_board, sl_board, top_leans),
         "portfolio": _portfolio(reader, gate, slate),
         "results": _results(reader),
         "research": _research(reader, gate, f5_board),
     }
-    nav = '<div class=brand>Chase Analytics</div><div class=tagline>MLB Model</div>' + "".join(
-        f'<button class="navb{" on" if k == "today" else ""}" data-v="{k}" onclick="show(\'{k}\')">{lbl}</button>'
-        for k, lbl in _NAV)
+    # Real Chase Analytics header nav: the 8 product views live in the top chase-nav-links,
+    # switched in-page via show(). (The old left sidebar is retired in favor of the shared header.)
+    nav_items = [(k, lbl, f"show('{k}')") for k, lbl in _NAV]
     sections = "".join(f'<section class="view{" on" if k == "today" else ""}" id="v-{k}">{html_}</section>'
                        for k, html_ in views.items())
     deployment_notice = os.getenv("MLB_MODEL_DEPLOYMENT_NOTICE", "").strip()
@@ -1043,7 +1119,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     )
     js = ("function show(k){document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));"
           "document.getElementById('v-'+k).classList.add('on');"
-          "document.querySelectorAll('.navb').forEach(b=>b.classList.toggle('on',b.dataset.v===k));"
+          "document.querySelectorAll('.chase-nav-link').forEach(b=>b.classList.toggle('active',b.dataset.v===k));"
           "window.scrollTo(0,0);}"
           "function switchGame(g){document.querySelectorAll('.matchup-report').forEach(x=>"
           "x.classList.toggle('on',x.dataset.game===g));const s=document.getElementById('gameSelect');"
@@ -1057,24 +1133,21 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
           "b.classList.add('on');r.querySelector('[data-panel=\"'+k+'\"]').classList.add('on');}"
           "document.addEventListener('keydown',function(ev){"
           "if(ev.target.tagName==='INPUT'||ev.target.tagName==='TEXTAREA')return;"
-          "var btns=Array.prototype.slice.call(document.querySelectorAll('.navb'));"
-          "var i=btns.findIndex(function(b){return b.classList.contains('on');});"
+          "var btns=Array.prototype.slice.call(document.querySelectorAll('.chase-nav-link'));"
+          "var i=btns.findIndex(function(b){return b.classList.contains('active');});"
           "if(ev.key==='ArrowDown'||ev.key==='ArrowRight'){ev.preventDefault();"
           "var n=btns[(i+1)%btns.length];if(n)n.click();}"
           "if(ev.key==='ArrowUp'||ev.key==='ArrowLeft'){ev.preventDefault();"
           "var p=btns[(i-1+btns.length)%btns.length];if(p)p.click();}});"
           + TABLE_UI_JS)
-    # Brand bar only -- the left sidebar below already handles section navigation for this
-    # product's 8-view information architecture (kept, per the shared design contract's
-    # allowance for product-specific IA); duplicating the same links in both would just be
-    # two navs fighting for the same job.
-    chase_nav = chase_theme.nav_html([], "today", "MLB Model")
-    return (f'<!DOCTYPE html><html lang=en><head><meta charset=utf-8>'
+    chase_nav = chase_theme.nav_html(nav_items, "today", "MLB Model", status=(sd or "Live"))
+    return (f'<!DOCTYPE html><html lang=en class=view-opening><head><meta charset=utf-8>'
             f'<meta name=viewport content="width=device-width,initial-scale=1">'
             f'<title>MLB Model — Chase Analytics</title>'
-            f'<style>{chase_theme.theme_css()}{_CSS}{_SHELL_CSS}</style></head><body>'
+            f'<style>{chase_theme.theme_css()}{_CSS}{_SHELL_CSS}</style></head>'
+            f'<body class="platform-dashboard opening-dashboard">'
             f'{chase_nav}'
-            f'<div id=appshell><nav id=nav>{nav}</nav><main id=main>{notice}{sections}</main></div>'
+            f'<main id=main class=ca-page-shell>{notice}{sections}</main>'
             f'<script>{js}</script></body></html>')
 
 

@@ -28,6 +28,11 @@ LG_BABIP = 0.295
 LG_LOB = 0.72
 LG_K = 0.225
 LG_BB = 0.082
+LG_H = 0.23
+# Expected starter win contribution for PrizePicks fantasy score (Win = +6 pts). Win depends on
+# team offense + bullpen, not just the pitcher, so it's modeled as a flat league-average starter
+# win rate rather than sampled; the other components (outs/K/ER/QS) are exact per iteration.
+PP_WIN_PROB = 0.40
 LG_XWOBA = 0.320
 SKIP_PITCH_TYPES = {"UNK", "PO", "EP", "FA"}
 ORDER_WEIGHTS = np.array([1.10, 1.08, 1.07, 1.05, 1.02, 0.99, 0.96, 0.93, 0.90])
@@ -228,6 +233,7 @@ class PitcherProjectionEngine:
             column: pd.to_numeric(frame.get(column), errors="coerce")
             for column in ("H", "BB", "HR", "K", "R", "batters_faced", "pitches")
         }
+        # (hits/batters computed below is the empirical H/BF rate used to project hits allowed)
         hits, walks, homers, strikeouts, runs = (
             float(numeric[column].sum()) for column in ("H", "BB", "HR", "K", "R")
         )
@@ -252,6 +258,7 @@ class PitcherProjectionEngine:
         return {
             "babip": babip,
             "lob": lob,
+            "h_rate": (hits / batters) if batters > 0 else None,
             "k_trend": (recent_k - season_k) if None not in (recent_k, season_k) else 0.0,
             "bb_trend": (recent_bb - season_bb) if None not in (recent_bb, season_bb) else 0.0,
             "recent_ip": float(np.mean(recent_innings)) if len(recent_innings) else None,
@@ -602,6 +609,25 @@ class PitcherProjectionEngine:
         f5_lambda = rng.gamma(shape=5.0, scale=f5_mean / 5.0, size=iterations)
         f5_er = rng.poisson(f5_lambda)
         outs = np.rint(ip_samples * 3)
+        # Hits allowed: a per-batter hit rate (the pitcher's empirical H/BF, else league) drawn
+        # like K/BB, then sampled over batters faced.
+        h_rate = log_factors.get("h_rate")
+        h_probability = _clip(h_rate if h_rate is not None else LG_H, 0.10, 0.36)
+        h_draw = rng.beta(
+            h_probability * effective_bf + LG_H * 25,
+            (1 - h_probability) * effective_bf + (1 - LG_H) * 25,
+            iterations,
+        )
+        hits = rng.binomial(bf_samples, h_draw)
+        # DraftKings pitcher fantasy points: IP +2.25/inning (0.75/out), K +2, ER -2, H -0.6,
+        # BB -0.6. Excludes W / quality-start / complete-game bonuses (need game context).
+        fantasy = outs * 0.75 + strikeouts * 2.0 - earned_runs * 2.0 - hits * 0.6 - walks * 0.6
+        # PrizePicks pitcher fantasy score: Out +1, K +3, ER -3, Quality Start +4 (>=6 IP & <=3
+        # ER, computed exactly from the joint sim), Win +6 (modeled as PP_WIN_PROB, see above).
+        qs_bonus = np.where((outs >= 18) & (earned_runs <= 3), 4.0, 0.0)
+        pp_fantasy = (
+            outs + strikeouts * 3.0 - earned_runs * 3.0 + qs_bonus + 6.0 * PP_WIN_PROB
+        )
         state, luck = self._performance_state(profile, log_factors, skill_era)
 
         # Projection trust gates the edge board. The real signal is sample size, not which
@@ -637,6 +663,9 @@ class PitcherProjectionEngine:
                 "BB": _distribution(walks).as_dict(),
                 "ER": _distribution(earned_runs).as_dict(),
                 "Outs": _distribution(outs).as_dict(),
+                "H": _distribution(hits).as_dict(),
+                "Fantasy": _distribution(fantasy).as_dict(),
+                "PP_Fantasy": _distribution(pp_fantasy).as_dict(),
                 "F5_ER": _distribution(f5_er).as_dict(),
             },
             "sample": {

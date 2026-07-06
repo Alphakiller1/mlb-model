@@ -1,0 +1,134 @@
+/**
+ * MLBMA broadcast gradient backgrounds — full-page only (never banners/heroes).
+ * Must load last in <head>. No stadium photo layers (perf + self-contained HTML size).
+ */
+:root {
+  --ca-bg-base: #08090f;
+  --ca-bg-scrim: linear-gradient(
+    180deg,
+    rgba(5, 6, 14, 0.78) 0%,
+    rgba(8, 9, 15, 0.52) 42%,
+    rgba(8, 9, 15, 0.62) 72%,
+    rgba(5, 5, 12, 0.82) 100%
+  );
+  --ca-bg-scrim-opening: linear-gradient(
+    180deg,
+    rgba(5, 6, 14, 0.58) 0%,
+    rgba(8, 9, 15, 0.34) 38%,
+    rgba(8, 9, 15, 0.44) 68%,
+    rgba(5, 5, 12, 0.68) 100%
+  );
+  --ca-bg-violet-top: radial-gradient(ellipse 80% 52% at 76% 0%, rgba(124, 77, 255, 0.12), transparent 62%);
+  --ca-bg-violet-bottom: radial-gradient(ellipse 85% 55% at 8% 106%, rgba(91, 43, 224, 0.08), transparent 60%);
+}
+
+html:has(body.opening-dashboard),
+html:has(body.platform-dashboard),
+html:has(body.ca-bg-outfield),
+html:has(body.ca-bg-catcher),
+html:has(body.ca-bg-compare),
+html:has(body.ca-bg-plate),
+html:has(body.team-profile-page),
+html:has(body.bullpen-profile-page),
+html:has(body.batter-profile-page),
+html:has(body.pitcher-profile-page) {
+  background-color: var(--ca-bg-base);
+  min-height: 100%;
+}
+
+/* Hub / platform — violet broadcast scrim only */
+body.opening-dashboard,
+body.platform-dashboard,
+body.ca-bg-outfield {
+  background-color: var(--ca-bg-base) !important;
+  background-image:
+    var(--ca-bg-scrim),
+    var(--ca-bg-violet-top),
+    var(--ca-bg-violet-bottom) !important;
+  background-size: 100% 100%, auto, auto !important;
+  background-position: center top, center top, center top !important;
+  background-repeat: no-repeat !important;
+  background-attachment: scroll !important;
+}
+
+html.view-opening body.opening-dashboard.platform-dashboard,
+html.view-opening body.opening-dashboard.ca-bg-outfield,
+html.view-opening body.platform-dashboard.ca-bg-outfield {
+  background-color: var(--ca-bg-base) !important;
+  background-image:
+    var(--ca-bg-scrim-opening),
+    var(--ca-bg-violet-top),
+    var(--ca-bg-violet-bottom) !important;
+  background-size: 100% 100%, auto, auto !important;
+  background-position: center top, center top, center top !important;
+  background-repeat: no-repeat !important;
+  background-attachment: scroll !important;
+}
+
+body.team-profile-page:not(.batter-profile-page):not(.pitcher-profile-page),
+body.bullpen-profile-page,
+body.ca-bg-catcher,
+body.ca-bg-compare,
+body.batter-profile-page,
+body.pitcher-profile-page,
+body.ca-bg-plate {
+  background-color: var(--ca-bg-base) !important;
+  background-image:
+    var(--ca-bg-scrim),
+    var(--ca-bg-violet-top),
+    var(--ca-bg-violet-bottom) !important;
+  background-size: 100% 100%, auto, auto !important;
+  background-position: center top, center top, center top !important;
+  background-repeat: no-repeat !important;
+  background-attachment: scroll !important;
+}
+
+@media (max-width: 768px) {
+  html.view-opening body.opening-dashboard.platform-dashboard,
+  html.view-opening body.opening-dashboard.ca-bg-outfield,
+  body.opening-dashboard,
+  body.platform-dashboard,
+  body.ca-bg-outfield,
+  body.team-profile-page:not(.batter-profile-page):not(.pitcher-profile-page),
+  body.bullpen-profile-page,
+  body.ca-bg-catcher,
+  body.ca-bg-compare,
+  body.batter-profile-page,
+  body.pitcher-profile-page,
+  body.ca-bg-plate {
+    background-attachment: scroll;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.view-opening body.opening-dashboard.platform-dashboard,
+  html.view-opening body.opening-dashboard.ca-bg-outfield,
+  body.opening-dashboard,
+  body.platform-dashboard,
+  body.ca-bg-outfield,
+  body.team-profile-page:not(.batter-profile-page):not(.pitcher-profile-page),
+  body.bullpen-profile-page,
+  body.ca-bg-catcher,
+  body.ca-bg-compare,
+  body.batter-profile-page,
+  body.pitcher-profile-page,
+  body.ca-bg-plate {
+    background-attachment: scroll;
+  }
+}
+
+@media print {
+  body.opening-dashboard,
+  body.platform-dashboard,
+  body.ca-bg-outfield,
+  body.team-profile-page,
+  body.bullpen-profile-page,
+  body.ca-bg-catcher,
+  body.ca-bg-compare,
+  body.batter-profile-page,
+  body.pitcher-profile-page,
+  body.ca-bg-plate {
+    background: #fff !important;
+    background-image: none !important;
+  }
+}

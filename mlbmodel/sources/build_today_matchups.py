@@ -123,7 +123,7 @@ def fetch_pitch_hands(pitcher_ids) -> dict:
 
 def et_time(game_date_utc: str) -> str:
     d = dt.datetime.fromisoformat(game_date_utc.replace("Z", "+00:00")).astimezone(ET)
-    return d.strftime("%-I:%M %p ET")
+    return d.strftime("%I:%M %p ET").lstrip("0")
 
 
 def build_rows(out: Path, date_iso: str, games: list[dict] | None = None) -> list[dict]:
