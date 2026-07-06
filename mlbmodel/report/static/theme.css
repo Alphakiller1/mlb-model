@@ -1,0 +1,762 @@
+:root {
+  /* Single token source is mlbma_design_system.css. It is loaded BEFORE this file on
+     every page, so surface/text/border/brand/font tokens (--bg, --card, --border,
+     --text*, --v-light, --v-grad, --v-bg, --border-violet, --display, --mono, …) are
+     consumed from there — do NOT redefine them here.
+     This block holds only the tokens that are still UNIQUE to theme.css:
+     the violet ramp, the d-* grade scale, the metal gradients, and the --sans alias.
+     Migrate these into the design system as it absorbs them; never add new globals here. */
+  --v: #9A6BFF;
+  --v-mid: #7C4DFF;
+  --v-deep: #5B2BE0;
+  --v-heading: #6D28D9;
+  --v-grad-soft: linear-gradient(135deg, rgba(124, 77, 255, 0.13), rgba(91, 43, 224, 0.07));
+  --v-glow: rgba(124, 77, 255, 0.32);
+  --edge-grad: linear-gradient(90deg, #3B82F6 0%, #7C4DFF 50%, #EC4899 100%);
+  --d-elite: #3CCB7F;
+  --d-good: #86D76F;
+  --d-mid: #E8C24A;
+  --d-weak: #F0935B;
+  --d-poor: #F2545B;
+  --metal-silver: linear-gradient(180deg, #FFFFFF 0%, #E9EAF0 38%, #9DA0AE 56%, #D7D9E2 72%, #FFFFFF 100%);
+  --metal-violet: linear-gradient(180deg, #C4B0FF 0%, #7C4DFF 55%, #5B2BE0 100%);
+  --sans: "DM Sans", -apple-system, system-ui, sans-serif;
+}
+
+html, body {
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html:not(:has(body.opening-dashboard)):not(:has(body.platform-dashboard)):not(:has(body.ca-bg-outfield)):not(:has(body.ca-bg-catcher)):not(:has(body.ca-bg-plate)):not(:has(body.ca-bg-compare)):not(:has(body.team-profile-page)):not(:has(body.bullpen-profile-page)):not(:has(body.batter-profile-page)):not(:has(body.pitcher-profile-page)),
+body:not(.opening-dashboard):not(.platform-dashboard):not(.ca-bg-outfield):not(.ca-bg-catcher):not(.ca-bg-plate):not(.ca-bg-compare):not(.team-profile-page):not(.bullpen-profile-page):not(.batter-profile-page):not(.pitcher-profile-page) {
+  background: var(--bg);
+}
+
+body:not(.opening-dashboard):not(.platform-dashboard):not(.ca-bg-outfield):not(.ca-bg-catcher):not(.ca-bg-plate):not(.ca-bg-compare):not(.team-profile-page):not(.bullpen-profile-page):not(.batter-profile-page):not(.pitcher-profile-page) {
+  background-image:
+    radial-gradient(ellipse 90% 60% at 78% -8%, rgba(124, 77, 255, 0.14), transparent 58%),
+    radial-gradient(ellipse 70% 50% at 6% 102%, rgba(91, 43, 224, 0.08), transparent 60%);
+  background-color: var(--bg);
+}
+
+body::before,
+body::after,
+.ca-grid-texture {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+  background-image: none !important;
+}
+
+.ca-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+}
+
+.ca-card.is-active {
+  background: var(--card-2);
+  border-color: var(--border-violet);
+  box-shadow: inset 0 3px 0 0 rgba(139, 92, 246, 0.2);
+  position: relative;
+}
+
+.ca-card.is-active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 16px 16px 0 0;
+  background: var(--v-grad);
+}
+
+.ca-pill {
+  border: 1px solid var(--border);
+  background: var(--raised);
+  color: var(--text-2);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 14px;
+}
+
+.ca-pill.is-active {
+  border-color: transparent;
+  background: var(--v-grad);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.25), 0 10px 24px -14px var(--v-glow);
+}
+
+.ca-chip {
+  border: 1px solid var(--border);
+  background: var(--raised);
+  color: var(--text-2);
+  border-radius: 7px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  padding: 4px 9px;
+}
+
+/* ============================================================
+   Numeric stat display system
+   #1 (bare graded TEXT) everywhere; banners override to #3 (large filled chip).
+   The !important reset below neutralizes every per-section "chip box"
+   (min-width / padding / background) in one place, so values render as bare
+   legible text dashboard-wide. Poor/weak hues are lightened for contrast on
+   the dark page background.
+   ============================================================ */
+.ca-value-chip,
+.val-chip,
+.chip {
+  display: inline-block;
+  font-family: var(--display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 0 1px !important;
+}
+.chip.c-elite, .val-chip.c-elite { color: #4ADE80; }
+.chip.c-good,  .val-chip.c-good  { color: #7BDC5A; }
+.chip.c-mid,   .val-chip.c-mid   { color: #FBBF24; }
+.chip.c-weak,  .val-chip.c-weak  { color: #FB923C; }
+.chip.c-poor,  .val-chip.c-poor  { color: #F87171; }
+.chip.c-na,    .val-chip.c-na    { color: #6E7383; font-size: 14px; }
+
+/* ---- Profile banners: large graded text values (not filled chips) ---- */
+:is(.tp-team-banner__stats, .pp-hero-stats, .bp-hero-banner-shell, #bullpenSnapshot)
+  .tp-hero-stat__value .chip,
+:is(.tp-team-banner__stats, .pp-hero-stats, .bp-hero-banner-shell, #bullpenSnapshot)
+  .tp-hero-stat__value .tp-hero-stat__num {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+}
+:is(.tp-team-banner__stats, .pp-hero-stats, .bp-hero-banner-shell, #bullpenSnapshot)
+  .tp-hero-stat__value .chip.c-elite { color: #4ADE80 !important; }
+:is(.tp-team-banner__stats, .pp-hero-stats, .bp-hero-banner-shell, #bullpenSnapshot)
+  .tp-hero-stat__value .chip.c-good { color: #7BDC5A !important; }
+:is(.tp-team-banner__stats, .pp-hero-stats, .bp-hero-banner-shell, #bullpenSnapshot)
+  .tp-hero-stat__value .chip.c-mid { color: #FBBF24 !important; }
+:is(.tp-team-banner__stats, .pp-hero-stats, .bp-hero-banner-shell, #bullpenSnapshot)
+  .tp-hero-stat__value .chip.c-weak { color: #FB923C !important; }
+:is(.tp-team-banner__stats, .pp-hero-stats, .bp-hero-banner-shell, #bullpenSnapshot)
+  .tp-hero-stat__value .chip.c-poor { color: #F87171 !important; }
+:is(.tp-team-banner__stats, .pp-hero-stats, .bp-hero-banner-shell, #bullpenSnapshot)
+  .tp-hero-stat__value .chip.c-na { color: #6E7383 !important; }
+
+/* ---- Larger, legible profile/ranking tables (bare-gradient-text era) ---- */
+.tp-table th, .hub-table th, .pp-data-table th, .tp-trend-table th, .tp-trend-table thead th,
+.pp-pv-metrics-table th, .pp-oor-metrics-table th, .bp-reliever-rank-table th, .pp-tier-split-table th,
+.rl-table-premium th, .rl-table th, .pl-prop-table th, .pp-table-head {
+  font-size: 13.5px;
+  letter-spacing: 0.03em;
+}
+.tp-trend-table__metric, .pp-table-label-text,
+.tp-trend-table tbody th[scope="row"], .tp-table tbody th[scope="row"],
+.hub-table tbody th[scope="row"] {
+  font-size: 15px;
+}
+
+/* Toggle pills — hero CTA pattern (see mlbma_design_system.css) */
+.ca-pill-bold,
+.lv-pill,
+.hub-pill,
+.thm-pill.ca-pill-btn {
+  font-family: inherit;
+}
+
+/* Bold table container */
+.tbl-card,
+.lv-table-wrap,
+.thm-table-wrap,
+.ca-table-wrap,
+.rl-table-wrap,
+.table-wrap {
+  background: #10131F;
+  border: 1.5px solid #37405A;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.7);
+}
+.tbl-card::before,
+.lv-table-wrap::before,
+.thm-table-wrap::before,
+.ca-table-wrap::before,
+.rl-table-wrap::before,
+.table-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #9A6BFF, #5B2BE0);
+  z-index: 3;
+}
+
+.team-cell-bold {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.team-cell-bold img,
+.lv-team-logo,
+.thm-team-logo {
+  width: 28px !important;
+  height: 28px !important;
+  object-fit: contain;
+  flex: none;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.team-cell-bold .ab,
+.lv-team-cell strong,
+.thm-team strong {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--text, #F6F8FC);
+}
+
+.ca-query-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ca-query-line strong {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.ca-stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 14px 12px;
+}
+
+.ca-stat-eyebrow {
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ca-stat-value {
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 32px;
+  line-height: 1.08;
+  font-weight: 800;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.section-title {
+  font-family: var(--display);
+  font-variation-settings: "wdth" 125;
+  letter-spacing: -0.015em;
+  color: var(--v-heading);
+}
+
+h1:not(.ca-page-title):not(.ca-profile-hero__title),
+h2, h3, .platform-title, .ca-section-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 125;
+  letter-spacing: -0.015em;
+  color: var(--v-heading);
+}
+
+h1:not(.ca-page-title):not(.ca-profile-hero__title) {
+  background: none !important;
+  -webkit-text-fill-color: var(--v-heading) !important;
+  color: var(--v-heading) !important;
+}
+
+.section-subtitle,
+.rl-tab-purpose {
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1.6;
+  font-weight: 600;
+}
+
+/* Legacy rule-line section label (superseded by .ca-section-head in design system) */
+.ca-section-head--rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ca-section-head--rule .ca-icon-circle--sm {
+  flex-shrink: 0;
+}
+
+.ca-section-head--rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.ca-icon-circle {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255,255,255,0.18), transparent 22%),
+    radial-gradient(circle at 50% 52%, rgba(154, 107, 255, 0.28), rgba(124, 77, 255, 0.12) 58%, rgba(5, 6, 11, 0.92));
+  border: 1.5px solid rgba(154, 107, 255, 0.72);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--v-light, #c4b0ff);
+  flex: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.13),
+    inset 0 -10px 18px rgba(0,0,0,0.34),
+    0 0 0 1px rgba(154,107,255,0.13),
+    0 0 24px rgba(124,77,255,0.28);
+}
+.ca-icon-circle svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  fill: none;
+  filter: drop-shadow(0 0 8px rgba(196, 176, 255, 0.34));
+}
+.ca-icon-circle svg.ca-icon-mark {
+  fill: none;
+  stroke: none;
+}
+.ca-icon-circle--sm {
+  width: 38px;
+  height: 38px;
+}
+.ca-icon-circle--sm svg {
+  width: 18px;
+  height: 18px;
+}
+.ca-icon-circle--hero {
+  width: 50px;
+  height: 50px;
+}
+.ca-icon-circle--hero svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Neon line-art PNG marks — replace badges, never stack under ca-icon-circle */
+.ca-neon-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0;
+  padding: 0;
+  line-height: 0;
+}
+.ca-neon-icon .ca-icon-img {
+  display: block;
+  width: 46px;
+  height: 46px;
+  max-width: none;
+  object-fit: contain;
+  object-position: center;
+  image-rendering: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  filter: none;
+}
+.ca-neon-icon--sm .ca-icon-img {
+  width: 38px;
+  height: 38px;
+}
+.ca-neon-icon--hero .ca-icon-img {
+  width: 50px;
+  height: 50px;
+}
+.ca-neon-icon--tool .ca-icon-img {
+  width: 52px;
+  height: 52px;
+}
+
+.ca-section-head .ca-neon-icon,
+.ca-section-head .ca-icon.ca-icon--asset,
+.ca-section-head .ca-icon:has(.ca-icon-img) {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0;
+  padding: 0;
+}
+
+.ca-tool-card__icon--asset,
+.ca-tool-card__icon:has(.ca-neon-icon) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin-bottom: 14px;
+}
+
+.ca-icon-img--mark {
+  shape-rendering: geometricPrecision;
+}
+.ca-section-head .ca-icon .ca-icon-img,
+.ca-tool-card__icon .ca-icon-img {
+  display: block;
+  object-fit: contain;
+  object-position: center;
+  image-rendering: auto;
+  filter: none;
+  width: 38px;
+  height: 38px;
+}
+.ca-platform-cta__item .ca-icon-circle--asset .ca-icon-img {
+  width: 36px;
+  height: 36px;
+}
+
+.index-card-icon.ca-icon-circle--asset .ca-icon-img {
+  width: 38px;
+  height: 38px;
+}
+
+.rl-home-card-icon.ca-icon-circle--asset .ca-icon-img {
+  width: 46px;
+  height: 46px;
+}
+.ca-tool-card__cta [data-lucide],
+.ca-tool-card__cta svg,
+.ca-btn [data-lucide],
+.ca-btn svg,
+.rl-home-card-cta [data-lucide],
+.rl-home-card-cta svg {
+  stroke: currentColor;
+  stroke-width: 2.7;
+  fill: none;
+}
+/* Legacy alias — insight rails use ca-icon-circle--sm */
+.ca-icon {
+  flex: none;
+}
+.ca-insight-rail {
+  background: var(--bg-3, #12141d);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.ca-insight-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.ca-insight-row:last-child { margin-bottom: 0; }
+.ca-insight-label {
+  display: block;
+  font-family: var(--display);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--v-light, #c4b0ff);
+}
+.ca-insight-text {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+.ca-split-pair {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+.ca-split-card {
+  flex: 1;
+  background: var(--bg-3, #12141d);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.ca-split-card.lhp { border-color: rgba(20, 184, 166, 0.4); }
+.ca-split-card.rhp { border-color: rgba(240, 147, 91, 0.4); }
+.ca-split-head {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.ca-split-card.lhp .ca-split-head { color: #2dd4bf; }
+.ca-split-card.rhp .ca-split-head { color: #f0935b; text-align: right; }
+.ca-split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; }
+.ca-split-stat .v {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.ca-split-stat .k {
+  margin-top: 2px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+.ca-split-badge {
+  margin-top: 10px;
+  text-align: center;
+  font-family: var(--display);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+.ca-split-card.lhp .ca-split-badge { color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); }
+.ca-split-card.rhp .ca-split-badge { color: #f0935b; border: 1px solid rgba(240, 147, 91, 0.4); }
+.ca-split-medallion {
+  flex: none;
+  align-self: center;
+  z-index: 2;
+  margin: 0 -12px;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: var(--bg-2, #0e1018);
+  border: 1px solid var(--border-2, #363b4d);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.ca-split-medallion .d {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ca-split-medallion .c {
+  margin-top: 1px;
+  font-size: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  line-height: 1.2;
+}
+
+/* Team Profile / export infographic hero (§4) */
+.ca-profile-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.ca-profile-hero__eyebrow {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--v-light, #c4b0ff);
+  margin-bottom: 8px;
+}
+.ca-profile-hero__title {
+  font-family: var(--display);
+  font-size: clamp(36px, 5vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  color: var(--text);
+  font-variation-settings: "wdth" 125;
+}
+.ca-profile-hero__sub {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.ca-profile-hero__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 140px;
+}
+.ca-wrc-medallion {
+  background: var(--bg-3, #12141d);
+  border: 1px solid var(--border-violet, rgba(124, 77, 255, 0.45));
+  border-radius: 12px;
+  padding: 12px 16px;
+  text-align: center;
+  min-width: 110px;
+}
+.ca-wrc-medallion .v {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+.ca-wrc-medallion .c {
+  margin-top: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.ca-profile-hero__body {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.ca-profile-logo-glow {
+  flex: none;
+  filter: drop-shadow(0 0 18px rgba(124, 77, 255, 0.35));
+}
+.ca-stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  background: var(--bg-3, #12141d);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 13px;
+}
+.ca-stat-strip span strong { font-family: var(--mono); font-weight: 700; }
+
+/* ============================================================
+   PDF punch-list (Jun 2026): typography & table density
+   Visual-only — no structure or data changes.
+   ============================================================ */
+
+/* Item 1: section explanations use title case via JS; bump legibility */
+.ca-section-head .purpose,
+.pl-section-sub,
+.thm-note,
+.tp-section .ca-helper {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  line-height: 1.55;
+}
+
+/* Items 2–3, 8, 12: ranking / heatmap table headings */
+.lv-table thead th,
+.thm-table thead th {
+  font-size: 13.5px !important;
+  letter-spacing: 0.04em !important;
+}
+
+/* Items 7–12: Pitcher Intelligence ranking sections */
+#plRankingsMount .pl-section-title,
+#plBullpenRankingsMount .pl-section-title {
+  font-size: 22px !important;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.pl-rank-table-wrap {
+  max-height: 520px;
+  overflow: auto;
+}
+
+/* Item 14: profile section headings, row labels, and stat values */
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .glossary-page) .ca-section-head .title,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .glossary-page) .ca-section-title {
+  font-size: 20px !important;
+}
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .glossary-page) .ca-section-head .purpose,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .glossary-page) .ca-helper {
+  font-size: 16px !important;
+}
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .tp-table tbody td,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .hub-table tbody td,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .pp-data-table tbody td,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .bp-reliever-rank-table tbody td,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .tp-trend-table tbody td,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .tp-trend-table tbody th[scope="row"] {
+  font-size: 16px !important;
+}
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page) .tp-trend-table__metric,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page) .pp-table-label-text,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page) .hub-table tbody th[scope="row"] {
+  font-size: 16px !important;
+  font-weight: 700;
+}
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page) .tp-trend-table__metric-desc {
+  font-size: 14px !important;
+}
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page) .tp-trend-table__reliability,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page) .tp-trend-table__interp {
+  font-size: 15px !important;
+  font-weight: 700;
+}
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .chip,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .val-chip {
+  font-size: 18px !important;
+}
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .tp-table th,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .hub-table th,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .pp-data-table th,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .bp-reliever-rank-table th,
+:is(.team-profile-page, .pitcher-profile-page, .player-profile-page, .bullpen-profile-page) .tp-trend-table thead th {
+  font-size: 14px !important;
+}

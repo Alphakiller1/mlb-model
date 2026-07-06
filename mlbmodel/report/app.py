@@ -735,7 +735,7 @@ transition:color .15s ease,background .15s ease}
 border-color:var(--border-violet);box-shadow:0 6px 20px rgba(124,77,255,.14)}
 .navb.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;
 background:linear-gradient(180deg,var(--v-light),var(--teal))}
-#main{flex:1;min-width:0;overflow:auto;padding:26px 28px 72px}
+#main{max-width:1240px;margin:0 auto;padding:26px 28px 72px}
 .view{display:none}.view.on{display:block;animation:viewin .28s ease both}
 @keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.view.on{animation:none}.card{transition:none}}
@@ -922,9 +922,9 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "results": _results(reader),
         "research": _research(reader, gate, f5_board),
     }
-    nav = '<div class=brand>Chase Analytics</div><div class=tagline>MLB Model</div>' + "".join(
-        f'<button class="navb{" on" if k == "today" else ""}" data-v="{k}" onclick="show(\'{k}\')">{lbl}</button>'
-        for k, lbl in _NAV)
+    # Real Chase Analytics header nav: the 8 product views live in the top chase-nav-links,
+    # switched in-page via show(). (The old left sidebar is retired in favor of the shared header.)
+    nav_items = [(k, lbl, f"show('{k}')") for k, lbl in _NAV]
     sections = "".join(f'<section class="view{" on" if k == "today" else ""}" id="v-{k}">{html_}</section>'
                        for k, html_ in views.items())
     deployment_notice = os.getenv("MLB_MODEL_DEPLOYMENT_NOTICE", "").strip()
@@ -936,7 +936,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     )
     js = ("function show(k){document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));"
           "document.getElementById('v-'+k).classList.add('on');"
-          "document.querySelectorAll('.navb').forEach(b=>b.classList.toggle('on',b.dataset.v===k));"
+          "document.querySelectorAll('.chase-nav-link').forEach(b=>b.classList.toggle('active',b.dataset.v===k));"
           "window.scrollTo(0,0);}"
           "function switchGame(g){document.querySelectorAll('.matchup-report').forEach(x=>"
           "x.classList.toggle('on',x.dataset.game===g));const s=document.getElementById('gameSelect');"
@@ -948,17 +948,16 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
           "r.querySelectorAll('.rtabbar button').forEach(x=>x.classList.remove('on'));"
           "r.querySelectorAll('.pn').forEach(x=>x.classList.remove('on'));"
           "b.classList.add('on');r.querySelector('[data-panel=\"'+k+'\"]').classList.add('on');}")
-    # Brand bar only -- the left sidebar below already handles section navigation for this
-    # product's 8-view information architecture (kept, per the shared design contract's
-    # allowance for product-specific IA); duplicating the same links in both would just be
-    # two navs fighting for the same job.
-    chase_nav = chase_theme.nav_html([], "today", "MLB Model")
-    return (f'<!DOCTYPE html><html lang=en><head><meta charset=utf-8>'
+    # The real Chase Analytics header carries the section nav; the body wears the production
+    # stadium-outfield background via the same body classes the live dashboards use.
+    chase_nav = chase_theme.nav_html(nav_items, "today", "MLB Model", status=(sd or "Live"))
+    return (f'<!DOCTYPE html><html lang=en class=view-opening><head><meta charset=utf-8>'
             f'<meta name=viewport content="width=device-width,initial-scale=1">'
             f'<title>MLB Model — Chase Analytics</title>'
-            f'<style>{chase_theme.theme_css()}{_CSS}{_SHELL_CSS}</style></head><body>'
+            f'<style>{chase_theme.theme_css()}{_CSS}{_SHELL_CSS}</style></head>'
+            f'<body class="platform-dashboard opening-dashboard ca-bg-outfield">'
             f'{chase_nav}'
-            f'<div id=appshell><nav id=nav>{nav}</nav><main id=main>{notice}{sections}</main></div>'
+            f'<main id=main class=ca-page-shell>{notice}{sections}</main>'
             f'<script>{js}</script></body></html>')
 
 
