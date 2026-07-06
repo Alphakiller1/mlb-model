@@ -91,17 +91,22 @@ jobs:
           fi
       - name: Fetch PrizePicks pick'em lines
         run: |
-          # PrizePicks public MLB projections (league 2) — free, no Odds-API credits. curl gets
-          # past the edge that 403s Python clients; the module parses the raw JSON into pitcher
-          # pick'em lines. Non-fatal: a failure just leaves the pick'em board empty.
-          curl -s -m 30 \
+          # PrizePicks public MLB projections (league 2) — free, no Odds-API credits. The edge
+          # (Cloudflare) challenges datacenter IPs, so send a full browser header set. Non-fatal:
+          # any failure just leaves the pick'em board empty. Prints the response head to diagnose
+          # a challenge page vs real JSON.
+          curl -s -m 30 --compressed \
             -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
-            -H "Accept: application/json" \
+            -H "Accept: application/json, text/plain, */*" \
+            -H "Accept-Language: en-US,en;q=0.9" \
+            -H "Origin: https://app.prizepicks.com" \
+            -H "Referer: https://app.prizepicks.com/" \
             "https://api.prizepicks.com/projections?league_id=2&per_page=1000" \
-            -o _deploy_data/pp_raw.json \
-            && python -m mlbmodel.market.prizepicks --from-raw _deploy_data/pp_raw.json \
-                 --cache _deploy_data/prizepicks_lines.json \
-            || echo "WARNING: PrizePicks fetch failed; pick'em board stays empty"
+            -o _deploy_data/pp_raw.json || echo "curl failed"
+          echo "PrizePicks response head:"; head -c 180 _deploy_data/pp_raw.json 2>/dev/null; echo
+          python -m mlbmodel.market.prizepicks --from-raw _deploy_data/pp_raw.json \
+            --cache _deploy_data/prizepicks_lines.json \
+            || echo "WARNING: PrizePicks parse failed; pick'em board stays empty"
       - name: Build static research dashboard
         env:
           MLBMODEL_CACHE_DIR: _deploy_data
