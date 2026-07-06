@@ -24,3 +24,11 @@ def test_build_app_renders_all_views():
     assert "sortable" in html
     assert "function show(k)" in html
     assert "location.hash" in html
+    assert "prop-board" in html
+
+
+def test_build_app_matchup_switch_includes_full_terminals():
+    """Every slate game gets the full matchup terminal (not compact-only summaries)."""
+    html = build_app("NYY@BOS", fetch=False, data_dir=DATA)
+    assert html.count('class="matchup-report') >= 2
+    assert html.count("rtabs") >= 2

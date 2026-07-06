@@ -28,7 +28,6 @@ from mlbmodel.report.matchup import (
     _CSS,
     _promotion,
     build_report,
-    matchup_summary_html,
     report_body,
 )
 from mlbmodel.report.decision import collect_market_plays as _collect_market_plays, markets_html as _markets
@@ -135,10 +134,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             )
             if "pk" in game:
                 model_by_pk[game["pk"]] = r.get("markets", [])
-            if game_name == featured_game.upper():
-                report = report_body(r)
-            else:
-                report = matchup_summary_html(r)
+            report = report_body(r)
         except Exception as exc:
             report = f'<div class=empty>Could not build {e(game_name)}: {e(str(exc))}</div>'
         active = " on" if game_name == featured_game.upper() else ""

@@ -715,7 +715,7 @@ def _f5_panel(r, gd, esc):
 
 
 def matchup_summary_html(report: dict) -> str:
-    """Compact matchup card for non-featured games (smaller HTML than full terminal)."""
+    """Compact matchup card — optional embed; the app shell uses full ``report_body`` per game."""
     esc = html.escape
     gd, probs = report["gd"], report["probs"]
     away, home = report["away"], report["home"]

@@ -151,10 +151,10 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top
     ud_board = ud_board or {}
     sl_board = sl_board or {}
 
-    def projection_cell(row, prop, model_only=False):
+    def projection_cell(row, prop, model_only=False, label=""):
         value = (row.get("projections") or {}).get(prop) or {}
         if not value:
-            return '<td class=mut>—</td>'
+            return f'<td class=mut data-label="{e(label or prop)}">—</td>'
         report = next(
             (item for item in row.get("market_report", []) if item["prop"] == prop),
             None,
@@ -175,7 +175,7 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top
                 if report else '<span class="prop-mkt mut">no line</span>'
             )
         return (
-            f'<td class=prop-cell><b>{value["mean"]:.1f}</b>'
+            f'<td class=prop-cell data-label="{e(label or prop)}"><b>{value["mean"]:.1f}</b>'
             f'<span class=prop-range>range {value["p10"]:.0f}–{value["p90"]:.0f}</span>'
             f'{market}</td>'
         )
@@ -203,21 +203,21 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top
             market_tone = "warnc"
         rows += (
             f'<tr class=prop-main onclick="togglePitcher({index})">'
-            f'<td><div class=pitcher-cell>{_headshot(row.get("pitcher_id"))}'
+            f'<td data-label="Starter"><div class=pitcher-cell>{_headshot(row.get("pitcher_id"))}'
             f'<div><b>{e(str(row.get("pitcher") or "TBD"))}</b>'
             f'<span>{_logo(row.get("team"), "tlogo sm")}{e(str(row.get("team") or ""))}</span>'
             f'</div></div></td>'
-            f'<td><span class=gcell>{_logo(row.get("opponent"), "tlogo sm")}'
+            f'<td data-label="vs"><span class=gcell>{_logo(row.get("opponent"), "tlogo sm")}'
             f'{e(str(row.get("opponent") or ""))}</span></td>'
-            f'<td><span class="pill {state_tone}" title="Performance state from results versus underlying pitching skill">{e(state)}</span>'
+            f'<td data-label="Performance"><span class="pill {state_tone}" title="Performance state from results versus underlying pitching skill">{e(state)}</span>'
             f'<span class=prop-sub>{float(row.get("luck_runs") or 0):+.2f} runs</span></td>'
-            f'<td class=starter-base><b>{_display(row.get("expected_ip"), digits=1)} IP</b>'
+            f'<td class=starter-base data-label="Baseline"><b>{_display(row.get("expected_ip"), digits=1)} IP</b>'
             f'<span>{_display(row.get("skill_era"), digits=2)} runs/9</span></td>'
-            f'{projection_cell(row, "K")}{projection_cell(row, "BB")}'
-            f'{projection_cell(row, "ER")}{projection_cell(row, "Outs")}'
-            f'{projection_cell(row, "H", model_only=True)}'
-            f'{projection_cell(row, "Fantasy", model_only=True)}'
-            f'<td><span class="pill {market_tone}">{e(str(market_state))}</span>'
+            f'{projection_cell(row, "K", label="K")}{projection_cell(row, "BB", label="BB")}'
+            f'{projection_cell(row, "ER", label="ER")}{projection_cell(row, "Outs", label="Outs")}'
+            f'{projection_cell(row, "H", model_only=True, label="Hits")}'
+            f'{projection_cell(row, "Fantasy", model_only=True, label="DK Pts")}'
+            f'<td data-label="Market"><span class="pill {market_tone}">{e(str(market_state))}</span>'
             f'<span class=prop-sub>{e(str(row.get("confidence") or "low"))} confidence</span></td></tr>'
         )
         pitch_rows = "".join(
@@ -248,7 +248,7 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top
         ) or '<tr><td class=mut colspan=8>No paired prop price for this pitcher.</td></tr>'
         pitch_matchup = row.get("pitch_matchup") or {}
         lineup = row.get("lineup") or {}
-        rows += f"""<tr class=prop-detail id=prop-detail-{index}><td colspan=9>
+        rows += f"""<tr class=prop-detail id=prop-detail-{index}><td colspan=11>
           <div class=prop-detail-grid>
             <div class=sec><h2>Arsenal vs opponent production</h2><div class=body>
               <div class=detail-strip>
@@ -319,7 +319,7 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top
    <div class=table-scroll><table id=pickem-table class=sortable><tr><th>Pitcher</th><th>Book</th><th>Market</th><th>Line</th><th>Model</th><th>P(over)</th><th>Lean</th></tr>{pickem_rows}</table></div>
    <div class=note>Fantasy score uses each book&apos;s pitcher formula (Out +1, K +3, ER −3, quality start +4, win +6 — win modeled; PrizePicks and Underdog scoring match). Hits / strikeouts / earned runs / outs / walks grade directly against the projection. P(over) is a normal approximation of the simulated distribution; leans ≥58% are highlighted. Not betting advice.</div>
  </div></div>
- <div class=sec><h2>Pitcher board</h2><div class=body>
+ <div class=sec><h2>Pitcher board</h2><div class="body prop-board">
    <div class=table-scroll><table class=prop-table><tr><th>Starter</th><th>vs</th>
    <th>Performance</th><th title="Projected innings and expected runs allowed per nine">Starter baseline</th><th>K</th><th>BB</th>
    <th>ER</th><th>Outs</th><th title="Projected hits allowed">Hits</th><th title="DraftKings pitcher fantasy points: IP*2.25 + K*2 - ER*2 - H*0.6 - BB*0.6">DK Pts</th><th>Market</th></tr>{rows or '<tr><td class=mut colspan=11>No pitcher inputs loaded.</td></tr>'}</table></div>
