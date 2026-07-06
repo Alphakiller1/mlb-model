@@ -32,6 +32,7 @@ from mlbmodel.report.matchup import (
     report_body,
 )
 from mlbmodel.report.decision import collect_market_plays as _collect_market_plays, markets_html as _markets
+from mlbmodel.leans.decision_calibration import thresholds_from_leans
 from mlbmodel.leans.record import collect_leans, record_leans
 from mlbmodel.market.pickem import build_pickem_rows, build_pickem_rows_from_boards
 from mlbmodel.report.shell import NAV as _NAV, shell_css, shell_js
@@ -177,7 +178,15 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         for m in rows
         if str(m.get("market") or "").startswith("f5_")
     ]
-    market_plays = _collect_market_plays(slate, sharp_by_pk, model_by_pk)
+    cal_result = reader.get(
+        "model_leans?settled=eq.true&select=edge,won,push,source,settled&limit=2000"
+    )
+    decision_thresholds = thresholds_from_leans(
+        cal_result.rows if not cal_result.error else []
+    )
+    market_plays = _collect_market_plays(
+        slate, sharp_by_pk, model_by_pk, decision_thresholds
+    )
     pickem_sources = [
         ("prizepicks", pp_board),
         ("underdog", ud_board),
@@ -225,7 +234,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "today": _today(slate, sd, sharp_by_pk, sync, top_leans),
         "matchups": matchups,
         "trends": _trends(slate_reports),
-        "markets": _markets(slate, sharp_by_pk, model_by_pk),
+        "markets": _markets(slate, sharp_by_pk, model_by_pk, decision_thresholds),
         "props": _props(pitchers, prop_prices, pp_board, ud_board, sl_board, top_leans),
         "portfolio": _portfolio(reader, gate, slate),
         "results": _results(reader),

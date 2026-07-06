@@ -500,7 +500,9 @@ border:2px solid #454B61;box-shadow:0 5px 14px rgba(0,0,0,.45),0 0 0 2px rgba(15
 .rtabbar button:hover{color:var(--ink2)}.rtabbar button.on{color:var(--ink);border-bottom-color:var(--accent)}.pn{display:none}.pn.on{display:block}
 th[title],td[title]{cursor:help;text-decoration:underline dotted rgba(148,163,184,.4);text-underline-offset:3px}
 /* section boards — MLBMA .ca-board from design system; local typography */
-.ca-board h2,.sec h2{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--v-light);margin:0 0 10px}
+.ca-board h2,.sec h2,.ca-board .ca-section-head .title,.sec .ca-section-head .title{
+font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--v-light);margin:0 0 10px}
+.ca-board>.ca-section-head,.sec>.ca-section-head{margin:-4px 0 12px}
 .ca-board>.body,.sec>.body{padding:0}
 .ca-board+.ca-board,.sec+.sec{margin-top:14px}
 .table-scroll{width:100%;overflow-x:auto}

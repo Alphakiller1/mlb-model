@@ -2,8 +2,8 @@ name: settle-model-leans
 
 on:
   schedule:
-    # Post-slate grading: 2 AM ET (07:00 UTC) and 8 AM ET (13:00 UTC) safety net
-    - cron: "0 7,13 * * *"
+    # Post-slate grading: 2 AM ET (07:00), 8 AM ET (13:00), noon ET (17:00), 6 PM ET (23:00) UTC
+    - cron: "0 7,13,17,23 * * *"
   workflow_dispatch:
 
 permissions:
@@ -26,3 +26,4 @@ jobs:
         run: |
           python -m mlbmodel.sources.build_game_results
           python -m mlbmodel.market.settle
+          python scripts/check_pending_leans.py

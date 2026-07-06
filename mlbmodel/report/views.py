@@ -9,7 +9,7 @@ from mlbmodel.market.probability import p_over_line_erf
 from mlbmodel.leans.calibration import calibration_buckets, summarize_record
 from mlbmodel.portfolio.risk import summarize_positions
 from mlbmodel.report.decision import MKT_LABEL as _MKT_LABEL
-from mlbmodel.report.html_fmt import display as _display, edge_grade as _edge_grade
+from mlbmodel.report.html_fmt import display as _display, edge_grade as _edge_grade, section_head
 from mlbmodel.report.matchup import _headshot, _logo
 
 e = html.escape
@@ -83,7 +83,7 @@ def today(slate, sd, sharp_by_pk, sync=None, top_leans=""):
    <div class=card><div class=k>MLBMA sync</div><div class=v style="font-size:16px">{e(sync_label)}</div></div>
  </div>
  <div class=cols>
-   <div class=ca-board><h2>Slate</h2><div class=body>
+   <div class=ca-board>{section_head("Slate", icon="slate")}<div class=body>
      <div class=table-scroll><table><tr><th>Game</th><th>Time</th><th>Win%(H)</th><th>Proj tot</th><th>Margin</th><th>Lean</th><th>Sharp</th></tr>{rows or '<tr><td class=mut colspan=7>No slate loaded.</td></tr>'}</table></div></div></div>
    <div class=ca-board><h2>Biggest model leans</h2><div class=body>
      <div class=table-scroll><table><tr><th>Lean</th><th>Margin</th><th>Win%</th><th>Tot</th></tr>{lrows or '<tr><td class=mut colspan=4>—</td></tr>'}</table></div>
@@ -451,7 +451,7 @@ def results(reader):
    <div class=card><div class=k>Leans logged</div><div class=v>{len(rows)}</div></div>
    <div class=card><div class=k>Settled</div><div class=v>{summary["total"]}</div></div>
  </div>
- <div class=ca-board><h2>Calibration</h2><div class=body>
+ <div class=ca-board>{section_head("Calibration", icon="results")}<div class=body>
    <div class=table-scroll><table class=sortable><tr><th>Bucket</th><th>n</th><th>Predicted</th><th>Actual</th><th>Gap</th></tr>{cal_rows}</table></div>
    <div class=note>Bucketed by model probability vs realized hit-rate once games finalize.</div>
  </div></div>
@@ -565,7 +565,7 @@ def trends(reports):
    <div class=card><div class=k>Strongest signal</div><div class=v>{strongest:.1f}σ</div></div>
    <div class=card><div class=k>Source</div><div class=v style="font-size:16px">MLBMA logs</div></div>
  </div>
- <div class=ca-board><h2>Dominant trend board</h2><div class=body>
+ <div class=ca-board>{section_head("Dominant trend board", icon="trends")}<div class=body>
    <div class=table-scroll><table><tr><th>Game</th><th>Team</th><th>Type</th><th>Signal</th>
    <th>Mag</th><th>n</th><th>Lean / bet</th></tr>{board}</table></div>
    <div class=note>Ranked by blended score (magnitude × sample × relevance). σ = SDs from the league baseline.</div></div></div>

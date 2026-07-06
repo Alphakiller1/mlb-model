@@ -28,7 +28,14 @@ SYNC_FILES = (
     "chase_nav.css",
 )
 
-# Never overwrite — documented fork in chase_theme.py
+# Model-local vendored CSS (not copied from mlbma-pipeline/dashboard):
+MODEL_LOCAL_CSS = (
+    "chase_tokens.css",
+    "chase_components.css",
+    "mlbma_backgrounds.css",  # gradient-only fork
+)
+
+# Optional JS vendored separately: scripts/sync_chase_icons.py
 EXCLUDE = frozenset({"mlbma_backgrounds.css"})
 
 

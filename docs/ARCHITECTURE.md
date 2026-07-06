@@ -44,6 +44,8 @@ Nav order in `shell.NAV`: **Today · Matchups · Trends · Markets · Props · P
 
 Matchups: featured game renders full terminal; other games show compact summary with full terminal in `<template>` hydrated on first `switchGame()`.
 
+Markets: `decide()` thresholds default to fixed floors; when ≥25 settled sharp leans exist, `thresholds_from_leans()` calibrates STRONG/BET edge floors from realized hit rates.
+
 ## Supabase tables
 
 | Table | Writer | Reader |
@@ -61,7 +63,7 @@ Requires `SUPABASE_URL` + `SUPABASE_KEY` secrets for lean recording. Apply migra
 
 ## Settle
 
-`.github/workflows/settle.yml` (07:00 + 13:00 UTC): `build_game_results` **must succeed** before `market.settle` runs (`run_all` grades sharp observations + model leans).
+`.github/workflows/settle.yml` (07:00, 13:00, 17:00, 23:00 UTC): `build_game_results` **must succeed** before `market.settle` runs; then `check_pending_leans.py` logs any remaining unsettled rows.
 
 ## Design note
 
