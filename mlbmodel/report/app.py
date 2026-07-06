@@ -34,6 +34,11 @@ from mlbmodel.report.matchup import (
     build_report,
     report_body,
 )
+from mlbmodel.leans.calibration import calibration_buckets, summarize_record
+from mlbmodel.leans.record import collect_leans, record_leans
+from mlbmodel.market.pickem import build_pickem_rows, build_pickem_rows_from_boards
+from mlbmodel.report.interactive import TABLE_UI_CSS, TABLE_UI_JS
+from mlbmodel.report.top_leans import top_leans_html
 from mlbmodel.storage.supabase import SupabaseReader
 
 e = html.escape
@@ -65,7 +70,7 @@ def _slate(repo):
 
 
 # ── sections (each = context -> conclusion -> evidence; honest empty states) ──
-def _today(slate, sd, sharp_by_pk, sync=None):
+def _today(slate, sd, sharp_by_pk, sync=None, top_leans=""):
     rows = ""
     for g in slate:
         if g.get("err"):
@@ -96,6 +101,7 @@ def _today(slate, sd, sharp_by_pk, sync=None):
         f'<td>{g["total"]:.1f}</td></tr>' for g in leans)
     return f"""<h2>Today</h2>
  <div class=ctx>Open a matchup for model, market, risk, and freshness details.</div>
+ {top_leans}
  <div class=cards>
    <div class=card><div class=k>Games</div><div class=v>{n}</div></div>
    <div class=card><div class=k>Slate</div><div class=v style="font-size:16px">{e(sd or "—")}</div></div>
@@ -198,9 +204,8 @@ def _decide(s, model_rows):
     }
 
 
-def _markets(slate, sharp_by_pk, model_by_pk=None):
-    model_by_pk = model_by_pk or {}
-    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate}
+def _collect_market_plays(slate, sharp_by_pk, model_by_pk):
+    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
     plays = []
     for pk, sigs in sharp_by_pk.items():
         for s in sigs:
@@ -208,6 +213,11 @@ def _markets(slate, sharp_by_pk, model_by_pk=None):
             d["pk"], d["game"] = pk, pkmap.get(pk, str(pk))
             plays.append(d)
     plays.sort(key=lambda d: -d["score"])
+    return plays
+
+
+def _markets(slate, sharp_by_pk, model_by_pk=None):
+    plays = _collect_market_plays(slate, sharp_by_pk, model_by_pk or {})
 
     def _num(odds):
         return f"{odds:+d}" if isinstance(odds, int) else "—"
@@ -272,7 +282,8 @@ def _markets(slate, sharp_by_pk, model_by_pk=None):
      <div class=mut style="font-size:11px">{n_pass} pass</div></div>
  </div>
  <div class=sec><h2>Decision board</h2><div class=body>
-   <div class=table-scroll><table><tr><th>Game</th><th>The bet</th>
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter game or bet…" data-filter-for="markets-table" aria-label="Filter markets"></div>
+   <div class=table-scroll><table id=markets-table class=sortable><tr><th>Game</th><th>The bet</th>
    <th title="Sharp-book de-vig consensus minus the public consensus">Sharp lean</th>
    <th title="Model fair % minus the live price-implied %, plus EV at the number">Model edge</th>
    <th>Verdict</th><th>Stake</th></tr>{rows}</table></div>
@@ -369,7 +380,7 @@ def _pickem_rows(pitchers, sources):
     return rows, count
 
 
-def _props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None):
+def _props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top_leans=""):
     pp_board = pp_board or {}
     ud_board = ud_board or {}
     sl_board = sl_board or {}
@@ -525,6 +536,7 @@ def _props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None):
     confirmed = sum(1 for row in pitchers if row.get("lineup_status") == "confirmed")
     return f"""<h2>Pitcher Props</h2>
  <div class=ctx>Projection distributions, opponent pitch response, and executable price comparison.</div>
+ {top_leans}
  <div class=cards>
    <div class=card><div class=k>Probable starters</div><div class=v>{len(pitchers)}</div></div>
    <div class=card><div class=k>Confirmed lineups</div><div class=v>{confirmed}/30</div></div>
@@ -532,11 +544,13 @@ def _props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None):
    <div class=card><div class=k>Price feed</div><div class=v style="font-size:16px">{"LIVE" if all_markets else "NO SNAPSHOT"}</div></div>
  </div>
  <div class=sec><h2>Prop market report</h2><div class=body>
-   <div class=table-scroll><table><tr><th>Pitcher</th><th>Prop</th><th>Bet</th>
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter pitcher or prop…" data-filter-for="props-report-table" aria-label="Filter props report"></div>
+   <div class=table-scroll><table id=props-report-table class=sortable><tr><th>Pitcher</th><th>Prop</th><th>Bet</th>
    <th>Best price</th><th>Model</th><th>Market</th><th>Edge</th><th>State</th></tr>
    {report_rows}</table></div></div></div>
  <div class=sec><h2>Pick&apos;em boards <span class="mut" style="font-weight:600;font-size:11px">PrizePicks + Underdog + Sleeper · model vs line · {pickem_count} lines</span></h2><div class=body>
-   <div class=table-scroll><table><tr><th>Pitcher</th><th>Book</th><th>Market</th><th>Line</th><th>Model</th><th>P(over)</th><th>Lean</th></tr>{pickem_rows}</table></div>
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter pitcher…" data-filter-for="pickem-table" aria-label="Filter pickem"></div>
+   <div class=table-scroll><table id=pickem-table class=sortable><tr><th>Pitcher</th><th>Book</th><th>Market</th><th>Line</th><th>Model</th><th>P(over)</th><th>Lean</th></tr>{pickem_rows}</table></div>
    <div class=note>Fantasy score uses each book&apos;s pitcher formula (Out +1, K +3, ER −3, quality start +4, win +6 — win modeled; PrizePicks and Underdog scoring match). Hits / strikeouts / earned runs / outs / walks grade directly against the projection. P(over) is a normal approximation of the simulated distribution; leans ≥58% are highlighted. Not betting advice.</div>
  </div></div>
  <div class=sec><h2>Pitcher board</h2><div class=body>
@@ -625,24 +639,61 @@ def _portfolio(reader, gate, slate):
 
 
 def _results(reader):
-    mp = reader.get("model_predictions?select=verdict&limit=1000")
-    go = reader.get("game_outcomes?select=game_pk&limit=2000")
-    brier = reader.get("v_open_vs_close_brier?select=*")
-    errors = [result.error for result in (mp, go, brier) if result.error]
-    if errors:
-        return f"""<h2>Results</h2><div class=ctx>Settled performance and calibration.</div>
- <div class=empty>Warehouse unavailable: {e("; ".join(errors))}</div>"""
-    mp_rows, go_rows, brier_rows = mp.rows, go.rows, brier.rows
-    b = brier_rows[0] if brier_rows else {}
+    result = reader.get(
+        "model_leans?select=lean_id,slate_date,source,market,selection,line,model_prob,"
+        "edge,lean,won,push,settled,recorded_at&order=recorded_at.desc&limit=2000"
+    )
+    if result.error:
+        return f"""<h2>Results</h2><div class=ctx>Self-tracked model leans — record, settle, calibrate.</div>
+ <div class=empty>Lean warehouse unavailable: {e(result.error)}. Apply migration
+ <code>0003_model_leans.sql</code> and configure <code>SUPABASE_URL</code> +
+ <code>SUPABASE_KEY</code> in GitHub Actions secrets.</div>"""
+
+    rows = result.rows
+    summary = summarize_record(rows)
+    cal = calibration_buckets(rows)
+    hit = summary.get("hit_rate")
+    hit_txt = f"{hit:.1f}%" if hit is not None else "—"
+
+    cal_rows = "".join(
+        f'<tr><td>{e(c["bucket"])}</td><td>{c["n"]}</td><td>{c["predicted"]:.1f}%</td>'
+        f'<td>{c["actual"]:.1f}%</td><td>{c["gap"]:+.1f}pt</td></tr>'
+        for c in cal
+    ) or '<tr><td class=mut colspan=5>No settled leans for calibration yet.</td></tr>'
+
+    src_rows = "".join(
+        f'<tr><td>{e(src)}</td><td>{v["w"]}</td><td>{v["l"]}</td><td>{v["p"]}</td>'
+        f'<td>{(v["w"]/(v["w"]+v["l"])*100 if v["w"]+v["l"] else 0):.1f}%</td></tr>'
+        for src, v in sorted((summary.get("by_source") or {}).items())
+    ) or '<tr><td class=mut colspan=5>—</td></tr>'
+
+    recent = "".join(
+        f'<tr><td>{e(str(r.get("slate_date") or ""))}</td>'
+        f'<td>{e(str(r.get("source") or ""))}</td>'
+        f'<td>{e(str(r.get("market") or ""))} {e(str(r.get("selection") or ""))}</td>'
+        f'<td>{e(str(r.get("lean") or ""))}</td>'
+        f'<td>{"W" if r.get("won") else ("P" if r.get("push") else ("L" if r.get("settled") else "—"))}</td></tr>'
+        for r in rows[:25]
+    ) or '<tr><td class=mut colspan=5>No leans recorded yet.</td></tr>'
+
     return f"""<h2>Results</h2>
- <div class=ctx>Settled performance, CLV and calibration. Builds as the daily settle loop runs.</div>
+ <div class=ctx>Accumulating track record from persisted model leans. Calibration is the honest headline.</div>
  <div class=cards>
-	   <div class=card><div class=k>Predictions logged</div><div class=v>{len(mp_rows)}</div></div>
-	   <div class=card><div class=k>Games settled</div><div class=v>{len(go_rows)}</div></div>
-   <div class=card><div class=k>Open Brier</div><div class=v>{b.get('open_brier','—')}</div></div>
-   <div class=card><div class=k>Close Brier</div><div class=v>{b.get('close_brier','—')}</div></div>
+   <div class=card><div class=k>Record</div><div class=v>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</div></div>
+   <div class=card><div class=k>Hit rate</div><div class=v>{hit_txt}</div></div>
+   <div class=card><div class=k>Leans logged</div><div class=v>{len(rows)}</div></div>
+   <div class=card><div class=k>Settled</div><div class=v>{summary["total"]}</div></div>
  </div>
- <div class=note>Open-versus-close calibration describes market learning. It does not, by itself, establish a profitable entry rule.</div>"""
+ <div class=sec><h2>Calibration</h2><div class=body>
+   <div class=table-scroll><table class=sortable><tr><th>Bucket</th><th>n</th><th>Predicted</th><th>Actual</th><th>Gap</th></tr>{cal_rows}</table></div>
+   <div class=note>Bucketed by model probability vs realized hit-rate once games finalize.</div>
+ </div></div>
+ <div class=sec><h2>By source</h2><div class=body>
+   <div class=table-scroll><table><tr><th>Source</th><th>W</th><th>L</th><th>P</th><th>Hit%</th></tr>{src_rows}</table></div>
+ </div></div>
+ <div class=sec><h2>Recent leans</h2><div class=body>
+   <div class=table-scroll><table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Lean</th><th>Result</th></tr>{recent}</table></div>
+ </div></div>"""
 
 
 _CAT_LABEL = {
@@ -881,7 +932,7 @@ background:linear-gradient(135deg,rgba(124,77,255,.12),rgba(45,212,191,.04));col
 .trend-list .pill{margin-right:6px;vertical-align:middle}
 @media(max-width:760px){#appshell{flex-direction:column}#nav{width:100%;height:auto;position:static;display:flex;flex-wrap:wrap;gap:4px}
 #nav .brand,#nav .tagline{width:100%}.navb{width:auto}.cards{grid-template-columns:repeat(2,1fr)}}
-"""
+""" + TABLE_UI_CSS
 
 
 def build_app(featured_game, *, fetch=True, data_dir=None):
@@ -1008,12 +1059,48 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         for m in rows
         if str(m.get("market") or "").startswith("f5_")
     ]
+    market_plays = _collect_market_plays(slate, sharp_by_pk, model_by_pk)
+    pickem_sources = [
+        ("prizepicks", pp_board),
+        ("underdog", ud_board),
+        ("sleeper", sl_board),
+    ]
+    pickem_rows = build_pickem_rows_from_boards(pitchers, pickem_sources)
+    if not pickem_rows:
+        pickem_rows = build_pickem_rows(pitchers)
+    flat_props = []
+    for pitcher in pitchers:
+        for report in pitcher.get("market_report") or []:
+            flat_props.append({
+                "pitcher": pitcher.get("pitcher"),
+                "game_pk": pitcher.get("game_pk"),
+                **report,
+                "model_mean": (pitcher.get("projections") or {}).get(report.get("prop"), {}).get("mean"),
+            })
+    top_leans = top_leans_html(
+        market_plays=market_plays,
+        pickem_rows=pickem_rows,
+        prop_reports=flat_props,
+    )
+
+    if sd:
+        try:
+            record_leans(collect_leans(
+                slate_date=str(sd)[:10],
+                market_plays=market_plays,
+                pickem_rows=pickem_rows,
+                prop_reports=flat_props,
+                pkmap=pkmap,
+            ))
+        except Exception:
+            pass
+
     views = {
-        "today": _today(slate, sd, sharp_by_pk, sync),
+        "today": _today(slate, sd, sharp_by_pk, sync, top_leans),
         "matchups": matchups,
         "trends": _trends(slate_reports),
         "markets": _markets(slate, sharp_by_pk, model_by_pk),
-        "props": _props(pitchers, prop_prices, pp_board, ud_board, sl_board),
+        "props": _props(pitchers, prop_prices, pp_board, ud_board, sl_board, top_leans),
         "portfolio": _portfolio(reader, gate, slate),
         "results": _results(reader),
         "research": _research(reader, gate, f5_board),
@@ -1043,15 +1130,22 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
           "function showReportTab(b,k){const r=b.closest('.rtabs');"
           "r.querySelectorAll('.rtabbar button').forEach(x=>x.classList.remove('on'));"
           "r.querySelectorAll('.pn').forEach(x=>x.classList.remove('on'));"
-          "b.classList.add('on');r.querySelector('[data-panel=\"'+k+'\"]').classList.add('on');}")
-    # The real Chase Analytics header carries the section nav; the body wears the production
-    # stadium-outfield background via the same body classes the live dashboards use.
+          "b.classList.add('on');r.querySelector('[data-panel=\"'+k+'\"]').classList.add('on');}"
+          "document.addEventListener('keydown',function(ev){"
+          "if(ev.target.tagName==='INPUT'||ev.target.tagName==='TEXTAREA')return;"
+          "var btns=Array.prototype.slice.call(document.querySelectorAll('.chase-nav-link'));"
+          "var i=btns.findIndex(function(b){return b.classList.contains('active');});"
+          "if(ev.key==='ArrowDown'||ev.key==='ArrowRight'){ev.preventDefault();"
+          "var n=btns[(i+1)%btns.length];if(n)n.click();}"
+          "if(ev.key==='ArrowUp'||ev.key==='ArrowLeft'){ev.preventDefault();"
+          "var p=btns[(i-1+btns.length)%btns.length];if(p)p.click();}});"
+          + TABLE_UI_JS)
     chase_nav = chase_theme.nav_html(nav_items, "today", "MLB Model", status=(sd or "Live"))
     return (f'<!DOCTYPE html><html lang=en class=view-opening><head><meta charset=utf-8>'
             f'<meta name=viewport content="width=device-width,initial-scale=1">'
             f'<title>MLB Model — Chase Analytics</title>'
             f'<style>{chase_theme.theme_css()}{_CSS}{_SHELL_CSS}</style></head>'
-            f'<body class="platform-dashboard opening-dashboard ca-bg-outfield">'
+            f'<body class="platform-dashboard opening-dashboard">'
             f'{chase_nav}'
             f'<main id=main class=ca-page-shell>{notice}{sections}</main>'
             f'<script>{js}</script></body></html>')

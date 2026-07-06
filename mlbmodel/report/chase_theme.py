@@ -2,15 +2,14 @@
 
 These are byte-for-byte copies of the production Chase Analytics dashboard styles from
 mlbma-pipeline/dashboard/ (mlbma_design_system.css, theme.css, chase_nav.css,
-mlbma_backgrounds.css + the stadium-outfield background photo and brand icon). The model report
-renders with the *same* header, wordmark, tokens, typography, and stadium background as
+mlbma_backgrounds.css + brand icon). The model report renders with the *same* header, wordmark,
+tokens, typography, and gradient broadcast background as
 chase-analytics.com — not an approximation. Everything is inlined so each generated HTML page
 stays fully self-contained (no external CSS/asset fetches), while remaining a faithful port of
 the source. Resync by re-copying the four CSS files + the background asset if the source changes.
 """
 from __future__ import annotations
 
-import base64
 from functools import lru_cache
 from pathlib import Path
 
@@ -32,12 +31,6 @@ _FONT_IMPORT = (
 
 
 @lru_cache(maxsize=1)
-def _bg_photo_data_uri() -> str:
-    data = (_STATIC / "assets" / "backgrounds" / "stadium-outfield-night.png").read_bytes()
-    return "data:image/png;base64," + base64.b64encode(data).decode("ascii")
-
-
-@lru_cache(maxsize=1)
 def theme_css() -> str:
     """The full production Chase Analytics stylesheet, inlined and self-contained.
 
@@ -56,11 +49,6 @@ def theme_css() -> str:
     nav = (_STATIC / "chase_nav.css").read_text(encoding="utf-8")
 
     backgrounds = (_STATIC / "mlbma_backgrounds.css").read_text(encoding="utf-8")
-    # Inline the stadium photo so the page needs no external asset fetch on GitHub Pages.
-    backgrounds = backgrounds.replace(
-        "url('assets/backgrounds/stadium-outfield-night.png')",
-        f"url('{_bg_photo_data_uri()}')",
-    )
 
     tokens = (_STATIC / "chase_tokens.css").read_text(encoding="utf-8")
     components = (_STATIC / "chase_components.css").read_text(encoding="utf-8")
@@ -70,6 +58,8 @@ def theme_css() -> str:
 
 @lru_cache(maxsize=1)
 def _icon_data_uri() -> str:
+    import base64
+
     data = (_STATIC / "assets" / "chase-icon-filled.png").read_bytes()
     return "data:image/png;base64," + base64.b64encode(data).decode("ascii")
 

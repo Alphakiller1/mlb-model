@@ -1,0 +1,98 @@
+from mlbmodel.leans.calibration import calibration_buckets, summarize_record
+from mlbmodel.leans.grade import grade_lean
+from mlbmodel.leans.record import collect_leans, record_leans, _row
+
+
+def test_collect_leans_dedupes_market_and_prop():
+    plays = [{
+        "verdict": "BET",
+        "pk": 1,
+        "mkt_type": "total",
+        "sel": "over",
+        "price": -110,
+        "model_p": 55.0,
+        "medge": 3.0,
+    }]
+    pickem = [{
+        "lean": "OVER",
+        "book": "prizepicks",
+        "prop": "K",
+        "line": 5.5,
+        "projection": 6.2,
+        "p_over": 0.62,
+        "edge_pts": 12.0,
+        "game_pk": 1,
+    }]
+    props = [{
+        "state": "BET",
+        "prop": "K",
+        "side": "over",
+        "line": 5.5,
+        "edge": 0.04,
+        "model_probability": 0.58,
+        "model_mean": 6.0,
+        "game_pk": 1,
+    }]
+    rows = collect_leans(
+        slate_date="2026-07-06",
+        market_plays=plays,
+        pickem_rows=pickem,
+        prop_reports=props,
+    )
+    assert len(rows) == 3
+    assert {r["source"] for r in rows} == {"sharp", "prizepicks", "prop"}
+
+
+def test_record_leans_skips_without_credentials(monkeypatch):
+    monkeypatch.setattr("mlbmodel.leans.record.SupabaseWriter", lambda: type("W", (), {"url": "", "key": ""})())
+    assert record_leans([_row(
+        slate_date="2026-07-06",
+        game_pk=1,
+        source="sharp",
+        market="ml",
+        selection="NYY",
+        line=None,
+        model_value=52.0,
+        model_prob=52.0,
+        edge=2.0,
+        lean="BET",
+    )]) == 0
+
+
+def test_grade_lean_total_over_win():
+    won, push = grade_lean(
+        {"market": "total", "selection": "over", "line": 8.5},
+        outcome={"total_runs": 10, "home_runs": 5, "away_runs": 5},
+    )
+    assert won is True
+    assert push is False
+
+
+def test_grade_lean_total_push():
+    won, push = grade_lean(
+        {"market": "total", "selection": "over", "line": 10.0},
+        outcome={"total_runs": 10},
+    )
+    assert won is None
+    assert push is True
+
+
+def test_grade_lean_prop_strikeouts():
+    won, push = grade_lean(
+        {"market": "k", "selection": "over", "line": 5.5, "source": "prizepicks"},
+        pitcher_stats={"strikeouts": 7},
+    )
+    assert won is True
+
+
+def test_calibration_buckets():
+    rows = [
+        {"settled": True, "model_prob": 0.55, "won": True, "push": False},
+        {"settled": True, "model_prob": 0.56, "won": False, "push": False},
+        {"settled": True, "model_prob": 0.80, "won": True, "push": False},
+    ]
+    buckets = calibration_buckets(rows, buckets=2)
+    assert buckets
+    summary = summarize_record(rows)
+    assert summary["wins"] == 2
+    assert summary["losses"] == 1

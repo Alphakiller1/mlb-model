@@ -152,6 +152,8 @@ jobs:
       - name: Build static research dashboard
         env:
           MLBMODEL_CACHE_DIR: _deploy_data
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           MLB_MODEL_DEPLOYMENT_NOTICE: >-
             Synchronized MLBMA research build with live pitcher-prop lines.
             No displayed state is a wager instruction.
