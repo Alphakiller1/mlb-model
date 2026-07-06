@@ -34,7 +34,7 @@ build_app()  ──►  index.html (GitHub Pages)
 | `mlbmodel/props/` | Pitcher projection engine |
 | `mlbmodel/leans/` | Record at build, grade after finals, calibration |
 | `mlbmodel/quant/` | Promotion gate (blocks executable BET) |
-| `mlbmodel/report/` | Chase-themed HTML shell (`app.py`, `matchup.py`) |
+| `mlbmodel/report/` | Chase-themed HTML shell (`app.py`, `matchup.py`, `decision.py`) |
 | `mlbmodel/storage/` | Supabase REST reader/writer |
 
 ## Supabase tables
@@ -55,3 +55,5 @@ Requires `SUPABASE_URL` + `SUPABASE_KEY` secrets for lean recording. Apply migra
 ## Design note
 
 `mlbmodel/report/static/mlbma_backgrounds.css` is an **MLB Model fork** (gradient-only). Do not overwrite from `mlbma-pipeline/dashboard/` — chase-analytics.com keeps stadium photo backgrounds.
+
+Resync other vendored CSS with `python scripts/sync_chase_css.py --source ../mlbma-pipeline --check` (or `--write`). CI runs `--check` when `mlbma-pipeline` is available.
