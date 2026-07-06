@@ -20,7 +20,7 @@ from mlbmodel.baseball.model import model_probabilities
 from mlbmodel.baseball.repository import DataRepository
 from mlbmodel.market.props import load_prop_board, market_report
 from mlbmodel.market.quotes import load_board
-from mlbmodel.market import prizepicks, underdog
+from mlbmodel.market import prizepicks, underdog, sleeper
 from mlbmodel import settings
 from mlbmodel.portfolio.risk import summarize_positions
 from mlbmodel.props.model import build_pitcher_board
@@ -369,9 +369,10 @@ def _pickem_rows(pitchers, sources):
     return rows, count
 
 
-def _props(pitchers, prop_board, pp_board=None, ud_board=None):
+def _props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None):
     pp_board = pp_board or {}
     ud_board = ud_board or {}
+    sl_board = sl_board or {}
 
     def projection_cell(row, prop, model_only=False):
         value = (row.get("projections") or {}).get(prop) or {}
@@ -514,10 +515,11 @@ def _props(pitchers, prop_board, pp_board=None, ud_board=None):
         'Projections remain visible; price decisions remain NO MARKET.</td></tr>'
     )
     pickem_rows, pickem_count = _pickem_rows(
-        pitchers, [("PrizePicks", pp_board), ("Underdog", ud_board)]
+        pitchers,
+        [("PrizePicks", pp_board), ("Underdog", ud_board), ("Sleeper", sl_board)],
     )
     pickem_rows = pickem_rows or (
-        '<tr><td class=mut colspan=7>No PrizePicks or Underdog pitcher lines loaded '
+        '<tr><td class=mut colspan=7>No PrizePicks / Underdog / Sleeper pitcher lines loaded '
         '(off-hours or feed unavailable).</td></tr>'
     )
     confirmed = sum(1 for row in pitchers if row.get("lineup_status") == "confirmed")
@@ -533,7 +535,7 @@ def _props(pitchers, prop_board, pp_board=None, ud_board=None):
    <div class=table-scroll><table><tr><th>Pitcher</th><th>Prop</th><th>Bet</th>
    <th>Best price</th><th>Model</th><th>Market</th><th>Edge</th><th>State</th></tr>
    {report_rows}</table></div></div></div>
- <div class=sec><h2>Pick&apos;em boards <span class="mut" style="font-weight:600;font-size:11px">PrizePicks + Underdog · model vs line · {pickem_count} lines</span></h2><div class=body>
+ <div class=sec><h2>Pick&apos;em boards <span class="mut" style="font-weight:600;font-size:11px">PrizePicks + Underdog + Sleeper · model vs line · {pickem_count} lines</span></h2><div class=body>
    <div class=table-scroll><table><tr><th>Pitcher</th><th>Book</th><th>Market</th><th>Line</th><th>Model</th><th>P(over)</th><th>Lean</th></tr>{pickem_rows}</table></div>
    <div class=note>Fantasy score uses each book&apos;s pitcher formula (Out +1, K +3, ER −3, quality start +4, win +6 — win modeled; PrizePicks and Underdog scoring match). Hits / strikeouts / earned runs / outs / walks grade directly against the projection. P(over) is a normal approximation of the simulated distribution; leans ≥58% are highlighted. Not betting advice.</div>
  </div></div>
@@ -893,6 +895,9 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     ud_board = prizepicks.board_by_player(
         underdog.load_lines(settings.CACHE_DIR / "underdog_lines.json")
     )
+    sl_board = prizepicks.board_by_player(
+        sleeper.load_lines(settings.CACHE_DIR / "sleeper_lines.json")
+    )
     gate = _promotion(reader)
     pitchers = build_pitcher_board(repo)
     promotion_status = (
@@ -1008,7 +1013,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "matchups": matchups,
         "trends": _trends(slate_reports),
         "markets": _markets(slate, sharp_by_pk, model_by_pk),
-        "props": _props(pitchers, prop_prices, pp_board, ud_board),
+        "props": _props(pitchers, prop_prices, pp_board, ud_board, sl_board),
         "portfolio": _portfolio(reader, gate, slate),
         "results": _results(reader),
         "research": _research(reader, gate, f5_board),
