@@ -112,6 +112,25 @@ jobs:
           else
             echo "PrizePicks: live fetch blocked (PerimeterX) — using committed snapshot"
           fi
+      - name: Fetch Underdog pick'em lines
+        run: |
+          # Underdog over/under lines — free, second pick'em source. Same snapshot pattern as
+          # PrizePicks (datacenter IPs may be blocked): committed snapshot is the base; a live
+          # fetch replaces it only when it returns real lines. Non-fatal.
+          cp deployment_data/underdog_lines.json _deploy_data/underdog_lines.json 2>/dev/null || true
+          curl -s -m 30 --compressed \
+            -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
+            -H "Accept: application/json, text/plain, */*" \
+            -H "Accept-Language: en-US,en;q=0.9" \
+            "https://api.underdogfantasy.com/beta/v5/over_under_lines" \
+            -o _deploy_data/ud_raw.json || true
+          python -m mlbmodel.market.underdog --from-raw _deploy_data/ud_raw.json --cache /tmp/ud_live.json 2>/dev/null || true
+          if [ -s /tmp/ud_live.json ] && python -c "import json,sys; sys.exit(0 if len(json.load(open('/tmp/ud_live.json')))>0 else 1)" 2>/dev/null; then
+            cp /tmp/ud_live.json _deploy_data/underdog_lines.json
+            echo "Underdog: live fetch OK"
+          else
+            echo "Underdog: live fetch blocked — using committed snapshot"
+          fi
       - name: Build static research dashboard
         env:
           MLBMODEL_CACHE_DIR: _deploy_data
