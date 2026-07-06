@@ -24,5 +24,5 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          python -m mlbmodel.sources.build_game_results || echo "WARNING: game results refresh failed"
+          python -m mlbmodel.sources.build_game_results
           python -m mlbmodel.market.settle

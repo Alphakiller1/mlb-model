@@ -27,8 +27,10 @@ def test_build_app_renders_all_views():
     assert "prop-board" in html
 
 
-def test_build_app_matchup_switch_includes_full_terminals():
-    """Every slate game gets the full matchup terminal (not compact-only summaries)."""
+def test_build_app_matchup_switch_hybrid_terminals():
+    """Featured game is full; others ship compact + deferred full terminal in <template>."""
     html = build_app("NYY@BOS", fetch=False, data_dir=DATA)
     assert html.count('class="matchup-report') >= 2
-    assert html.count("rtabs") >= 2
+    assert "matchup-full-src" in html
+    assert "matchup-summary" in html
+    assert "matchup-body" in html

@@ -25,7 +25,8 @@ letter-spacing:-.02em;margin:0 0 5px;line-height:1.05}
 .ctx{color:var(--muted);font-size:13px;margin-bottom:18px}
 .note{color:var(--muted);font-size:11.5px;margin-top:10px}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:16px}
-.card{position:relative;background:var(--ca-panel-glass);border:1px solid var(--border-2);border-radius:14px;
+.card{position:relative;background:linear-gradient(180deg,var(--ca-board-top, #181B26),var(--ca-board-bottom, #12141D));
+border:2px solid var(--ca-panel-border, var(--border-violet));border-radius:14px;
 padding:15px 16px 14px;overflow:hidden;box-shadow:var(--ca-card-shadow);
 transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
 .card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--v-grad);opacity:.7}
@@ -105,8 +106,11 @@ def shell_js() -> str:
         "document.querySelectorAll('.chase-nav-link').forEach(b=>b.classList.toggle('active',b.dataset.v===k));"
         "if(location.hash!=='#'+k)history.replaceState(null,'','#'+k);"
         "window.scrollTo(0,0);}"
-        "function switchGame(g){document.querySelectorAll('.matchup-report').forEach(x=>"
-        "x.classList.toggle('on',x.dataset.game===g));const s=document.getElementById('gameSelect');"
+        "function switchGame(g){document.querySelectorAll('.matchup-report').forEach(x=>{"
+        "const on=x.dataset.game===g;x.classList.toggle('on',on);"
+        "if(on){const body=x.querySelector('.matchup-body');const tpl=x.querySelector('template.matchup-full-src');"
+        "if(body&&tpl&&body.querySelector('.matchup-summary'))body.innerHTML=tpl.innerHTML;}"
+        "});const s=document.getElementById('gameSelect');"
         "if(s)s.value=g;}"
         "function openGame(g){switchGame(g);show('matchups');}"
         "function togglePitcher(i){const r=document.getElementById('prop-detail-'+i);"

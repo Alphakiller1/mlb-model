@@ -75,13 +75,9 @@ def run() -> int:
 def run_all() -> tuple[int, int]:
     """Settle sharp observations and model leans."""
     sharp_settled = run()
-    try:
-        from mlbmodel.leans.grade import settle_leans
+    from mlbmodel.leans.grade import settle_leans
 
-        lean_settled = settle_leans(reader=SupabaseReader(), writer=SupabaseWriter())
-    except Exception as exc:
-        log.warning("model lean settlement failed: %s", exc)
-        lean_settled = 0
+    lean_settled = settle_leans(reader=SupabaseReader(), writer=SupabaseWriter())
     return sharp_settled, lean_settled
 
 

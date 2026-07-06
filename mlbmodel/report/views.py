@@ -83,9 +83,9 @@ def today(slate, sd, sharp_by_pk, sync=None, top_leans=""):
    <div class=card><div class=k>MLBMA sync</div><div class=v style="font-size:16px">{e(sync_label)}</div></div>
  </div>
  <div class=cols>
-   <div class=sec><h2>Slate</h2><div class=body>
+   <div class=ca-board><h2>Slate</h2><div class=body>
      <div class=table-scroll><table><tr><th>Game</th><th>Time</th><th>Win%(H)</th><th>Proj tot</th><th>Margin</th><th>Lean</th><th>Sharp</th></tr>{rows or '<tr><td class=mut colspan=7>No slate loaded.</td></tr>'}</table></div></div></div>
-   <div class=sec><h2>Biggest model leans</h2><div class=body>
+   <div class=ca-board><h2>Biggest model leans</h2><div class=body>
      <div class=table-scroll><table><tr><th>Lean</th><th>Margin</th><th>Win%</th><th>Tot</th></tr>{lrows or '<tr><td class=mut colspan=4>—</td></tr>'}</table></div>
      <div class=note>Ranked by projected run margin. Open in <b>Matchups</b> for fair vs market edge.</div></div></div>
  </div>"""
@@ -250,7 +250,7 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top
         lineup = row.get("lineup") or {}
         rows += f"""<tr class=prop-detail id=prop-detail-{index}><td colspan=11>
           <div class=prop-detail-grid>
-            <div class=sec><h2>Arsenal vs opponent production</h2><div class=body>
+            <div class=ca-board><h2>Arsenal vs opponent production</h2><div class=body>
               <div class=detail-strip>
                 <span><b>{e(str(row.get("lineup_status") or "unavailable"))}</b> lineup</span>
                 <span>{e(str(pitch_matchup.get("response_source") or "no response source"))}</span>
@@ -264,7 +264,7 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top
                 <th>K effect</th><th>Run effect</th><th>Who benefits</th></tr>{pitch_rows}</table></div>
               <div class=note>Opponent values switch from team results to batting-order-weighted player results when at least six posted hitters match.</div>
             </div></div>
-            <div class=sec><h2>Market report</h2><div class=body>
+            <div class=ca-board><h2>Market report</h2><div class=body>
               <div class=table-scroll><table><tr><th>Prop</th><th>Bet</th><th>Best price</th>
                 <th>Model</th><th>Market</th><th>Edge</th><th>EV</th><th>State</th></tr>{market_rows}</table></div>
               <div class=detail-strip>
@@ -309,17 +309,17 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None, top
    <div class=card><div class=k>Priced prop sides</div><div class=v>{len(all_markets)}</div></div>
    <div class=card><div class=k>Price feed</div><div class=v style="font-size:16px">{"LIVE" if all_markets else "NO SNAPSHOT"}</div></div>
  </div>
- <div class=sec><h2>Prop market report</h2><div class=body>
+ <div class=ca-board><h2>Prop market report</h2><div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter pitcher or prop…" data-filter-for="props-report-table" aria-label="Filter props report"></div>
    <div class=table-scroll><table id=props-report-table class=sortable><tr><th>Pitcher</th><th>Prop</th><th>Bet</th>
    <th>Best price</th><th>Model</th><th>Market</th><th>Edge</th><th>State</th></tr>
    {report_rows}</table></div></div></div>
- <div class=sec><h2>Pick&apos;em boards <span class="mut" style="font-weight:600;font-size:11px">PrizePicks + Underdog + Sleeper · model vs line · {pickem_count} lines</span></h2><div class=body>
+ <div class=ca-board><h2>Pick&apos;em boards <span class="mut" style="font-weight:600;font-size:11px">PrizePicks + Underdog + Sleeper · model vs line · {pickem_count} lines</span></h2><div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter pitcher…" data-filter-for="pickem-table" aria-label="Filter pickem"></div>
    <div class=table-scroll><table id=pickem-table class=sortable><tr><th>Pitcher</th><th>Book</th><th>Market</th><th>Line</th><th>Model</th><th>P(over)</th><th>Lean</th></tr>{pickem_rows}</table></div>
    <div class=note>Fantasy score uses each book&apos;s pitcher formula (Out +1, K +3, ER −3, quality start +4, win +6 — win modeled; PrizePicks and Underdog scoring match). Hits / strikeouts / earned runs / outs / walks grade directly against the projection. P(over) is a normal approximation of the simulated distribution; leans ≥58% are highlighted. Not betting advice.</div>
  </div></div>
- <div class=sec><h2>Pitcher board</h2><div class="body prop-board">
+ <div class=ca-board><h2>Pitcher board</h2><div class="body prop-board">
    <div class=table-scroll><table class=prop-table><tr><th>Starter</th><th>vs</th>
    <th>Performance</th><th title="Projected innings and expected runs allowed per nine">Starter baseline</th><th>K</th><th>BB</th>
    <th>ER</th><th>Outs</th><th title="Projected hits allowed">Hits</th><th title="DraftKings pitcher fantasy points: IP*2.25 + K*2 - ER*2 - H*0.6 - BB*0.6">DK Pts</th><th>Market</th></tr>{rows or '<tr><td class=mut colspan=11>No pitcher inputs loaded.</td></tr>'}</table></div>
@@ -396,7 +396,7 @@ def portfolio(reader, gate, slate):
    <div class=card><div class=k>Largest game</div><div class=v>{summary.largest_game_exposure:.2f}u</div></div>
  </div>
  {concentration}
- <div class=sec><h2>Open paper positions</h2><div class=body>
+ <div class=ca-board><h2>Open paper positions</h2><div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter positions…" data-filter-for="portfolio-table" aria-label="Filter portfolio"></div>
    <div class=table-scroll><table id=portfolio-table class=sortable><tr><th>Game</th><th>Market</th><th>Selection</th>
    <th>Entry</th><th>Model</th><th>Market</th><th>Risk</th><th>Entered</th></tr>
@@ -451,14 +451,14 @@ def results(reader):
    <div class=card><div class=k>Leans logged</div><div class=v>{len(rows)}</div></div>
    <div class=card><div class=k>Settled</div><div class=v>{summary["total"]}</div></div>
  </div>
- <div class=sec><h2>Calibration</h2><div class=body>
+ <div class=ca-board><h2>Calibration</h2><div class=body>
    <div class=table-scroll><table class=sortable><tr><th>Bucket</th><th>n</th><th>Predicted</th><th>Actual</th><th>Gap</th></tr>{cal_rows}</table></div>
    <div class=note>Bucketed by model probability vs realized hit-rate once games finalize.</div>
  </div></div>
- <div class=sec><h2>By source</h2><div class=body>
+ <div class=ca-board><h2>By source</h2><div class=body>
    <div class=table-scroll><table><tr><th>Source</th><th>W</th><th>L</th><th>P</th><th>Hit%</th></tr>{src_rows}</table></div>
  </div></div>
- <div class=sec><h2>Recent leans</h2><div class=body>
+ <div class=ca-board><h2>Recent leans</h2><div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter leans…" data-filter-for="results-recent-table" aria-label="Filter results"></div>
    <div class=table-scroll><table id=results-recent-table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Lean</th><th>Result</th></tr>{recent}</table></div>
  </div></div>"""
@@ -546,7 +546,7 @@ def trends(reports):
             f'→ {e(t.betting_implications[0]) if t.betting_implications else ""}</b></li>'
             for t in r.trends[:5]
         ) or '<li class=mut>No dominant trends cleared the magnitude/sample threshold.</li>'
-        cards += f"""<div class=sec><h2>{e(r.game)} · {lean_txt}</h2><div class=body>
+        cards += f"""<div class=ca-board><h2>{e(r.game)} · {lean_txt}</h2><div class=body>
           <div class=edge-row>
             <div class=edge-cell><span class=k>{e(r.away)}</span>{_edge_bar(r.away_edge_score)}</div>
             <div class=edge-cell><span class=k>{e(r.home)}</span>{_edge_bar(r.home_edge_score)}</div>
@@ -565,7 +565,7 @@ def trends(reports):
    <div class=card><div class=k>Strongest signal</div><div class=v>{strongest:.1f}σ</div></div>
    <div class=card><div class=k>Source</div><div class=v style="font-size:16px">MLBMA logs</div></div>
  </div>
- <div class=sec><h2>Dominant trend board</h2><div class=body>
+ <div class=ca-board><h2>Dominant trend board</h2><div class=body>
    <div class=table-scroll><table><tr><th>Game</th><th>Team</th><th>Type</th><th>Signal</th>
    <th>Mag</th><th>n</th><th>Lean / bet</th></tr>{board}</table></div>
    <div class=note>Ranked by blended score (magnitude × sample × relevance). σ = SDs from the league baseline.</div></div></div>
@@ -602,16 +602,16 @@ def research(reader, pv, f5_board=None):
     else:
         f5rows = '<tr><td class=mut colspan=7>No live F5 prices on the slate yet — F5 shows as model fair values in each matchup.</td></tr>'
         f5_note = "F5 prices appear here when the live F5 feed returns them."
-    f5_panel = (f'<div class=sec><h2>First 5 (F5) edges</h2><div class=body>'
+    f5_panel = (f'<div class=ca-board><h2>First 5 (F5) edges</h2><div class=body>'
                 f'<div class=table-scroll><table><tr><th>Game</th><th>Market</th><th>Side</th>'
                 f'<th>Model%</th><th>Price</th><th>Edge</th><th>State</th></tr>{f5rows}</table></div>'
                 f'<div class=note>{f5_note}</div></div></div>')
 
     return f"""<h2>Research</h2>
  <div class=ctx>Model + data health. Not part of the betting workflow — promotion is gated here.</div>
- <div class=sec><h2>Promotion gate</h2><div class=body>
+ <div class=ca-board><h2>Promotion gate</h2><div class=body>
    <div class="vbar {tone}"><b>{pv['verdict']}</b><span>{e('; '.join(pv.get('reasons', [])))}</span></div>
 	   <div class=note>Promotion also requires an executable signal timestamp and entry price. Open-to-close hindsight cannot qualify.</div></div></div>
  {f5_panel}
- <div class=sec><h2>Kalshi price calibration</h2><div class=body>
+ <div class=ca-board><h2>Kalshi price calibration</h2><div class=body>
    <div class=table-scroll><table><tr><th>Bucket</th><th>n</th><th>Avg price</th><th>Actual win%</th><th>Gap</th></tr>{crows}</table></div></div></div>"""

@@ -32,11 +32,19 @@ def verdict_label(verdict: str) -> str:
     return _VERDICT_LABEL[verdict]
 
 
+_VERDICT_CLASS = {
+    "STRONG": "pos",
+    "BET": "pos",
+    "LEAN": "warnc",
+    "SHARP": "mut",
+    "CONFLICT": "neg",
+}
+
+
 def verdict_badge(verdict: str) -> str:
-    _, _, fg, bg, _why = _VERDICT[verdict]
     return (
-        f'<span class="pill" style="background:{bg};color:{fg};'
-        f'border:1px solid {fg}55;font-weight:800">{_VERDICT_LABEL[verdict]}</span>'
+        f'<span class="pill {_VERDICT_CLASS[verdict]}">'
+        f'{_VERDICT_LABEL[verdict]}</span>'
     )
 
 
@@ -143,7 +151,7 @@ def markets_html(slate, sharp_by_pk, model_by_pk=None) -> str:
         else:
             model = '<span class=mut>—</span>'
         stake = (
-            f'<b style="color:{_VERDICT[play["verdict"]][2]}">{play["stake"]:.1f}u</b>'
+            f'<b class="{_VERDICT_CLASS[play["verdict"]]}">{play["stake"]:.1f}u</b>'
             if play["stake"] else '<span class=mut>—</span>'
         )
         return (
@@ -182,7 +190,7 @@ def markets_html(slate, sharp_by_pk, model_by_pk=None) -> str:
    <div class=card><div class=k>Suggested exposure</div><div class=v>{exposure:.1f}u</div>
      <div class=mut style="font-size:11px">{n_pass} pass</div></div>
  </div>
- <div class=sec><h2>Decision board</h2><div class=body>
+ <div class=ca-board><h2>Decision board</h2><div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter game or bet…" data-filter-for="markets-table" aria-label="Filter markets"></div>
    <div class=table-scroll><table id=markets-table class=sortable><tr><th>Game</th><th>The bet</th>
    <th title="Sharp-book de-vig consensus minus the public consensus">Sharp lean</th>

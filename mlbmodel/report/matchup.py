@@ -499,11 +499,10 @@ border:2px solid #454B61;box-shadow:0 5px 14px rgba(0,0,0,.45),0 0 0 2px rgba(15
 .rtabbar button{padding:9px 16px;font:700 13.5px var(--sans);color:var(--muted);cursor:pointer;border:0;border-bottom:2.5px solid transparent;margin-bottom:-1px;background:none}
 .rtabbar button:hover{color:var(--ink2)}.rtabbar button.on{color:var(--ink);border-bottom-color:var(--accent)}.pn{display:none}.pn.on{display:block}
 th[title],td[title]{cursor:help;text-decoration:underline dotted rgba(148,163,184,.4);text-underline-offset:3px}
-/* section */
-.sec{border:1px solid var(--border-2);border-radius:8px;background:var(--card);overflow:hidden;position:relative}
-.sec::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--v-grad);opacity:.6}
-.sec h2{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--v-light);margin:0;padding:13px 16px 0}
-.sec .body{padding:12px 16px 16px}
+/* section boards — MLBMA .ca-board from design system; local typography */
+.ca-board h2,.sec h2{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--v-light);margin:0 0 10px}
+.ca-board>.body,.sec>.body{padding:0}
+.ca-board+.ca-board,.sec+.sec{margin-top:14px}
 .table-scroll{width:100%;overflow-x:auto}
 /* tables */
 table{width:100%;border-collapse:collapse}
@@ -709,7 +708,7 @@ def _f5_panel(r, gd, esc):
             "against the model — same as every other market." if priced else
             "F5 isolates the starters from the bullpens. No live F5 price in the feed right now — "
             "these are model fair values.")
-    return (f'<div class=sec><h2>First 5 innings (F5)</h2><div class=body>'
+    return (f'<div class=ca-board><h2>First 5 innings (F5)</h2><div class=body>'
             f'<div class=availability>{"".join(parts)}</div>{sp_html}'
             f'<div class=note>{note}</div></div></div>')
 
@@ -744,7 +743,7 @@ def matchup_summary_html(report: dict) -> str:
    <div class=card><div class=k>Win% (H)</div><div class=v>{probs.p_home_win * 100:.0f}%</div></div>
    <div class=card><div class=k>Lean</div><div class=v>{esc(lean)}</div></div>
  </div>
- <div class=sec><h2>{esc(away)} @ {esc(home)}</h2><div class=body>
+ <div class=ca-board><h2>{esc(away)} @ {esc(home)}</h2><div class=body>
    <div class=table-scroll><table><tr><th>Market</th><th>Side</th><th>Model%</th><th>Edge</th></tr>{mrows}</table></div>
    <div class=note>SP: {esc(gd.away_sp)} vs {esc(gd.home_sp)}. Rebuild with <code>--game {esc(away)}@{esc(home)}</code> for the full matchup terminal.</div>
  </div></div></div>"""
@@ -955,7 +954,7 @@ def report_body(r):
         )
         if not pitcher or not pitcher.get("projections"):
             return (
-                f'<div class=sec><h2>{esc(team)} starter</h2><div class=body>'
+                f'<div class=ca-board><h2>{esc(team)} starter</h2><div class=body>'
                 f'<div class=empty>No matched pitcher projection.</div></div></div>'
             )
         projections = pitcher["projections"]
@@ -977,7 +976,7 @@ def report_body(r):
                 "warnc" if pitcher["state"] == "LIMITED SAMPLE" else "side"
             )
         )
-        return f"""<div class=sec><h2>{esc(str(pitcher["pitcher"]))} vs {esc(str(pitcher["opponent"]))}</h2>
+        return f"""<div class=ca-board><h2>{esc(str(pitcher["pitcher"]))} vs {esc(str(pitcher["opponent"]))}</h2>
           <div class=body>
             <div class=pitch-summary>
               <span><b>{projections["K"]["mean"]:.1f}</b>K <i>{projections["K"]["p10"]:.0f}–{projections["K"]["p90"]:.0f}</i></span>
@@ -1040,7 +1039,7 @@ def report_body(r):
     has_price = any(market.get("mkt") is not None for market in r["markets"])
     has_sharp = bool(r["sharp"])
     market_panel = (
-        f'<div class=sec><h2>Market report</h2><div class=body><div class=table-scroll>'
+        f'<div class=ca-board><h2>Market report</h2><div class=body><div class=table-scroll>'
         f'<table><tr><th>Bet</th><th title="best available American price">Best</th>'
         f'<th title="book\'s price with its two-sided hold removed">No-vig fair</th>'
         f'<th title="model fair price from the projection">Model fair</th>'
@@ -1050,13 +1049,13 @@ def report_body(r):
         if has_price else ''
     )
     sharp_panel = (
-        f'<div class=sec><h2>Sharp market activity</h2><div class=body><table>'
+        f'<div class=ca-board><h2>Sharp market activity</h2><div class=body><table>'
         f'<tr><th>Market</th><th>Side</th><th>Sharp gap</th><th>Move</th></tr>{sharp_rows}</table>'
         f'</div></div>'
         if has_sharp else ''
     )
     advantage_panel = (
-        f'<div class=sec><h2>Matchup advantage</h2><div class=body><div class=table-scroll>'
+        f'<div class=ca-board><h2>Matchup advantage</h2><div class=body><div class=table-scroll>'
         f'<table><tr><th>Category</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th>'
         f'<th>League base</th><th>Edge</th></tr>{advantage_rows}</table></div>'
         f'<div class=note>Per team: value · Δ vs season baseline · percentile chip '
@@ -1083,7 +1082,7 @@ def report_body(r):
 
     <div class=decision-grid>
       {advantage_panel}
-      <div class=sec><h2>Biggest run impacts</h2><div class=body>
+      <div class=ca-board><h2>Biggest run impacts</h2><div class=body>
         <div class=table-scroll><table><tr><th>Factor</th><th>Impact</th><th>Affects</th><th>Trust</th></tr>{factor_rows}</table></div>
         <div class=missing-row><b>Waiting on</b>{missing}</div>
       </div></div>
@@ -1096,7 +1095,7 @@ def report_body(r):
     <div class=pitcher-grid>{pitcher_panels}</div>
 
     {sharp_panel}
-    <div class=sec><h2>What can break the projection</h2><div class=body><table>
+    <div class=ca-board><h2>What can break the projection</h2><div class=body><table>
       <tr><th>Risk</th><th>Betting implication</th><th>Type</th></tr>{risk_rows}</table>
     </div></div>
 

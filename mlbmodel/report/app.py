@@ -28,6 +28,7 @@ from mlbmodel.report.matchup import (
     _CSS,
     _promotion,
     build_report,
+    matchup_summary_html,
     report_body,
 )
 from mlbmodel.report.decision import collect_market_plays as _collect_market_plays, markets_html as _markets
@@ -134,7 +135,14 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             )
             if "pk" in game:
                 model_by_pk[game["pk"]] = r.get("markets", [])
-            report = report_body(r)
+            full_terminal = report_body(r)
+            if game_name == featured_game.upper():
+                report = f'<div class=matchup-body>{full_terminal}</div>'
+            else:
+                report = (
+                    f'<div class=matchup-body>{matchup_summary_html(r)}</div>'
+                    f'<template class=matchup-full-src>{full_terminal}</template>'
+                )
         except Exception as exc:
             report = f'<div class=empty>Could not build {e(game_name)}: {e(str(exc))}</div>'
         active = " on" if game_name == featured_game.upper() else ""
@@ -195,17 +203,23 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
 
     if sd:
         try:
-            written = record_leans(collect_leans(
+            lean_rows = collect_leans(
                 slate_date=str(sd)[:10],
                 market_plays=market_plays,
                 pickem_rows=pickem_rows,
                 prop_reports=flat_props,
                 pkmap=pkmap,
-            ))
+            )
+            written = record_leans(lean_rows)
             if written:
                 log.info("recorded %s model leans for %s", written, sd)
+            elif lean_rows and os.getenv("SUPABASE_URL"):
+                log.error(
+                    "model lean record wrote 0 rows (%s candidates); check SUPABASE_KEY and migrations",
+                    len(lean_rows),
+                )
         except Exception as exc:
-            log.warning("model lean record failed: %s", exc)
+            log.error("model lean record failed: %s", exc)
 
     views = {
         "today": _today(slate, sd, sharp_by_pk, sync, top_leans),
