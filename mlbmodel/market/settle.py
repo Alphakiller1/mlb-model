@@ -68,8 +68,21 @@ def run() -> int:
     return settled
 
 
+def run_all() -> tuple[int, int]:
+    """Settle sharp observations and model leans."""
+    sharp_settled = run()
+    try:
+        from mlbmodel.leans.grade import settle_leans
+
+        lean_settled = settle_leans(reader=SupabaseReader(), writer=SupabaseWriter())
+    except Exception:
+        lean_settled = 0
+    return sharp_settled, lean_settled
+
+
 def main() -> None:
-    print(f"settled sharp observations={run()}")
+    sharp, leans = run_all()
+    print(f"settled sharp observations={sharp} model_leans={leans}")
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ permissions:
 
 concurrency:
   group: github-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -66,6 +66,8 @@ jobs:
           MLB_MODEL_DEPLOYMENT_NOTICE: >-
             Synchronized MLBMA research build with live pitcher-prop lines.
             No displayed state is a wager instruction.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           mkdir -p _site
           python -m mlbmodel.report.app \
