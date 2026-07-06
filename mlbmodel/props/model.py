@@ -29,6 +29,10 @@ LG_LOB = 0.72
 LG_K = 0.225
 LG_BB = 0.082
 LG_H = 0.23
+# Expected starter win contribution for PrizePicks fantasy score (Win = +6 pts). Win depends on
+# team offense + bullpen, not just the pitcher, so it's modeled as a flat league-average starter
+# win rate rather than sampled; the other components (outs/K/ER/QS) are exact per iteration.
+PP_WIN_PROB = 0.40
 LG_XWOBA = 0.320
 SKIP_PITCH_TYPES = {"UNK", "PO", "EP", "FA"}
 ORDER_WEIGHTS = np.array([1.10, 1.08, 1.07, 1.05, 1.02, 0.99, 0.96, 0.93, 0.90])
@@ -618,6 +622,12 @@ class PitcherProjectionEngine:
         # DraftKings pitcher fantasy points: IP +2.25/inning (0.75/out), K +2, ER -2, H -0.6,
         # BB -0.6. Excludes W / quality-start / complete-game bonuses (need game context).
         fantasy = outs * 0.75 + strikeouts * 2.0 - earned_runs * 2.0 - hits * 0.6 - walks * 0.6
+        # PrizePicks pitcher fantasy score: Out +1, K +3, ER -3, Quality Start +4 (>=6 IP & <=3
+        # ER, computed exactly from the joint sim), Win +6 (modeled as PP_WIN_PROB, see above).
+        qs_bonus = np.where((outs >= 18) & (earned_runs <= 3), 4.0, 0.0)
+        pp_fantasy = (
+            outs + strikeouts * 3.0 - earned_runs * 3.0 + qs_bonus + 6.0 * PP_WIN_PROB
+        )
         state, luck = self._performance_state(profile, log_factors, skill_era)
 
         # Projection trust gates the edge board. The real signal is sample size, not which
@@ -655,6 +665,7 @@ class PitcherProjectionEngine:
                 "Outs": _distribution(outs).as_dict(),
                 "H": _distribution(hits).as_dict(),
                 "Fantasy": _distribution(fantasy).as_dict(),
+                "PP_Fantasy": _distribution(pp_fantasy).as_dict(),
                 "F5_ER": _distribution(f5_er).as_dict(),
             },
             "sample": {
