@@ -81,18 +81,19 @@
   --font-wordmark: 'Oswald', 'Arial Narrow', system-ui, sans-serif;
   --ca-editorial-caps: 0.1em;
 
-  /* MLB Model type scale — dense broadcast UI */
-  --mm-text-2xs: 10px;
-  --mm-text-xs: 11px;
-  --mm-text-sm: 12px;
-  --mm-text-base: 13px;
-  --mm-text-md: 14px;
-  --mm-text-lg: 15px;
-  --mm-text-xl: 17px;
-  --mm-text-2xl: 20px;
-  --mm-text-3xl: 24px;
-  --mm-text-display: 28px;
-  --mm-text-hero: 32px;
+  /* MLB Model type scale — dense broadcast UI, bumped up ~1-2px per step for legibility
+     (floor raised 10->11, body 13->15). Change these tokens to rescale the whole report. */
+  --mm-text-2xs: 11px;
+  --mm-text-xs: 12px;
+  --mm-text-sm: 13px;
+  --mm-text-base: 15px;
+  --mm-text-md: 16px;
+  --mm-text-lg: 17px;
+  --mm-text-xl: 19px;
+  --mm-text-2xl: 22px;
+  --mm-text-3xl: 27px;
+  --mm-text-display: 31px;
+  --mm-text-hero: 36px;
 
   /* Nav (chase_nav.css) */
   --chase-nav-height: 68px;
