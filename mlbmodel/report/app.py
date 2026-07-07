@@ -68,7 +68,17 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     reader = SupabaseReader()
     cache_dir = Path(data_dir) if data_dir else settings.CACHE_DIR
     cache_dir.mkdir(parents=True, exist_ok=True)
-    board = load_board(fetch=fetch, cache_path=cache_dir / "odds_latest.json")
+    slate_frame = repo.slate()
+    slate_date = (
+        str(slate_frame.iloc[0].get("Slate_Date", ""))[:10]
+        if slate_frame is not None and len(slate_frame)
+        else str((repo.sync_manifest() or {}).get("slate_date") or "")[:10]
+    )
+    board = load_board(
+        fetch=fetch,
+        cache_path=cache_dir / "odds_latest.json",
+        slate_date=slate_date or None,
+    )
     prop_prices = load_prop_board(
         fetch=fetch, cache_path=cache_dir / "prop_odds_latest.json"
     )
@@ -193,12 +203,17 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         f'{"".join(matchup_reports)}'
     )
 
+    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
     try:
-        slate_reports = build_slate_reports(repo)
+        slate_reports = build_slate_reports(
+            repo,
+            pitchers=pitchers,
+            model_by_pk=model_by_pk,
+            pkmap=pkmap,
+            top_n=10,
+        )
     except Exception:
         slate_reports = []
-
-    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
     f5_board = [
         (pkmap.get(pk, str(pk)), m)
         for pk, rows in model_by_pk.items()

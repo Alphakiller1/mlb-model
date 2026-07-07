@@ -83,6 +83,9 @@ def test_trends_view_renders_board():
         effect_size=1.2,
         trend_score=1.5,
         sample_size=40,
+        confidence="high",
+        significance="strong",
+        direction="run_suppression",
         betting_implications=["NYY team total UNDER"],
         mechanistic_explanation="pitching edge",
     )
@@ -95,7 +98,9 @@ def test_trends_view_renders_board():
         edge_lean="NYY",
         trends=[trend],
     )
-    html = trends([report])
-    assert "Dominant trend board" in html
-    assert "ca-section-head" in html
-    assert "NYY@BOS" in html
+    html_out = trends([report])
+    assert "Trends by matchup" in html_out
+    assert "Game &amp; situational" in html_out
+    assert "data-trend-filter" in html_out
+    assert "data-lane=\"game\"" in html_out
+    assert "NYY@BOS" in html_out

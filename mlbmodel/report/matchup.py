@@ -44,6 +44,14 @@ from mlbmodel.report.html_fmt import (
     val_grade_html,
 )
 from mlbmodel.report.pitch_mix_ui import pitch_mix_board_html, pitch_mix_runs_chip
+from mlbmodel.report.matchup_ui import (
+    advantage_panel_html,
+    f5_section_html,
+    matchup_banner_html,
+    matchup_context_html,
+    pitcher_deck_html,
+    run_impacts_html,
+)
 from mlbmodel.storage.supabase import SupabaseReader
 
 
@@ -462,6 +470,7 @@ def build_report(
             "pitchers": pitcher_rows or [],
             "risks": risk_signals(gd), "sharp": _sharp_for(gd.game_pk, reader),
             "game_pk": gd.game_pk, "promotion": gate, "freshness_hours": freshness,
+            "repo": repo, "data_dir": str(repo.data_dir),
             "model_version": settings.MODEL_VERSION, "metric_version": settings.METRIC_VERSION,
             "generated": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
@@ -1189,11 +1198,7 @@ def matchup_summary_html(report: dict) -> str:
 
 def report_body(r):
     """Render a matchup as a betting decision surface, not a written report."""
-    gd, probability, esc = r["gd"], r["probs"], html.escape
-    context = gd.live_context or {}
-    lineups = context.get("lineups") or {}
-    weather = context.get("weather") or {}
-    umpire = context.get("umpire") or {}
+    gd, esc = r["gd"], html.escape
 
     def market_row(market):
         return _graded_market_row(market, esc)
@@ -1224,102 +1229,17 @@ def report_body(r):
         )
         decision = f'<div class="matchup-verdict vbar mut"><span class="pill mut">NO ACTION</span><span>{esc(reason)}</span></div>'
 
-    weather_label = "Dome"
-    if weather.get("status") != "dome":
-        temperature = weather.get("temp_f")
-        if temperature is None:
-            temperature = weather.get("temperature_f")
-        wind_out = weather.get("wind_out_mph")
-        rain = weather.get("precipitation_probability_pct")
-        # Show the modeled run effect so it's visible the weather is actually applied.
-        wx_runs = (weather_run_factor(weather) - 1.0) * 100
-        wx_tag = f' · runs {wx_runs:+.1f}%' if abs(wx_runs) >= 0.1 else ' · neutral'
-        weather_label = (
-            f'{temperature:.0f}°F · wind {"out" if (wind_out or 0) >= 0 else "in"} '
-            f'{abs(wind_out or 0):.0f} mph · rain {rain or 0:.0f}%{wx_tag}'
-            if temperature is not None else "Unavailable"
-        )
-    away_lineup = (lineups.get("away") or {}).get("status", "unavailable")
-    home_lineup = (lineups.get("home") or {}).get("status", "unavailable")
-    umpire_label = (
-        umpire.get("umpire")
-        if umpire.get("status") == "announced"
-        else "Not announced"
-    )
-    coverage_tone = "pos" if probability.data_coverage_pct >= 85 else "warnc"
-    # Only surface availability facts that actually have data — no "unavailable" filler.
-    avail_parts = []
-    if away_lineup != "unavailable" or home_lineup != "unavailable":
-        avail_parts.append(
-            f'<span><b>Lineups</b>{esc(gd.away)} {esc(away_lineup)} · '
-            f'{esc(gd.home)} {esc(home_lineup)}</span>'
-        )
-    if weather_label not in ("Unavailable",):
-        avail_parts.append(f'<span><b>First pitch</b>{esc(weather_label)}</span>')
-    if str(umpire_label) != "Not announced":
-        avail_parts.append(f'<span><b>Plate umpire</b>{esc(str(umpire_label))}</span>')
-    avail_parts.append(
-        f'<span><b>Input coverage</b><i class={coverage_tone}>'
-        f'{probability.data_coverage_pct}%</i></span>'
-    )
-    availability = f'<div class="matchup-meta-bar availability">{"".join(avail_parts)}</div>'
+    banner = matchup_banner_html(r, esc)
+    factors = r.get("factors") or []
+    repo = r.get("repo")
+    if repo is None:
+        repo = DataRepository(r.get("data_dir"))
 
-    fresh_hours = r.get("freshness_hours")
-    freshness = (
-        f"{fresh_hours:.1f}h old" if fresh_hours is not None else "timestamp unavailable"
-    )
-    banner = _matchup_banner(r, esc)
-    kpi_strip = _matchup_kpi_strip(r, esc, freshness)
-
-    factor_rows = "".join(
-        f'<tr><td><b>{esc(factor["name"])}</b><span class=mut>'
-        f' · {esc(factor["side"])}</span></td>'
-        f'<td class={"pos" if factor["runs"] > 0 else "neg"}>'
-        f'{factor["runs"]:+.2f} runs</td>'
-        f'<td>{esc(factor["market"])}</td>'
-        f'<td><span class="pill {"warnc" if factor["conf"] == "low" else "mut"}">'
-        f'{esc(factor["conf"])}</span></td></tr>'
-        for factor in r["factors"][:6]
-    )
-    missing = "".join(
-        f'<span class="pill warnc">{esc(item)}</span>'
-        for item in probability.missing_context
-    ) or '<span class="pill pos">core context loaded</span>'
-
-    context_panel = _matchup_context_panel(gd, probability, context, esc)
-
-    def pitcher_panel(team):
-        pitcher = next(
-            (row for row in r.get("pitchers", []) if row.get("team") == team),
-            None,
-        )
-        if not pitcher or not pitcher.get("projections"):
-            return (
-                f'<div class=ca-board>{section_head(f"{esc(team)} starter", icon="props")}<div class=body>'
-                f'<div class=empty>No matched pitcher projection.</div></div></div>'
-            )
-        projections = pitcher["projections"]
-        pitch_matchup = pitcher.get("pitch_matchup") or {}
-        pitch_mix_block = pitch_mix_board_html(pitch_matchup, compact=False)
-        state_tone = "neg" if pitcher["state"] == "REGRESSION" else (
-            "pos" if pitcher["state"] == "PROGRESSION" else (
-                "warnc" if pitcher["state"] == "LIMITED SAMPLE" else "side"
-            )
-        )
-        return f"""<div class=ca-board>{section_head(f'{esc(str(pitcher["pitcher"]))} vs {esc(str(pitcher["opponent"]))}', icon="props")}
-          <div class=body>
-            <div class=pitch-summary>
-              <span><b>{projections["K"]["mean"]:.1f}</b>K <i>{projections["K"]["p10"]:.0f}–{projections["K"]["p90"]:.0f}</i></span>
-              <span><b>{projections["ER"]["mean"]:.1f}</b>ER <i>{projections["ER"]["p10"]:.0f}–{projections["ER"]["p90"]:.0f}</i></span>
-              <span><b>{projections["Outs"]["mean"]:.1f}</b>outs <i>{projections["Outs"]["p10"]:.0f}–{projections["Outs"]["p90"]:.0f}</i></span>
-              <span><b>{projections["H"]["mean"]:.1f}</b>hits <i>{projections["H"]["p10"]:.0f}–{projections["H"]["p90"]:.0f}</i></span>
-              <span><b>{projections["Fantasy"]["mean"]:.1f}</b>DK pts <i>{projections["Fantasy"]["p10"]:.0f}–{projections["Fantasy"]["p90"]:.0f}</i></span>
-              <span><em class={state_tone}>{esc(pitcher["state"])}</em><i>{esc(pitcher["confidence"])} confidence</i></span>
-            </div>
-            {pitch_mix_block}
-          </div></div>"""
-
-    pitcher_panels = pitcher_panel(gd.away) + pitcher_panel(gd.home)
+    context_panel = matchup_context_html(r, gd, repo, esc)
+    advantage_panel = advantage_panel_html(gd, r.get("advantage", []), esc)
+    run_impacts_panel = run_impacts_html(factors, esc)
+    f5_panel = f5_section_html(r, gd, repo, esc)
+    pitcher_deck = pitcher_deck_html(r, gd, repo, esc)
     risk_rows = "".join(
         f'<tr><td><b>{esc(signal.label)}</b></td>'
         f'<td>{esc(signal.implication)}</td>'
@@ -1334,30 +1254,6 @@ def report_body(r):
         for signal in r["sharp"]
     ) or '<tr><td class=mut colspan=4>No sharp-money snapshot for this game.</td></tr>'
 
-    # Graded advantage matrix (raw · Δ-vs-baseline · percentile chip · rank).
-    def _adv_delta(d, lower_better):
-        if d is None:
-            return ""
-        good = (d < 0) if lower_better else (d > 0)
-        tone = "pos" if good else ("neg" if d != 0 else "mut")
-        return f' <span class="delta {tone}">{d:+g}</span>'
-
-    def adv_row(a):
-        ac, al = _chip(a.get("a_pct"))
-        hc, hl = _chip(a.get("h_pct"))
-        unit, lb = a.get("unit", ""), a.get("lower_better")
-        ar = f' <span class=n>#{a["a_rank"]}</span>' if a.get("a_rank") else ""
-        hr = f' <span class=n>#{a["h_rank"]}</span>' if a.get("h_rank") else ""
-        av = f'{_adv_val_cell(a.get("a_val"), a["cat"], unit)}{_adv_delta(a.get("a_d"), lb)} <span class="chip {ac}">{al}</span>{ar}'
-        hv = f'{_adv_val_cell(a.get("h_val"), a["cat"], unit)}{_adv_delta(a.get("h_d"), lb)} <span class="chip {hc}">{hl}</span>{hr}'
-        return (
-            f'<tr><td title="{esc(_cat_def(a["cat"]))}"><b>{esc(a["cat"])}</b></td>'
-            f'<td class=side>{av}</td><td>{hv}</td>'
-            f'<td class=mut>{_f(a.get("base"))}{unit}</td>'
-            f'<td>{esc(str(a.get("edge", "")))}</td></tr>'
-        )
-
-    advantage_rows = "".join(adv_row(a) for a in r.get("advantage", []))
     has_price = any(market.get("mkt") is not None for market in r["markets"])
     has_sharp = bool(r["sharp"])
     market_panel = (
@@ -1376,34 +1272,20 @@ def report_body(r):
         f'</div></div></div>'
         if has_sharp else ''
     )
-    advantage_panel = (
-        f'<div class=ca-board>{section_head("Matchup advantage", icon="matchups")}<div class=body><div class=table-scroll>'
-        f'<table><tr><th>Category</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th>'
-        f'<th>League base</th><th>Edge</th></tr>{advantage_rows}</table></div></div></div>'
-        if advantage_rows else ''
-    )
-    f5_panel = _f5_panel(r, gd, esc)
 
     return f"""{banner}
     {decision}
-    {kpi_strip}
-    {availability}
     {context_panel}
 
     <div class=decision-grid>
       {advantage_panel}
-      <div class=ca-board>{section_head("Biggest run impacts", icon="matchups")}<div class=body>
-        <div class=table-scroll><table><tr><th>Factor</th><th>Impact</th><th>Affects</th><th>Trust</th></tr>{factor_rows}</table></div>
-        <div class=missing-row><b>Waiting on</b>{missing}</div>
-      </div></div>
+      {run_impacts_panel}
     </div>
 
-    {market_panel}
-
     {f5_panel}
+    {pitcher_deck}
 
-    <div class=pitcher-grid>{pitcher_panels}</div>
-
+    {market_panel}
     {sharp_panel}
     <div class=ca-board>{section_head("What can break the projection", icon="research")}<div class=body><div class=table-scroll><table>
       <tr><th>Risk</th><th>Betting implication</th><th>Type</th></tr>{risk_rows}</table>

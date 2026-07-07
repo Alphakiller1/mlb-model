@@ -35,7 +35,7 @@ def test_pitch_mix_board_shows_net_drivers_and_legend():
         }],
     })
     assert "Net vs lineup" in html
-    assert "Pitch-type drivers" in html
+    assert "Pitch mix vs opposing lineup" in html
     assert "Δ K%" in html
     assert "Δ runs" in html
     assert "pitcher edge" not in html.lower() or "Pitcher" in html

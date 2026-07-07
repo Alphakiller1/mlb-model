@@ -109,9 +109,16 @@ def _pitch_row(pitch: dict, *, compact: bool) -> str:
         else ""
     )
     whiff_col = f"<td>{whiff_cell}</td>" if not compact else ""
+    ba_ops_cols = ""
+    if not compact:
+        ba_ops_cols = (
+            f'<td>{val_chip_html(pitch.get("lineup_ba"), "rate", digits=3)}</td>'
+            f'<td>{val_chip_html(pitch.get("lineup_ops"), "woba", digits=3)}</td>'
+        )
     return (
         f'<tr><td><b>{e(str(pitch.get("pitch") or ""))}</b>'
         f'<span class="mut pitch-name-meta">{float(pitch.get("usage_pct") or 0):.0f}% usage</span></td>'
+        f"{ba_ops_cols}"
         f'<td>{val_chip_html(pitch.get("lineup_xwoba"), "woba", digits=3)}</td>'
         f"{whiff_col}"
         f'<td class=num>{pitch_k_delta_html(pitch.get("k_delta"))}</td>'
@@ -125,24 +132,25 @@ def pitch_mix_board_html(pitch_matchup: dict, *, compact: bool = False) -> str:
     pm = pitch_matchup or {}
     pitches = pm.get("pitches") or []
     whiff_head = "" if compact else "<th>Opp whiff</th>"
+    ba_ops_head = "" if compact else "<th>Opp BA</th><th>Opp OPS</th>"
     if not pitches:
-        cols = 5 if compact else 6
+        cols = 7 if compact else 9
         body = f'<tr><td class=mut colspan={cols}>No reliable pitch-type overlap with this lineup.</td></tr>'
     else:
         body = "".join(_pitch_row(pitch, compact=compact) for pitch in pitches[:5])
     source = e(str(pm.get("response_source") or "No lineup match"))
     legend = (
         '<p class="pitch-mix-legend">'
-        "<b>Δ K%</b> = whiff/chase edge on this pitch · "
-        "<b>Δ runs</b> = contact-quality shift (green = fewer runs allowed) · "
-        "Lower opp xwOBA favors the pitcher.</p>"
+        "<b>Δ K%</b> = whiff/chase edge · "
+        "<b>Δ runs</b> = contact shift (green = fewer runs allowed) · "
+        "Opp BA/OPS = how the lineup hits this pitch type.</p>"
     )
     return (
         f"{pitch_mix_net_html(pm)}"
-        f'<div class="ca-subhead">Pitch-type drivers</div>'
+        f'<div class="ca-subhead">Pitch mix vs opposing lineup</div>'
         f'<p class="pitch-mix-source">{source}</p>'
         f'<div class=table-scroll><table class="pitch-mix-table">'
-        f"<tr><th>Pitch</th><th>Opp contact (xwOBA)</th>{whiff_head}"
+        f"<tr><th>Pitch</th>{ba_ops_head}<th>Opp xwOBA</th>{whiff_head}"
         f"<th>Δ K%</th><th>Δ runs</th><th>Lean</th></tr>{body}</table></div>"
         f"{legend}"
     )

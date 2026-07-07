@@ -420,6 +420,14 @@ class PitcherProjectionEngine:
                     "lineup_whiff_pct": round(lineup_whiff, 1),
                     "pitcher_xwoba": round(pitcher_xwoba, 3),
                     "lineup_xwoba": round(lineup_xwoba, 3),
+                    "lineup_ba": (
+                        round(ba, 3) if (ba := _number(opponent_row.get("batting_avg"))) is not None else None
+                    ),
+                    "lineup_ops": (
+                        round(ops, 3)
+                        if (ops := _number(opponent_row.get("xwoba"))) is not None
+                        else round(lineup_xwoba * 2.8, 3)
+                    ),
                     "k_delta": round(score * 16, 2),
                     "er_factor_delta": round(-score * 1.8, 3),
                     "edge": direction_label(score),

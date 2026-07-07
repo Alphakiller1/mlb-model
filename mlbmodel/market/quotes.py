@@ -8,6 +8,9 @@ import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+ET = ZoneInfo("America/New_York")
 
 from mlbmodel import settings
 from mlbmodel.market.oddsmath import american_to_implied, devig_two_way
@@ -254,6 +257,23 @@ def _merge_f5_markets(events: list[dict]) -> None:
                 target.setdefault("markets", []).extend(book.get("markets", []))
 
 
+def filter_events_for_slate(events: list[dict], slate_date: str | None) -> list[dict]:
+    """Keep only Odds API events whose first pitch falls on the slate day (US/Eastern)."""
+    if not slate_date:
+        return events
+    kept: list[dict] = []
+    for event in events:
+        commence = str(event.get("commence_time") or "").strip()
+        if not commence:
+            continue
+        when = datetime.fromisoformat(commence.replace("Z", "+00:00"))
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        if when.astimezone(ET).date().isoformat() == slate_date:
+            kept.append(event)
+    return kept
+
+
 def load_cached_events(cache_path: Path | None = None) -> tuple[list[dict], str]:
     path = cache_path or settings.CACHE_DIR / "odds_latest.json"
     if not path.exists():
@@ -262,12 +282,19 @@ def load_cached_events(cache_path: Path | None = None) -> tuple[list[dict], str]
     return payload.get("events", []), str(payload.get("fetched_at") or "")
 
 
-def load_board(*, fetch: bool = False, cache_path: Path | None = None) -> OddsBoard:
+def load_board(
+    *,
+    fetch: bool = False,
+    cache_path: Path | None = None,
+    slate_date: str | None = None,
+) -> OddsBoard:
     if fetch:
         try:
             events, fetched = fetch_events(cache_path=cache_path)
+            events = filter_events_for_slate(events, slate_date)
             return build_board(events, fetched)
         except (OSError, RuntimeError, ValueError, json.JSONDecodeError):
             pass
     events, fetched = load_cached_events(cache_path)
+    events = filter_events_for_slate(events, slate_date)
     return build_board(events, fetched) if events else OddsBoard({})

@@ -25,6 +25,7 @@ from mlbmodel.report.html_fmt import (
 )
 from mlbmodel.report.matchup import _logo
 from mlbmodel.report.props_ui import pitcher_prop_deck, prop_channel_counts
+from mlbmodel.report.trends_ui import trends_section_html
 
 e = html.escape
 
@@ -201,76 +202,8 @@ def results(reader):
  </div></div>"""
 
 
-_CAT_LABEL = {
-    "bullpen_fatigue": "BULLPEN", "form_vs_hand": "FORM vs HAND",
-    "starter_quality": "SP QUALITY", "park": "PARK",
-}
-_CAT_TONE = {
-    "bullpen_fatigue": "warnc", "form_vs_hand": "side",
-    "starter_quality": "pos", "park": "mut",
-}
-
-
-def _bet_tone(implication):
-    """Color a bet by direction: OVER green, UNDER red, else neutral."""
-    u = (implication or "").upper()
-    if "OVER" in u:
-        return "pos"
-    if "UNDER" in u:
-        return "neg"
-    return "mut"
-
-
-def _mag_grade(effect_size):
-    """chase 5-tier color for a trend's standardized magnitude (in SD)."""
-    if effect_size is None:
-        return "c-na"
-    if effect_size >= 1.5:
-        return "c-elite"
-    if effect_size >= 0.9:
-        return "c-good"
-    if effect_size >= 0.6:
-        return "c-mid"
-    if effect_size >= 0.3:
-        return "c-weak"
-    return "c-poor"
-
-
 def trends(reports):
-    if not reports:
-        return "<h2>Situational Trends</h2><div class=empty>No slate loaded.</div>"
-    # slate-wide dominant-trend board
-    flat = []
-    for r in reports:
-        for t in r.trends:
-            if t.category == "park":
-                continue
-            flat.append((r, t))
-    flat.sort(key=lambda rt: rt[1].trend_score, reverse=True)
-    board = "".join(
-        f'<tr><td><button class=gamepick onclick="openGame(\'{e(r.game)}\')">'
-        f'{e(r.game)}</button></td>'
-        f'<td><span class=gcell>{_logo(t.team, "tlogo sm")}{e(t.team)}</span></td>'
-        f'<td><span class="pill {_CAT_TONE.get(t.category, "mut")}">{_CAT_LABEL.get(t.category, t.category.upper())}</span></td>'
-        f'<td class=trend-sig>{e(t.trend_description)}</td>'
-        f'<td><b class={_mag_grade(t.effect_size)}>{t.effect_size:.1f}σ</b></td>'
-        f'<td>{t.sample_size or "—"}</td>'
-        f'<td class={_bet_tone(t.betting_implications[0] if t.betting_implications else "")}>'
-        f'{e(t.betting_implications[0]) if t.betting_implications else "—"}</td></tr>'
-        for r, t in flat[:14]
-    ) or '<tr><td class=mut colspan=7>No dominant trends today.</td></tr>'
-
-    total = sum(len(r.trends) for r in reports)
-    strongest = flat[0][1].effect_size if flat else 0.0
-    return f"""<h2>Situational Trends</h2>
- <div class=cards>
-   <div class=card><div class=k>Games</div><div class=v>{len(reports)}</div></div>
-   <div class=card><div class=k>Trends</div><div class=v>{total}</div></div>
-   <div class=card><div class=k>Strongest</div><div class=v>{strongest:.1f}σ</div></div>
- </div>
- <div class=ca-board>{section_head("Dominant trend board", icon="trends")}<div class=body>
-   <div class=table-scroll><table class=sortable><tr><th>Game</th><th>Team</th><th>Type</th><th>Signal</th>
-   <th>Mag</th><th>n</th><th>Lean / bet</th></tr>{board}</table></div></div></div>"""
+    return trends_section_html(reports)
 
 
 def research(reader, pv, f5_board=None, clv_summary=None):

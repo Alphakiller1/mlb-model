@@ -1,13 +1,13 @@
 {
   "slate_date": "2026-07-07",
-  "fetched_at": "2026-07-07T00:32:56+00:00",
+  "fetched_at": "2026-07-07T01:15:37+00:00",
   "sources": {
     "schedule_lineups_injuries_umpires_venues": "MLB Stats API",
     "weather": "Open-Meteo hourly best-match"
   },
   "umpire_profile_metadata": {
     "games": 1492,
-    "league_runs_per_game": 9.109,
+    "league_runs_per_game": 9.115,
     "window_start": "2026-03-15",
     "window_end": "2026-07-06",
     "prior_games": 30

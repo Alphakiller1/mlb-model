@@ -356,3 +356,149 @@
 
 /* ── Cards row variants ── */
 .cards.cards--tight { margin-bottom: 12px; }
+
+/* ── Matchup v2 layout ── */
+.league-avg { color: #f5b14c; font-weight: 800; font-variant-numeric: tabular-nums; }
+.matchup-banner--v2 .matchup-banner__proj-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 10px;
+}
+.matchup-proj-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-2);
+  background: rgba(255,255,255,.03);
+}
+.matchup-proj-card .k {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.matchup-proj-card .v { font: 800 15px var(--display); color: var(--ink); }
+.matchup-context-stack {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.matchup-context-block--wide { grid-column: 1 / -1; }
+.matchup-pitchmix-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.pitcher-deck-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.pitcher-deck-card {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-2);
+  background: rgba(255,255,255,.02);
+}
+.pitcher-deck-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.pitcher-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.pitcher-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-2);
+  text-align: center;
+}
+.pitcher-stat-card .k { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.pitcher-stat-card .v { font: 800 18px var(--display); }
+.pitcher-opp-ops { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.f5-proj-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+.f5-team-col, .f5-mid-col {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-2);
+  background: rgba(255,255,255,.02);
+}
+.f5-mid-col { text-align: center; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 120px; }
+.f5-team-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 8px; }
+.f5-run-line { font: 800 22px var(--display); margin-bottom: 6px; }
+.f5-inn1-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.f5-inn1-chip { padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border-2); font-size: 12px; }
+@media (max-width: 900px) {
+  .matchup-context-stack, .matchup-pitchmix-duo, .pitcher-deck-grid { grid-template-columns: 1fr; }
+  .matchup-banner--v2 .matchup-banner__proj-row { grid-template-columns: 1fr; }
+  .f5-proj-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Trends deck ── */
+.trend-filter-bar { margin-bottom: 12px; }
+.trend-headline { text-align: left; color: var(--ink2); font-size: 12.5px; max-width: 420px; line-height: 1.4; }
+.trend-pills { white-space: nowrap; }
+.trend-pills .pill { margin-right: 4px; }
+.trend-bet b { font-family: var(--display); }
+.trend-game-deck { display: flex; flex-direction: column; gap: 10px; }
+.trend-game-card {
+  border: 2px solid var(--ca-panel-border, var(--border-violet));
+  border-radius: 16px;
+  overflow: hidden;
+}
+.trend-game-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.trend-game-head:hover { background: rgba(124, 77, 255, .06); }
+.trend-game-id { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.trend-game-edge { font-size: 11px; color: var(--muted); }
+.trend-game-summary { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; font-size: 11px; max-width: 46%; }
+.trend-game-top { color: var(--ink2); text-align: right; line-height: 1.35; }
+.trend-game-chevron { color: var(--muted); transition: transform .2s ease; }
+.trend-game-card.on .trend-game-chevron { transform: rotate(90deg); }
+.trend-game-body { display: none; padding: 0 14px 14px; border-top: 1px solid var(--border-2); }
+.trend-game-card.on .trend-game-body { display: block; }
+.trend-lane { padding-top: 12px; }
+.trend-lane + .trend-lane { margin-top: 8px; border-top: 1px solid var(--border-2); }
+.trend-lane-head {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  margin-bottom: 8px;
+}
+.trend-detail-row td { font-size: 11px; padding-top: 0; }
+@media (max-width: 760px) {
+  .trend-game-head { flex-wrap: wrap; }
+  .trend-game-summary { max-width: 100%; align-items: flex-start; text-align: left; }
+  .trend-game-top { text-align: left; }
+}
