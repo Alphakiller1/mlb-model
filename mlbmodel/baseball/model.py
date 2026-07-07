@@ -11,6 +11,12 @@ from mlbmodel.baseball.context import (
     umpire_run_factor,
     weather_run_factor,
 )
+from mlbmodel.baseball.metrics import (
+    offense_depth_factor,
+    platoon_metric_factor,
+    signal_confidence_modifier,
+    trend_run_factor,
+)
 from mlbmodel.market.oddsmath import prob_to_american
 
 
@@ -32,10 +38,22 @@ class TeamContext:
     proj_osi: float | None = None
     osi_l7: float | None = None
     osi_l14: float | None = None
+    abq_l7: float | None = None
+    abq_l14: float | None = None
+    rcv_l7: float | None = None
+    rcv_l14: float | None = None
+    oor: float | None = None
     woba: float | None = None
     platoon_osi: float | None = None
+    abq_vs_lhp: float | None = None
+    abq_vs_rhp: float | None = None
+    rcv_vs_lhp: float | None = None
+    rcv_vs_rhp: float | None = None
+    obr_vs_lhp: float | None = None
+    obr_vs_rhp: float | None = None
     bullpen_era: float | None = None
     bullpen_high_lev_era: float | None = None
+    bullpen_osi_allowed: float | None = None
     avg_pitching_score: float | None = None
     window_direction: str | None = None
 
@@ -78,6 +96,12 @@ class GameData:
     home_injury_features: dict = field(default_factory=dict)
     away_arsenal_features: dict = field(default_factory=dict)
     home_arsenal_features: dict = field(default_factory=dict)
+    trend_features: dict = field(default_factory=dict)
+    away_starter_profile: dict = field(default_factory=dict)
+    home_starter_profile: dict = field(default_factory=dict)
+    away_defense_factor: float = 1.0
+    home_defense_factor: float = 1.0
+    game_signals: list = field(default_factory=list)
     context_coverage_pct: int = 0
     missing_context: list[str] = field(default_factory=list)
 
@@ -151,6 +175,9 @@ def staff_factor(
     bullpen_component = bullpen_skill / settings.LEAGUE_BULLPEN_ERA * workload
     starter_share = clip(starter_innings / 9, 0.38, 0.81)
     raw = starter_component * starter_share + bullpen_component * (1 - starter_share)
+    skill_mult = float(starter.get("skill_multiplier") or 1.0)
+    pen_mult = float(bullpen.get("pen_multiplier") or 1.0)
+    raw *= skill_mult * pen_mult
     return _regress(clip(raw, *settings.PITCH_FACTOR_CLIP))
 
 
@@ -179,8 +206,14 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
     league = anchors["league_runs"]
     away_off = offense_factor(gd.away_osi)
     home_off = offense_factor(gd.home_osi)
+    away_depth, _ = offense_depth_factor(gd.away_context, gd.away_osi)
+    home_depth, _ = offense_depth_factor(gd.home_context, gd.home_osi)
     away_platoon = platoon_factor(gd.away_context, gd.away_osi)
     home_platoon = platoon_factor(gd.home_context, gd.home_osi)
+    away_metric_platoon = platoon_metric_factor(gd.away_context, gd.home_hand)
+    home_metric_platoon = platoon_metric_factor(gd.home_context, gd.away_hand)
+    away_trend = trend_run_factor(gd.trend_features, "away")
+    home_trend = trend_run_factor(gd.trend_features, "home")
     away_lineup = float(gd.away_lineup_features.get("factor") or 1.0)
     home_lineup = float(gd.home_lineup_features.get("factor") or 1.0)
     away_injury = float(gd.away_injury_features.get("factor") or 1.0)
@@ -236,6 +269,18 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         source="MLBMA team offense strength",
     )
     exp_away = apply_side(
+        exp_away, away_depth, name=f"{gd.away} offense depth (ABQ/RCV/PALS/proj)",
+        side=gd.away, markets="Away runs / Total / ML", confidence="medium",
+        source="MLBMA composite offense metrics + recent form",
+        include=away_depth != 1.0,
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, home_depth, name=f"{gd.home} offense depth (ABQ/RCV/PALS/proj)",
+        side=gd.home, markets="Home runs / Total / ML", confidence="medium",
+        source="MLBMA composite offense metrics + recent form",
+        include=home_depth != 1.0,
+    )
+    exp_away = apply_side(
         exp_away, away_platoon, name=f"{gd.away} offense vs {gd.home_hand}HP",
         side=gd.away, markets="Away runs / pitcher props", confidence="medium",
         source="MLBMA team handedness split", include=away_platoon != 1.0,
@@ -244,6 +289,19 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         exp_home_pre_hfa, home_platoon, name=f"{gd.home} offense vs {gd.away_hand}HP",
         side=gd.home, markets="Home runs / pitcher props", confidence="medium",
         source="MLBMA team handedness split", include=home_platoon != 1.0,
+    )
+    exp_away = apply_side(
+        exp_away, away_metric_platoon, name=f"{gd.away} platoon metrics vs {gd.home_hand}HP",
+        side=gd.away, markets="Away runs / pitcher props", confidence="medium",
+        source="MLBMA ABQ/RCV/OBR handedness splits",
+        include=away_metric_platoon != 1.0,
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, home_metric_platoon,
+        name=f"{gd.home} platoon metrics vs {gd.away_hand}HP",
+        side=gd.home, markets="Home runs / pitcher props", confidence="medium",
+        source="MLBMA ABQ/RCV/OBR handedness splits",
+        include=home_metric_platoon != 1.0,
     )
     exp_away = apply_side(
         exp_away, away_lineup, name=f"{gd.away} posted lineup vs {gd.home_hand}HP",
@@ -280,14 +338,38 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         source="MLB schedule + venue distance/timezone", include=home_travel != 1.0,
     )
     exp_away = apply_side(
+        exp_away, away_trend, name=f"{gd.away} situational trends",
+        side=gd.away, markets="Away runs / Total / ML", confidence="low",
+        source="MLBMA trend detectors (form, pen fatigue, park)",
+        include=away_trend != 1.0,
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, home_trend, name=f"{gd.home} situational trends",
+        side=gd.home, markets="Home runs / Total / ML", confidence="low",
+        source="MLBMA trend detectors (form, pen fatigue, park)",
+        include=home_trend != 1.0,
+    )
+    exp_away = apply_side(
         exp_away, away_pitch, name=f"{gd.home} starter and bullpen",
         side=gd.away, markets="Away runs / Total / ML", confidence="medium",
-        source="MLBMA starter season/L14 + bullpen quality/workload",
+        source="MLBMA starter season/L14 + bullpen quality/workload/roles",
     )
     exp_home_pre_hfa = apply_side(
         exp_home_pre_hfa, home_pitch, name=f"{gd.away} starter and bullpen",
         side=gd.home, markets="Home runs / Total / ML", confidence="medium",
-        source="MLBMA starter season/L14 + bullpen quality/workload",
+        source="MLBMA starter season/L14 + bullpen quality/workload/roles",
+    )
+    exp_away = apply_side(
+        exp_away, gd.home_defense_factor, name=f"{gd.home} fielding / run prevention",
+        side=gd.away, markets="Away runs / Total / ML", confidence="low",
+        source="MLBMA team run prevention + optional defensive ratings",
+        include=gd.home_defense_factor != 1.0,
+    )
+    exp_home_pre_hfa = apply_side(
+        exp_home_pre_hfa, gd.away_defense_factor, name=f"{gd.away} fielding / run prevention",
+        side=gd.home, markets="Home runs / Total / ML", confidence="low",
+        source="MLBMA team run prevention + optional defensive ratings",
+        include=gd.away_defense_factor != 1.0,
     )
     away_arsenal = arsenal_factor(gd.away_arsenal_features)
     home_arsenal = arsenal_factor(gd.home_arsenal_features)
@@ -364,6 +446,12 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         int(gd.away_starter_features.get("starts") or 0),
         int(gd.home_starter_features.get("starts") or 0),
     )
+    confidence = signal_confidence_modifier(
+        gd.game_signals,
+        gd.away,
+        gd.home,
+        confidence_from_coverage(gd.context_coverage_pct, starts),
+    )
     return Probabilities(
         exp_away_runs=round(exp_away, 2),
         exp_home_runs=round(exp_home, 2),
@@ -374,7 +462,7 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         factors=factors,
         data_coverage_pct=gd.context_coverage_pct,
         missing_context=list(gd.missing_context),
-        confidence=confidence_from_coverage(gd.context_coverage_pct, starts),
+        confidence=confidence,
     )
 
 

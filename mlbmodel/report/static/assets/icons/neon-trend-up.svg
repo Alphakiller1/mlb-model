@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-hidden="true">
+  <defs>
+    <linearGradient id="neon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C4B0FF"/>
+      <stop offset="45%" stop-color="#9A6BFF"/>
+      <stop offset="100%" stop-color="#7C4DFF"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#glow)" stroke="url(#neon)" stroke-linecap="round" stroke-linejoin="round">
+
+    <circle cx="256" cy="256" r="214" stroke-width="2.2" opacity="0.72"/>
+    <circle cx="256" cy="256" r="192" stroke-width="1.4" stroke-dasharray="9 15" opacity="0.45"/>
+    <path d="M156 340 V300 M196 340 V268 M236 340 V236 M276 340 V204 M316 340 V172" stroke-width="10"/>
+    <path d="M156 300 L236 220 L276 248 L356 148" stroke-width="3"/>
+    <path d="M332 148 H356 V172" stroke-width="3"/>
+  </g>
+</svg>

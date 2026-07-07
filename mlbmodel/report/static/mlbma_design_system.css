@@ -96,9 +96,10 @@ th.num,
 
   --font-primary: 'DM Sans', system-ui, -apple-system, sans-serif;
   --font: var(--font-primary);
-  --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-body: var(--font-primary);
   --font-display: 'Roboto Condensed', 'DM Sans', system-ui, sans-serif;
-  --mono: 'Roboto Condensed', ui-sans-serif, system-ui, sans-serif;
+  --sans: var(--font-primary);
+  --mono: var(--font-display);
 
   /* 7-step metric gradient (league-relative) */
   --metric-very-weak: #F2545B;

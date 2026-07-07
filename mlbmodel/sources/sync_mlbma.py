@@ -54,9 +54,34 @@ IDENTITY_COLUMNS = {"Game_PK", "MLB_Game_PK", "Game_Number", "Slate_Date"}
 SCHEDULE_AUTHORITATIVE_COLUMNS = {"Away_Hand", "Home_Hand"}
 
 
+EVENING_ROLLOVER_HOUR = 17  # 5 PM ET — roll the board to the next slate for pregame.
+
+
 def eastern_date(now: dt.datetime | None = None) -> str:
     current = now or dt.datetime.now(dt.timezone.utc)
     return current.astimezone(ET).date().isoformat()
+
+
+def resolve_slate_date(
+    explicit: str | None = None,
+    *,
+    metadata: dict[str, str] | None = None,
+    now: dt.datetime | None = None,
+) -> str:
+    """Pick the model slate date: explicit > hub future slate > evening rollover > hub today > today."""
+    if explicit:
+        return str(explicit)[:10]
+    current = (now or dt.datetime.now(dt.timezone.utc)).astimezone(ET)
+    today = current.date().isoformat()
+    tomorrow = (current.date() + dt.timedelta(days=1)).isoformat()
+    pipeline_date = str((metadata or {}).get("Slate_Date_ET") or "")[:10]
+    if pipeline_date and pipeline_date > today:
+        return pipeline_date
+    if current.hour >= EVENING_ROLLOVER_HOUR:
+        return tomorrow
+    if pipeline_date == today:
+        return pipeline_date
+    return today
 
 
 def _request(url: str, *, headers: dict[str, str] | None = None) -> bytes:
@@ -200,15 +225,15 @@ def _pipeline_updated_at(metadata: dict[str, str]) -> str | None:
 
 def sync(out: Path, slate_date: str | None = None) -> dict:
     out.mkdir(parents=True, exist_ok=True)
-    slate_date = slate_date or eastern_date()
     fetched_at = dt.datetime.now(dt.timezone.utc)
+    metadata = pipeline_metadata(fetch_sheet_matrix("Last_Updated"))
+    slate_date = resolve_slate_date(slate_date, metadata=metadata)
 
     hub_updated = materialize_hub(out, fetch_hub_datasets())
     games = fetch_schedule(slate_date)
     schedule_rows = build_rows(out, slate_date, games)
     all_pipeline_rows = fetch_sheet_rows("Today_Matchups")
     all_lineup_rows = fetch_sheet_rows("Today_Lineups")
-    metadata = pipeline_metadata(fetch_sheet_matrix("Last_Updated"))
     pipeline_rows = current_pipeline_rows(all_pipeline_rows, slate_date)
     pipeline_slate_date = metadata.get("Slate_Date_ET")
     merged_rows, game_set_exact = merge_pipeline_slate(schedule_rows, pipeline_rows)

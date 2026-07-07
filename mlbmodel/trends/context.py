@@ -15,6 +15,7 @@ from typing import Any
 
 import pandas as pd
 
+from mlbmodel import settings
 from mlbmodel.baseball.repository import DataRepository
 
 
@@ -111,15 +112,8 @@ class SituationalContext:
             opp_team=away, opp_starter=away_sp, opp_starter_hand=away_hand,
         )
 
-        park_factor: float | None = None
+        park_factor: float | None = settings.PARK_FACTORS.get(home.upper())
         stadium: str | None = None
-        try:
-            game = repo.load_game(away, home)
-            park_factor = _f(getattr(game, "park_factor", None))
-            weather = getattr(game, "weather", None) or {}
-            stadium = weather.get("stadium") if isinstance(weather, dict) else None
-        except Exception:
-            pass
 
         return cls(
             repo=repo, slate_date=slate_date, away=away, home=home,

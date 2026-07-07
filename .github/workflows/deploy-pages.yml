@@ -152,6 +152,8 @@ jobs:
       - name: Build static research dashboard
         env:
           MLBMODEL_CACHE_DIR: _deploy_data
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           MLB_MODEL_DEPLOYMENT_NOTICE: >-
             Synchronized MLBMA research build with live pitcher-prop lines.
             No displayed state is a wager instruction.
@@ -162,6 +164,22 @@ jobs:
             --data-dir _deploy_data \
             --out _site/index.html \
             --no-fetch
+      - name: Post-build smoke
+        run: |
+          python -c "
+          from pathlib import Path
+          html = Path('_site/index.html').read_text(encoding='utf-8')
+          size_kb = len(html) // 1024
+          assert size_kb < 1400, f'HTML too large: {size_kb} KB'
+          for key in ('today', 'matchups', 'trends', 'markets', 'props', 'results', 'research'):
+              assert f'id=\"v-{key}\"' in html, key
+          assert 'ca-board' in html
+          assert 'matchup-full-src' in html
+          assert 'ca-section-head' in html
+          icons = list(Path('_site/assets/icons').glob('*.svg'))
+          assert len(icons) >= 8, f'expected vendored icons, got {len(icons)}'
+          print(f'OK: {size_kb} KB, all views present, {len(icons)} icons')
+          "
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
