@@ -89,7 +89,8 @@ def test_trends_section_matchup_first():
     )()
     panel = trends_section_html([report])
     assert "trendGameSelect" in panel
-    assert "trend-matchup-panel on" in panel
+    assert "trend-matchup-panel" in panel
+    assert 'trend-matchup-panel" data-game="NYY@BOS">' in panel
     assert "data-trend-filter" not in panel
     assert "Props · Fantasy · Markets" not in panel
     assert "Fantasy" in panel

@@ -223,9 +223,9 @@ def trend_matchup_panel(report, *, active: bool = False) -> str:
         away = str(_get(report, "away") or "")
         home = str(_get(report, "home") or "")
         game = f"{away}@{home}" if away and home else ""
-    on_cls = " on" if active else ""
+    hidden = "" if active else " hidden"
     return (
-        f'<div class="trend-matchup-panel{on_cls}" data-game="{e(game)}">'
+        f'<div class="trend-matchup-panel" data-game="{e(game)}"{hidden}>'
         f'{_matchup_lanes_html(report)}</div>'
     )
 

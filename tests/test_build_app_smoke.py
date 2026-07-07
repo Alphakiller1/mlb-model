@@ -36,8 +36,13 @@ def test_build_app_renders_all_views():
 
 def test_build_app_matchup_switch_hybrid_terminals():
     """Featured game is full; others ship compact + deferred full terminal in <template>."""
+    import re
+
     html = build_app("NYY@TBR", fetch=False, data_dir=DATA)
-    assert html.count('class="matchup-report') >= 2
+    assert html.count('class="matchup-report"') >= 2
+    panels = re.findall(r'<div class="matchup-report" data-game="([^"]+)"([^>]*)>', html)
+    visible = [key for key, attrs in panels if "hidden" not in attrs]
+    assert visible == ["NYY@TBR"]
     assert "matchup-full-src" in html
     assert "matchup-summary" in html
     assert "matchup-body" in html

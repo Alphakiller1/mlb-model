@@ -28,6 +28,8 @@ from mlbmodel.baseball.metrics import (
     sp_split_skill_adjustment,
 )
 from mlbmodel.baseball.repository import DataRepository
+from mlbmodel.report.game_keys import parse_game_key
+from mlbmodel.sources.sync_mlbma import matchup_keys
 
 LG_BABIP = 0.295
 LG_LOB = 0.72
@@ -713,11 +715,14 @@ def build_pitcher_board(repo: DataRepository) -> list[dict]:
     if slate is None:
         return []
     board = []
-    for _, row in slate.iterrows():
+    slate_rows = [row.to_dict() for _, row in slate.iterrows()]
+    keys = matchup_keys(slate_rows)
+    for row, key in zip(slate_rows, keys, strict=True):
         away = str(row.get("Away") or "").upper().strip()
         home = str(row.get("Home") or "").upper().strip()
+        _, _, game_number = parse_game_key(key)
         try:
-            game = repo.load_game(away, home)
+            game = repo.load_game(away, home, game_number=game_number)
         except (FileNotFoundError, ValueError):
             continue
         board.append(

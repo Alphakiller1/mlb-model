@@ -70,7 +70,7 @@ margin-top:4px;line-height:1.05;letter-spacing:-.01em}
 .pagehead .ctx{margin:0}
 .pagehead select{min-width:180px;background:var(--card);color:var(--ink);border:1px solid var(--border-2);border-radius:10px;padding:10px 13px;font:600 var(--mm-text-base) var(--sans);transition:border-color .15s ease}
 .pagehead select:hover{border-color:var(--ca-panel-border)}
-.matchup-report{display:none}.matchup-report.on{display:block}
+.matchup-report[hidden],.trend-matchup-panel[hidden]{display:none!important}
 .matchup-summary .cards{margin-top:12px}
 .deployment-notice{position:relative;border:1px solid var(--border-violet);border-radius:12px;padding:11px 14px 11px 16px;
 background:linear-gradient(135deg,rgba(124,77,255,.12),rgba(45,212,191,.04));color:var(--ink2);font-size:var(--mm-text-sm);margin-bottom:18px;overflow:hidden}
@@ -143,27 +143,20 @@ def shell_js() -> str:
         "document.querySelectorAll('.chase-nav-link').forEach(b=>b.classList.toggle('active',b.dataset.v===k));"
         "if(location.hash!=='#'+k)history.replaceState(null,'','#'+k);"
         "window.scrollTo(0,0);}"
-        "function switchGame(g){var key=g;"
-        "if(!document.querySelector('.matchup-report[data-game=\"'+g+'\"]')){"
-        "var bare=g.split('#')[0];var first=document.querySelector('.matchup-report[data-game=\"'+bare+'\"]');"
-        "if(first)key=bare;}"
-        "document.querySelectorAll('.matchup-report').forEach(x=>{"
-        "const on=x.dataset.game===key;x.classList.toggle('on',on);"
-        "if(on){const body=x.querySelector('.matchup-body');const tpl=x.querySelector('template.matchup-full-src');"
+        "function switchGame(g){document.querySelectorAll('.matchup-report').forEach(function(x){"
+        "var on=x.getAttribute('data-game')===g;"
+        "if(on){x.removeAttribute('hidden');}else{x.setAttribute('hidden','');}"
+        "if(on){var body=x.querySelector('.matchup-body');var tpl=x.querySelector('template.matchup-full-src');"
         "if(body&&tpl&&body.querySelector('.matchup-summary'))body.innerHTML=tpl.innerHTML;}"
         "});const s=document.getElementById('gameSelect');"
-        "if(s)s.value=key;}"
+        "if(s)s.value=g;}"
         "function openGame(g){switchGame(g);show('matchups');}"
         "function togglePitcherCard(i){const c=document.getElementById('prop-card-'+i);"
         "if(c){c.classList.toggle('on');const b=c.querySelector('.pitcher-prop-head');"
         "if(b)b.setAttribute('aria-expanded',c.classList.contains('on')?'true':'false');}}"
-        "function switchTrendGame(g){var key=g;"
-        "if(!document.querySelector('.trend-matchup-panel[data-game=\"'+g+'\"]')){"
-        "var bare=g.split('#')[0];var first=document.querySelector('.trend-matchup-panel[data-game=\"'+bare+'\"]');"
-        "if(first)key=bare;}"
-        "document.querySelectorAll('.trend-matchup-panel').forEach(function(p){"
-        "p.classList.toggle('on',p.getAttribute('data-game')===key);});"
-        "const s=document.getElementById('trendGameSelect');if(s)s.value=key;}"
+        "function switchTrendGame(g){document.querySelectorAll('.trend-matchup-panel').forEach(function(p){"
+        "if(p.getAttribute('data-game')===g){p.removeAttribute('hidden');}else{p.setAttribute('hidden','');}"
+        "});const s=document.getElementById('trendGameSelect');if(s)s.value=g;}"
         "function togglePitcher(i){togglePitcherCard(i);}"
         "function showReportTab(b,k){const r=b.closest('.rtabs');"
         "r.querySelectorAll('.rtabbar button').forEach(x=>x.classList.remove('on'));"

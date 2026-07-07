@@ -190,9 +190,9 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 )
         except Exception as exc:
             report = f'<div class=empty>Could not build {e(game_key)}: {e(str(exc))}</div>'
-        active = " on" if game_key == featured_key else ""
+        hidden = "" if game_key == featured_key else " hidden"
         matchup_reports.append(
-            f'<div class="matchup-report{active}" data-game="{e(game_key)}">{report}</div>'
+            f'<div class="matchup-report" data-game="{e(game_key)}"{hidden}>{report}</div>'
         )
     option_rows = []
     for game in slate:

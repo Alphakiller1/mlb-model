@@ -26,7 +26,7 @@ from mlbmodel.report.html_fmt import (
 from mlbmodel.report.matchup import _logo
 from mlbmodel.report.shell import slate_view_label
 from mlbmodel.report.props_ui import pitcher_prop_deck, prop_channel_counts
-from mlbmodel.report.game_keys import assign_slate_keys
+from mlbmodel.report.game_keys import assign_slate_keys, parse_game_key
 from mlbmodel.report.trends_ui import trends_section_html
 
 e = html.escape
@@ -35,18 +35,24 @@ def slate(repo, pitcher_rows=None):
     m = repo.slate()
     if m is None or "Away" not in m.columns:
         return [], None
-    anchors = repo.anchors()
     sd = str(m.iloc[0].get("Slate_Date", "")) if len(m) else ""
     out = []
     for _, row in m.iterrows():
         a, h = str(row["Away"]).upper().strip(), str(row["Home"]).upper().strip()
-        rec = {"away": a, "home": h, "time": str(row.get("Time", "") or "")}
+        out.append({"away": a, "home": h, "time": str(row.get("Time", "") or "")})
+    assign_slate_keys(out)
+    anchors = repo.anchors()
+    for rec in out:
+        a, h = rec["away"], rec["home"]
+        _, _, game_number = parse_game_key(rec["key"])
         try:
             game_pitchers = [
                 row for row in (pitcher_rows or [])
                 if row.get("team") in {a, h}
             ]
-            gd = repo.load_game(a, h, pitcher_rows=game_pitchers or None)
+            gd = repo.load_game(
+                a, h, game_number=game_number, pitcher_rows=game_pitchers or None
+            )
             repo.enrich_trends(gd, a, h)
             pr = model_probabilities(gd, anchors)
             rec.update({"ph": pr.p_home_win, "total": pr.exp_total, "margin": pr.exp_margin,
@@ -57,8 +63,6 @@ def slate(repo, pitcher_rows=None):
                         "lean": h if pr.exp_margin > 0 else a, "pk": gd.game_pk})
         except Exception:
             rec["err"] = True
-        out.append(rec)
-    assign_slate_keys(out)
     return out, sd
 
 

@@ -959,8 +959,7 @@
 
 /* ── Trends — matchup picker + lane tables ── */
 .trend-matchup-deck { display: flex; flex-direction: column; gap: 0; }
-.trend-matchup-panel { display: none; }
-.trend-matchup-panel.on { display: block; }
+.trend-matchup-panel[hidden] { display: none !important; }
 .trend-matchup-panel .trend-lane:first-child { padding-top: 0; }
 .trend-headline { text-align: left; color: var(--ink2); max-width: 420px; line-height: 1.4; }
 .trend-pills { white-space: nowrap; }
