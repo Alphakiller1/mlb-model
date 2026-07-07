@@ -20,7 +20,7 @@
   --d-poor: #F2545B;
   --metal-silver: linear-gradient(180deg, #FFFFFF 0%, #E9EAF0 38%, #9DA0AE 56%, #D7D9E2 72%, #FFFFFF 100%);
   --metal-violet: linear-gradient(180deg, #C4B0FF 0%, #7C4DFF 55%, #5B2BE0 100%);
-  --sans: "DM Sans", -apple-system, system-ui, sans-serif;
+  --sans: var(--font-primary);
 }
 
 html, body {
@@ -98,7 +98,7 @@ body::after,
   background: var(--raised);
   color: var(--text-2);
   border-radius: 7px;
-  font-family: var(--mono);
+  font-family: var(--display);
   font-variant-numeric: tabular-nums;
   font-size: 11px;
   padding: 4px 9px;
@@ -250,7 +250,7 @@ body::after,
 }
 
 .ca-query-line strong {
-  font-family: var(--mono);
+  font-family: var(--display);
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
@@ -276,7 +276,7 @@ body::after,
   font-size: 32px;
   line-height: 1.08;
   font-weight: 800;
-  font-family: var(--mono);
+  font-family: var(--display);
   font-variant-numeric: tabular-nums;
 }
 
@@ -541,7 +541,7 @@ h1:not(.ca-page-title):not(.ca-profile-hero__title) {
 .ca-split-card.rhp .ca-split-head { color: #f0935b; text-align: right; }
 .ca-split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; }
 .ca-split-stat .v {
-  font-family: var(--mono);
+  font-family: var(--display);
   font-size: 15px;
   font-weight: 700;
   line-height: 1.1;
@@ -583,7 +583,7 @@ h1:not(.ca-page-title):not(.ca-profile-hero__title) {
   text-align: center;
 }
 .ca-split-medallion .d {
-  font-family: var(--mono);
+  font-family: var(--display);
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
@@ -648,7 +648,7 @@ h1:not(.ca-page-title):not(.ca-profile-hero__title) {
   min-width: 110px;
 }
 .ca-wrc-medallion .v {
-  font-family: var(--mono);
+  font-family: var(--display);
   font-size: 28px;
   font-weight: 800;
   line-height: 1;

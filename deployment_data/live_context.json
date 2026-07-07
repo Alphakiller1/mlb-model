@@ -1,0 +1,4943 @@
+{
+  "slate_date": "2026-07-07",
+  "fetched_at": "2026-07-07T02:22:35+00:00",
+  "sources": {
+    "schedule_lineups_injuries_umpires_venues": "MLB Stats API",
+    "weather": "Open-Meteo hourly best-match"
+  },
+  "umpire_profile_metadata": {
+    "games": 1492,
+    "league_runs_per_game": 9.123,
+    "window_start": "2026-03-15",
+    "window_end": "2026-07-06",
+    "prior_games": 30
+  },
+  "games": {
+    "823062": {
+      "game_pk": 823062,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T18:15:00Z",
+      "away": "MIL",
+      "home": "STL",
+      "venue": {
+        "venue_id": 2889,
+        "venue": "Busch Stadium",
+        "latitude": 38.62256667,
+        "longitude": -90.19286667,
+        "field_azimuth": 62.0,
+        "elevation_ft": 460.0,
+        "timezone": "America/Chicago",
+        "utc_offset": -5.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Christian Yelich",
+              "position": "DH",
+              "bats": "L"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Jackson Chourio",
+              "position": "LF",
+              "bats": "R"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Brice Turang",
+              "position": "2B",
+              "bats": "L"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "William Contreras",
+              "position": "C",
+              "bats": "R"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Jake Bauers",
+              "position": "1B",
+              "bats": "L"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Garrett Mitchell",
+              "position": "CF",
+              "bats": "L"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Sal Frelick",
+              "position": "RF",
+              "bats": "L"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Cooper Pratt",
+              "position": "SS",
+              "bats": "R"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "David Hamilton",
+              "position": "3B",
+              "bats": "L"
+            }
+          ]
+        },
+        "home": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "JJ Wetherholt",
+              "position": "2B",
+              "bats": "L"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Ivan Herrera",
+              "position": "DH",
+              "bats": "R"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Jordan Walker",
+              "position": "RF",
+              "bats": "R"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "Nelson Velazquez",
+              "position": "LF",
+              "bats": "R"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Jose Fermin",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Masyn Winn",
+              "position": "SS",
+              "bats": "R"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Nathan Church",
+              "position": "CF",
+              "bats": "L"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Blaze Jordan",
+              "position": "1B",
+              "bats": "R"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Pedro Pages",
+              "position": "C",
+              "bats": "R"
+            }
+          ]
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T18:00:00+00:00",
+        "dome": false,
+        "temp_f": 86.7,
+        "temperature_f": 86.7,
+        "humidity_pct": 53.0,
+        "precipitation_probability_pct": 3.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1017.9,
+        "wind_mph": 6.0,
+        "wind_direction_deg": 15.0,
+        "wind_gust_mph": 8.1,
+        "wind_out_mph": -4.09
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 672582,
+            "player": "Angel Zerpa",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left forearm tightness."
+          },
+          {
+            "player_id": 663604,
+            "player": "Brandon Lockridge",
+            "position": "LF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right knee laceration and contusion."
+          },
+          {
+            "player_id": 605540,
+            "player": "Brandon Woodruff",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shoulder inflammation."
+          },
+          {
+            "player_id": 702153,
+            "player": "Brian Fitzpatrick",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow injury"
+          },
+          {
+            "player_id": 692230,
+            "player": "Carlos Rodriguez",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": null
+          },
+          {
+            "player_id": 689441,
+            "player": "Coleman Crow",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right forearm flexor strain."
+          },
+          {
+            "player_id": 669084,
+            "player": "DL Hall",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left pectoral strain."
+          },
+          {
+            "player_id": 669270,
+            "player": "Joel Kuhnel",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shoulder impingement."
+          },
+          {
+            "player_id": 701656,
+            "player": "Logan Henderson",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Low back strain."
+          },
+          {
+            "player_id": 682990,
+            "player": "Quinn Priester",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right thoracic outlet syndrome"
+          },
+          {
+            "player_id": 642239,
+            "player": "Rob Zastryzny",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left trapezius strain."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 691008,
+            "player": "Max Rajcic",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right elbow soreness."
+          },
+          {
+            "player_id": 602104,
+            "player": "Ram\u00f3n Ur\u00edas",
+            "position": "3B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow lateral epicondylitis."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 823036,
+          "previous_game_time": "2026-07-06T23:45:00Z",
+          "previous_venue": "Busch Stadium",
+          "rest_hours": 18.5,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 823036,
+          "previous_game_time": "2026-07-06T23:45:00Z",
+          "previous_venue": "Busch Stadium",
+          "rest_hours": 18.5,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 694819,
+          "pitcher": "Jacob Misiorowski",
+          "profile": {
+            "pitcher_id": 694819,
+            "starts": 17,
+            "ERA": 1.47,
+            "FIP": 2.056,
+            "xFIP": 2.056,
+            "K_pct": 39.29,
+            "BB_pct": 6.8,
+            "HR9": 0.61,
+            "avg_IP": 6.118,
+            "avg_pitches": 91.6,
+            "batters_faced": 397,
+            "innings": 104.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": null,
+          "pitcher": null,
+          "profile": {}
+        }
+      }
+    },
+    "823035": {
+      "game_pk": 823035,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T23:45:00Z",
+      "away": "MIL",
+      "home": "STL",
+      "venue": {
+        "venue_id": 2889,
+        "venue": "Busch Stadium",
+        "latitude": 38.62256667,
+        "longitude": -90.19286667,
+        "field_azimuth": 62.0,
+        "elevation_ft": 460.0,
+        "timezone": "America/Chicago",
+        "utc_offset": -5.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Christian Yelich",
+              "position": "DH",
+              "bats": "L"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Jackson Chourio",
+              "position": "LF",
+              "bats": "R"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Brice Turang",
+              "position": "2B",
+              "bats": "L"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "William Contreras",
+              "position": "C",
+              "bats": "R"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Jake Bauers",
+              "position": "1B",
+              "bats": "L"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Garrett Mitchell",
+              "position": "CF",
+              "bats": "L"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Sal Frelick",
+              "position": "RF",
+              "bats": "L"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Cooper Pratt",
+              "position": "SS",
+              "bats": "R"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "David Hamilton",
+              "position": "3B",
+              "bats": "L"
+            }
+          ]
+        },
+        "home": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "JJ Wetherholt",
+              "position": "2B",
+              "bats": "L"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Ivan Herrera",
+              "position": "DH",
+              "bats": "R"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Jordan Walker",
+              "position": "RF",
+              "bats": "R"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "Nelson Velazquez",
+              "position": "LF",
+              "bats": "R"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Jose Fermin",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Masyn Winn",
+              "position": "SS",
+              "bats": "R"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Nathan Church",
+              "position": "CF",
+              "bats": "L"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Blaze Jordan",
+              "position": "1B",
+              "bats": "R"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Pedro Pages",
+              "position": "C",
+              "bats": "R"
+            }
+          ]
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T23:00:00+00:00",
+        "dome": false,
+        "temp_f": 89.0,
+        "temperature_f": 89.0,
+        "humidity_pct": 45.0,
+        "precipitation_probability_pct": 8.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1015.4,
+        "wind_mph": 7.0,
+        "wind_direction_deg": 42.0,
+        "wind_gust_mph": 8.7,
+        "wind_out_mph": -6.58
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 672582,
+            "player": "Angel Zerpa",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left forearm tightness."
+          },
+          {
+            "player_id": 663604,
+            "player": "Brandon Lockridge",
+            "position": "LF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right knee laceration and contusion."
+          },
+          {
+            "player_id": 605540,
+            "player": "Brandon Woodruff",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shoulder inflammation."
+          },
+          {
+            "player_id": 702153,
+            "player": "Brian Fitzpatrick",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow injury"
+          },
+          {
+            "player_id": 692230,
+            "player": "Carlos Rodriguez",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": null
+          },
+          {
+            "player_id": 689441,
+            "player": "Coleman Crow",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right forearm flexor strain."
+          },
+          {
+            "player_id": 669084,
+            "player": "DL Hall",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left pectoral strain."
+          },
+          {
+            "player_id": 669270,
+            "player": "Joel Kuhnel",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shoulder impingement."
+          },
+          {
+            "player_id": 701656,
+            "player": "Logan Henderson",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Low back strain."
+          },
+          {
+            "player_id": 682990,
+            "player": "Quinn Priester",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right thoracic outlet syndrome"
+          },
+          {
+            "player_id": 642239,
+            "player": "Rob Zastryzny",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left trapezius strain."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 691008,
+            "player": "Max Rajcic",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right elbow soreness."
+          },
+          {
+            "player_id": 602104,
+            "player": "Ram\u00f3n Ur\u00edas",
+            "position": "3B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow lateral epicondylitis."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 823062,
+          "previous_game_time": "2026-07-07T18:15:00Z",
+          "previous_venue": "Busch Stadium",
+          "rest_hours": 5.5,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 7
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 823062,
+          "previous_game_time": "2026-07-07T18:15:00Z",
+          "previous_venue": "Busch Stadium",
+          "rest_hours": 5.5,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 7
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": null,
+          "pitcher": null,
+          "profile": {}
+        },
+        "home": {
+          "pitcher_id": null,
+          "pitcher": null,
+          "profile": {}
+        }
+      }
+    },
+    "824820": {
+      "game_pk": 824820,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T22:35:00Z",
+      "away": "CHC",
+      "home": "BAL",
+      "venue": {
+        "venue_id": 2,
+        "venue": "Oriole Park at Camden Yards",
+        "latitude": 39.283787,
+        "longitude": -76.621689,
+        "field_azimuth": 31.0,
+        "elevation_ft": 33.0,
+        "timezone": "America/New_York",
+        "utc_offset": -4.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        },
+        "home": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T23:00:00+00:00",
+        "dome": false,
+        "temp_f": 79.8,
+        "temperature_f": 79.8,
+        "humidity_pct": 77.0,
+        "precipitation_probability_pct": 19.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1015.6,
+        "wind_mph": 6.0,
+        "wind_direction_deg": 77.0,
+        "wind_gust_mph": 9.8,
+        "wind_out_mph": -4.17
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 676962,
+            "player": "Ben Brown",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Neck strain."
+          },
+          {
+            "player_id": 690990,
+            "player": "Cade Horton",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right forearm strain."
+          },
+          {
+            "player_id": 694037,
+            "player": "Daniel Palencia",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 665795,
+            "player": "Edward Cabrera",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left hamstring strain."
+          },
+          {
+            "player_id": 681799,
+            "player": "Ethan Roberts",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "right forearm inflammation"
+          },
+          {
+            "player_id": 571948,
+            "player": "Hoby Milner",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Appendicitis"
+          },
+          {
+            "player_id": 640451,
+            "player": "Hunter Harvey",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right triceps inflammation."
+          },
+          {
+            "player_id": 592791,
+            "player": "Jameson Taillon",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Strained left hamstring."
+          },
+          {
+            "player_id": 657006,
+            "player": "Justin Steele",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow injury"
+          },
+          {
+            "player_id": 807713,
+            "player": "Matt Shaw",
+            "position": "RF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "left-hand sprain"
+          },
+          {
+            "player_id": 664208,
+            "player": "Phil Maton",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right knee tendinitis"
+          },
+          {
+            "player_id": 687863,
+            "player": "Porter Hodge",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow strain"
+          },
+          {
+            "player_id": 702303,
+            "player": "Riley Martin",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow inflammation."
+          },
+          {
+            "player_id": 571946,
+            "player": "Shelby Miller",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right Elbow UCL Injury"
+          },
+          {
+            "player_id": 592122,
+            "player": "Tyler Austin",
+            "position": "1B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right knee surgery."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 605135,
+            "player": "Chris Bassitt",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Low back discomfort."
+          },
+          {
+            "player_id": 681882,
+            "player": "Colin Selby",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder inflammation."
+          },
+          {
+            "player_id": 642585,
+            "player": "F\u00e9lix Bautista",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right Shoulder Surgery."
+          },
+          {
+            "player_id": 676059,
+            "player": "Jordan Westburg",
+            "position": "3B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow UCL sprain."
+          },
+          {
+            "player_id": 669211,
+            "player": "Keegan Akin",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left elbow discomfort"
+          },
+          {
+            "player_id": 664854,
+            "player": "Ryan Helsley",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right elbow discomfort."
+          },
+          {
+            "player_id": 663624,
+            "player": "Ryan Mountcastle",
+            "position": "1B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left foot fracture"
+          },
+          {
+            "player_id": 682274,
+            "player": "Yaramil Hiraldo",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder inflammation."
+          },
+          {
+            "player_id": 621107,
+            "player": "Zach Eflin",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow discomfort."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 824656,
+          "previous_game_time": "2026-07-05T18:30:00Z",
+          "previous_venue": "Wrigley Field",
+          "rest_hours": 52.1,
+          "travel_miles": 606.8,
+          "timezone_shift_hours": 1.0,
+          "games_last_7_days": 4
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 824497,
+          "previous_game_time": "2026-07-05T17:05:00Z",
+          "previous_venue": "Great American Ball Park",
+          "rest_hours": 53.5,
+          "travel_miles": 422.3,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 571510,
+          "pitcher": "Matthew Boyd",
+          "profile": {
+            "pitcher_id": 571510,
+            "starts": 7,
+            "ERA": 5.08,
+            "FIP": 3.527,
+            "xFIP": 3.527,
+            "K_pct": 25.52,
+            "BB_pct": 6.9,
+            "HR9": 1.07,
+            "avg_IP": 4.81,
+            "avg_pitches": 83.1,
+            "batters_faced": 145,
+            "innings": 33.667,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": 669358,
+          "pitcher": "Shane Baz",
+          "profile": {
+            "pitcher_id": 669358,
+            "starts": 17,
+            "ERA": 4.19,
+            "FIP": 3.883,
+            "xFIP": 3.883,
+            "K_pct": 20.05,
+            "BB_pct": 8.99,
+            "HR9": 0.8,
+            "avg_IP": 5.941,
+            "avg_pitches": 96.7,
+            "batters_faced": 434,
+            "innings": 101.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "824254": {
+      "game_pk": 824254,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T22:40:00Z",
+      "away": "ATH",
+      "home": "DET",
+      "venue": {
+        "venue_id": 2394,
+        "venue": "Comerica Park",
+        "latitude": 42.3391151,
+        "longitude": -83.048695,
+        "field_azimuth": 150.0,
+        "elevation_ft": 600.0,
+        "timezone": "America/Detroit",
+        "utc_offset": -4.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        },
+        "home": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T23:00:00+00:00",
+        "dome": false,
+        "temp_f": 84.8,
+        "temperature_f": 84.8,
+        "humidity_pct": 46.0,
+        "precipitation_probability_pct": 1.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1015.5,
+        "wind_mph": 6.3,
+        "wind_direction_deg": 86.0,
+        "wind_gust_mph": 7.8,
+        "wind_out_mph": -2.76
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 667670,
+            "player": "Brent Rooker",
+            "position": "DH",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Bone bruise in left knee."
+          },
+          {
+            "player_id": 621139,
+            "player": "Brooks Kriske",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder impingement"
+          },
+          {
+            "player_id": 672016,
+            "player": "Denzel Clarke",
+            "position": "CF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Mid foot bone bruise in right foot."
+          },
+          {
+            "player_id": 680684,
+            "player": "Gunnar Hoglund",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Sprained right knee."
+          },
+          {
+            "player_id": 805779,
+            "player": "Jacob Wilson",
+            "position": "SS",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right thumb inflammation"
+          },
+          {
+            "player_id": 622663,
+            "player": "Luis Severino",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder strain."
+          },
+          {
+            "player_id": 691016,
+            "player": "Tyler Soderstrom",
+            "position": "LF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left hip impingement"
+          }
+        ],
+        "home": [
+          {
+            "player_id": 690544,
+            "player": "Bailey Horn",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow arthroscopy recovery"
+          },
+          {
+            "player_id": 676428,
+            "player": "Brant Hurter",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Lumbar spine inflammation."
+          },
+          {
+            "player_id": 572143,
+            "player": "Burch Smith",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder inflammation."
+          },
+          {
+            "player_id": 650402,
+            "player": "Gleyber Torres",
+            "position": "2B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left oblique strain."
+          },
+          {
+            "player_id": 695549,
+            "player": "Jackson Jobe",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Recovering from Tommy John surgery"
+          },
+          {
+            "player_id": 595879,
+            "player": "Javier B\u00e1ez",
+            "position": "SS",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right ankle sprain."
+          },
+          {
+            "player_id": 434378,
+            "player": "Justin Verlander",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left hip inflammation."
+          },
+          {
+            "player_id": 678009,
+            "player": "Parker Meadows",
+            "position": "CF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left radius fracture."
+          },
+          {
+            "player_id": 681857,
+            "player": "Reese Olson",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right Shoulder Labral Repair"
+          },
+          {
+            "player_id": 700242,
+            "player": "Trey Sweeney",
+            "position": "SS",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder strain"
+          },
+          {
+            "player_id": 672761,
+            "player": "Wenceel P\u00e9rez",
+            "position": "RF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left orbital fracture."
+          },
+          {
+            "player_id": 676684,
+            "player": "Will Vest",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right posterior elbow inflammation."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 824980,
+          "previous_game_time": "2026-07-05T20:30:00Z",
+          "previous_venue": "Sutter Health Park",
+          "rest_hours": 50.2,
+          "travel_miles": 2021.3,
+          "timezone_shift_hours": 3.0,
+          "games_last_7_days": 5
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 822879,
+          "previous_game_time": "2026-07-05T19:30:00Z",
+          "previous_venue": "Globe Life Field",
+          "rest_hours": 51.2,
+          "travel_miles": 1012.6,
+          "timezone_shift_hours": 1.0,
+          "games_last_7_days": 6
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 669372,
+          "pitcher": "J.T. Ginn",
+          "profile": {
+            "pitcher_id": 669372,
+            "starts": 16,
+            "ERA": 3.04,
+            "FIP": 4.267,
+            "xFIP": 4.267,
+            "K_pct": 20.87,
+            "BB_pct": 10.43,
+            "HR9": 0.95,
+            "avg_IP": 5.917,
+            "avg_pitches": 93.7,
+            "batters_faced": 393,
+            "innings": 94.667,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": 669373,
+          "pitcher": "Tarik Skubal",
+          "profile": {
+            "pitcher_id": 669373,
+            "starts": 11,
+            "ERA": 3.15,
+            "FIP": 3.2,
+            "xFIP": 3.2,
+            "K_pct": 29.53,
+            "BB_pct": 3.15,
+            "HR9": 1.23,
+            "avg_IP": 5.97,
+            "avg_pitches": 88.4,
+            "batters_faced": 254,
+            "innings": 65.667,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "823361": {
+      "game_pk": 823361,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T22:40:00Z",
+      "away": "ATL",
+      "home": "PIT",
+      "venue": {
+        "venue_id": 31,
+        "venue": "PNC Park",
+        "latitude": 40.446904,
+        "longitude": -80.005753,
+        "field_azimuth": 116.0,
+        "elevation_ft": 780.0,
+        "timezone": "America/New_York",
+        "utc_offset": -4.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        },
+        "home": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T23:00:00+00:00",
+        "dome": false,
+        "temp_f": 83.4,
+        "temperature_f": 83.4,
+        "humidity_pct": 63.0,
+        "precipitation_probability_pct": 16.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1014.8,
+        "wind_mph": 3.0,
+        "wind_direction_deg": 347.0,
+        "wind_gust_mph": 5.8,
+        "wind_out_mph": 1.89
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 700363,
+            "player": "AJ Smith-Shawver",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow reconstruction"
+          },
+          {
+            "player_id": 673490,
+            "player": "Ha-Seong Kim",
+            "position": "SS",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right middle finger inflammation."
+          },
+          {
+            "player_id": 641729,
+            "player": "Joe Jim\u00e9nez",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 666214,
+            "player": "Joey Wentz",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right knee ACL tear."
+          },
+          {
+            "player_id": 527048,
+            "player": "Mart\u00edn P\u00e9rez",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left forearm contusion."
+          },
+          {
+            "player_id": 663158,
+            "player": "Robert Suarez",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right forearm tightness."
+          },
+          {
+            "player_id": 660670,
+            "player": "Ronald Acu\u00f1a Jr.",
+            "position": "RF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Strained left hamstring."
+          },
+          {
+            "player_id": 669221,
+            "player": "Sean Murphy",
+            "position": "C",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Fractured left middle finger."
+          },
+          {
+            "player_id": 680885,
+            "player": "Spencer Schwellenbach",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 675911,
+            "player": "Spencer Strider",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow inflammation."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 606965,
+            "player": "Chris Devenski",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 681895,
+            "player": "Evan Sisk",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left elbow inflammation."
+          },
+          {
+            "player_id": 665833,
+            "player": "Oneil Cruz",
+            "position": "CF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left hand fourth and fifth metacarpal non-displaced fractures."
+          },
+          {
+            "player_id": 687462,
+            "player": "Spencer Horwitz",
+            "position": "1B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left hamstring strain."
+          },
+          {
+            "player_id": 696062,
+            "player": "Wilber Dotel",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right lat muscle strain."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 824900,
+          "previous_game_time": "2026-07-06T23:15:00Z",
+          "previous_venue": "Truist Park",
+          "rest_hours": 23.4,
+          "travel_miles": 515.1,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 822715,
+          "previous_game_time": "2026-07-05T17:00:00Z",
+          "previous_venue": "Nationals Park",
+          "rest_hours": 53.7,
+          "travel_miles": 193.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 7
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 694462,
+          "pitcher": "Hurston Waldrep",
+          "profile": {
+            "pitcher_id": 694462,
+            "starts": 1,
+            "ERA": 3.68,
+            "FIP": 5.518,
+            "xFIP": 5.518,
+            "K_pct": 20.59,
+            "BB_pct": 14.71,
+            "HR9": 1.23,
+            "avg_IP": 7.333,
+            "avg_pitches": 131.0,
+            "batters_faced": 34,
+            "innings": 7.333,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": 694973,
+          "pitcher": "Paul Skenes",
+          "profile": {
+            "pitcher_id": 694973,
+            "starts": 18,
+            "ERA": 3.62,
+            "FIP": 3.118,
+            "xFIP": 3.118,
+            "K_pct": 30.13,
+            "BB_pct": 5.57,
+            "HR9": 1.02,
+            "avg_IP": 5.389,
+            "avg_pitches": 90.7,
+            "batters_faced": 395,
+            "innings": 97.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "823847": {
+      "game_pk": 823847,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T22:40:00Z",
+      "away": "SEA",
+      "home": "MIA",
+      "venue": {
+        "venue_id": 4169,
+        "venue": "loanDepot park",
+        "latitude": 25.77796236,
+        "longitude": -80.21951795,
+        "field_azimuth": 128.0,
+        "elevation_ft": 10.0,
+        "timezone": "America/New_York",
+        "utc_offset": -4.0,
+        "roof_type": "Retractable",
+        "turf_type": "Artificial Turf"
+      },
+      "lineups": {
+        "away": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        },
+        "home": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T23:00:00+00:00",
+        "dome": false,
+        "temp_f": 83.9,
+        "temperature_f": 83.9,
+        "humidity_pct": 77.0,
+        "precipitation_probability_pct": 10.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1019.1,
+        "wind_mph": 4.2,
+        "wind_direction_deg": 106.0,
+        "wind_gust_mph": 6.9,
+        "wind_out_mph": -3.89
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 680977,
+            "player": "Brendan Donovan",
+            "position": "3B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left groin muscle strain."
+          },
+          {
+            "player_id": 672841,
+            "player": "Carlos Vargas",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right lat strain."
+          },
+          {
+            "player_id": 681867,
+            "player": "Cooper Criswell",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder strain."
+          },
+          {
+            "player_id": 677594,
+            "player": "Julio Rodr\u00edguez",
+            "position": "CF",
+            "status_code": "D7",
+            "status": "Injured 7-Day",
+            "injury": "Concussion"
+          },
+          {
+            "player_id": 688138,
+            "player": "Logan Evans",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Recovery from torn UCL in right arm."
+          },
+          {
+            "player_id": 666374,
+            "player": "Matt Brash",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right lat strain."
+          },
+          {
+            "player_id": 608701,
+            "player": "Rob Refsnyder",
+            "position": "DH",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right knee inflammation."
+          },
+          {
+            "player_id": 669717,
+            "player": "Will Wilson",
+            "position": "3B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left thumb fracture."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 800049,
+            "player": "Adam Mazur",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow surgery."
+          },
+          {
+            "player_id": 677053,
+            "player": "Andrew Nardi",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left rib cage stress reaction."
+          },
+          {
+            "player_id": 669622,
+            "player": "Anthony Bender",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shin stress reaction."
+          },
+          {
+            "player_id": 676083,
+            "player": "Janson Junk",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shin bone inflammation."
+          },
+          {
+            "player_id": 694795,
+            "player": "Josh Ekness",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right calf strain."
+          },
+          {
+            "player_id": 702281,
+            "player": "Robby Snelling",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 678692,
+            "player": "Ronny Henriquez",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow surgery."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 823117,
+          "previous_game_time": "2026-07-05T21:00:00Z",
+          "previous_venue": "T-Mobile Park",
+          "rest_hours": 49.7,
+          "travel_miles": 2729.3,
+          "timezone_shift_hours": 3.0,
+          "games_last_7_days": 5
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 824980,
+          "previous_game_time": "2026-07-05T20:30:00Z",
+          "previous_venue": "Sutter Health Park",
+          "rest_hours": 50.2,
+          "travel_miles": 2546.8,
+          "timezone_shift_hours": 3.0,
+          "games_last_7_days": 5
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": null,
+          "pitcher": null,
+          "profile": {}
+        },
+        "home": {
+          "pitcher_id": 676974,
+          "pitcher": "Max Meyer",
+          "profile": {
+            "pitcher_id": 676974,
+            "starts": 18,
+            "ERA": 2.53,
+            "FIP": 3.54,
+            "xFIP": 3.54,
+            "K_pct": 26.29,
+            "BB_pct": 8.45,
+            "HR9": 0.87,
+            "avg_IP": 5.722,
+            "avg_pitches": 90.8,
+            "batters_faced": 426,
+            "innings": 103.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "822956": {
+      "game_pk": 822956,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T22:40:00Z",
+      "away": "NYY",
+      "home": "TBR",
+      "venue": {
+        "venue_id": 12,
+        "venue": "Tropicana Field",
+        "latitude": 27.767778,
+        "longitude": -82.6525,
+        "field_azimuth": 359.0,
+        "elevation_ft": 15.0,
+        "timezone": "America/New_York",
+        "utc_offset": -4.0,
+        "roof_type": "Dome",
+        "turf_type": "Artificial Turf"
+      },
+      "lineups": {
+        "away": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Trent Grisham",
+              "position": "CF",
+              "bats": "L"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Ben Rice",
+              "position": "DH",
+              "bats": "L"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Paul Goldschmidt",
+              "position": "1B",
+              "bats": "R"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "Cody Bellinger",
+              "position": "LF",
+              "bats": "L"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Jasson Dominguez",
+              "position": "RF",
+              "bats": "S"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Jazz Chisholm",
+              "position": "2B",
+              "bats": "L"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Jose Caballero",
+              "position": "SS",
+              "bats": "R"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Ryan McMahon",
+              "position": "3B",
+              "bats": "L"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Austin Wells",
+              "position": "C",
+              "bats": "L"
+            }
+          ]
+        },
+        "home": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Yandy Diaz",
+              "position": "DH",
+              "bats": "R"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Jonathan Aranda",
+              "position": "1B",
+              "bats": "L"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Junior Caminero",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "Cedric Mullins",
+              "position": "CF",
+              "bats": "L"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Jonny DeLuca",
+              "position": "RF",
+              "bats": "R"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Chandler Simpson",
+              "position": "LF",
+              "bats": "L"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Nick Fortes",
+              "position": "C",
+              "bats": "R"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Richie Palacios",
+              "position": "2B",
+              "bats": "L"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Taylor Walls",
+              "position": "SS",
+              "bats": "S"
+            }
+          ]
+        }
+      },
+      "weather": {
+        "status": "dome",
+        "source": "MLB venue roof",
+        "dome": true,
+        "run_factor": 1.0
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 592450,
+            "player": "Aaron Judge",
+            "position": "RF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right rib stress fracture"
+          },
+          {
+            "player_id": 607074,
+            "player": "Carlos Rod\u00f3n",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left elbow inflammation"
+          },
+          {
+            "player_id": 657376,
+            "player": "Clarke Schmidt",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right forearm tightness."
+          },
+          {
+            "player_id": 519317,
+            "player": "Giancarlo Stanton",
+            "position": "DH",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right calf strain."
+          },
+          {
+            "player_id": 608331,
+            "player": "Max Fried",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left elbow bone bruise."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 670955,
+            "player": "Edwin Uceta",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder impingement"
+          },
+          {
+            "player_id": 666158,
+            "player": "Gavin Lux",
+            "position": "LF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder impingement"
+          },
+          {
+            "player_id": 641584,
+            "player": "Jake Fraley",
+            "position": "RF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Hernia."
+          },
+          {
+            "player_id": 669947,
+            "player": "Jesse Scholtens",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right wrist sprain."
+          },
+          {
+            "player_id": 669169,
+            "player": "Jonathan Heasley",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 655889,
+            "player": "Manuel Rodr\u00edguez",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 686752,
+            "player": "Ryan Pepiot",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right hip inflammation"
+          },
+          {
+            "player_id": 571927,
+            "player": "Steven Matz",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left ankle sprain"
+          },
+          {
+            "player_id": 621051,
+            "player": "Steven Wilson",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Lumbar disc inflammation"
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 822958,
+          "previous_game_time": "2026-07-06T22:40:00Z",
+          "previous_venue": "Tropicana Field",
+          "rest_hours": 24.0,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 7
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 822958,
+          "previous_game_time": "2026-07-06T22:40:00Z",
+          "previous_venue": "Tropicana Field",
+          "rest_hours": 24.0,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 701542,
+          "pitcher": "Will Warren",
+          "profile": {
+            "pitcher_id": 701542,
+            "starts": 17,
+            "ERA": 3.73,
+            "FIP": 3.659,
+            "xFIP": 3.659,
+            "K_pct": 23.39,
+            "BB_pct": 7.46,
+            "HR9": 1.01,
+            "avg_IP": 5.255,
+            "avg_pitches": 88.4,
+            "batters_faced": 389,
+            "innings": 89.333,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": 693855,
+          "pitcher": "Ian Seymour",
+          "profile": {
+            "pitcher_id": 693855,
+            "starts": 4,
+            "ERA": 4.02,
+            "FIP": 4.2,
+            "xFIP": 4.2,
+            "K_pct": 26.09,
+            "BB_pct": 9.13,
+            "HR9": 1.29,
+            "avg_IP": 14.0,
+            "avg_pitches": 221.0,
+            "batters_faced": 230,
+            "innings": 56.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "822713": {
+      "game_pk": 822713,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T22:45:00Z",
+      "away": "HOU",
+      "home": "WSN",
+      "venue": {
+        "venue_id": 3309,
+        "venue": "Nationals Park",
+        "latitude": 38.872861,
+        "longitude": -77.007501,
+        "field_azimuth": 28.0,
+        "elevation_ft": 35.0,
+        "timezone": "America/New_York",
+        "utc_offset": -4.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Jose Altuve",
+              "position": "2B",
+              "bats": "R"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Yordan Alvarez",
+              "position": "DH",
+              "bats": "L"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Isaac Paredes",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "Christian Walker",
+              "position": "1B",
+              "bats": "R"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "LaMonte Wade",
+              "position": "LF",
+              "bats": "L"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Cam Smith",
+              "position": "RF",
+              "bats": "R"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Yainer Diaz",
+              "position": "C",
+              "bats": "R"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Braden Shewmake",
+              "position": "SS",
+              "bats": "L"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Brice Matthews",
+              "position": "CF",
+              "bats": "R"
+            }
+          ]
+        },
+        "home": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "James Wood",
+              "position": "DH",
+              "bats": "L"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Luis Garcia",
+              "position": "1B",
+              "bats": "L"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Curtis Mead",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "CJ Abrams",
+              "position": "SS",
+              "bats": "L"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Dylan Crews",
+              "position": "RF",
+              "bats": "R"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Daylen Lile",
+              "position": "LF",
+              "bats": "L"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Jacob Young",
+              "position": "CF",
+              "bats": "R"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Drew Millas",
+              "position": "C",
+              "bats": "S"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Nasim Nunez",
+              "position": "2B",
+              "bats": "S"
+            }
+          ]
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T23:00:00+00:00",
+        "dome": false,
+        "temp_f": 79.5,
+        "temperature_f": 79.5,
+        "humidity_pct": 85.0,
+        "precipitation_probability_pct": 29.0,
+        "precipitation_in": 0.055,
+        "pressure_hpa": 1015.3,
+        "wind_mph": 3.6,
+        "wind_direction_deg": 79.0,
+        "wind_gust_mph": 9.4,
+        "wind_out_mph": -2.27
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 656986,
+            "player": "Bennett Sousa",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow inflammation."
+          },
+          {
+            "player_id": 687888,
+            "player": "Brandon Walter",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow surgery recovery"
+          },
+          {
+            "player_id": 621043,
+            "player": "Carlos Correa",
+            "position": "SS",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left ankle tendon injury."
+          },
+          {
+            "player_id": 669713,
+            "player": "Hayden Wesneski",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Recovery from right elbow surgery"
+          },
+          {
+            "player_id": 665161,
+            "player": "Jeremy Pe\u00f1a",
+            "position": "SS",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left calf strain."
+          },
+          {
+            "player_id": 678906,
+            "player": "Kai-Wei Teng",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right knee sprain."
+          },
+          {
+            "player_id": 621121,
+            "player": "Lance McCullers Jr.",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shoulder inflammation."
+          },
+          {
+            "player_id": 669854,
+            "player": "Ronel Blanco",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow surgery recovery"
+          }
+        ],
+        "home": [
+          {
+            "player_id": 687792,
+            "player": "DJ Herz",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 663623,
+            "player": "Jake Irvin",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shoulder strain."
+          },
+          {
+            "player_id": 680686,
+            "player": "Josiah Gray",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right flexor strain."
+          },
+          {
+            "player_id": 686610,
+            "player": "Ken Waldichuk",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left forearm tightness."
+          },
+          {
+            "player_id": 668820,
+            "player": "Max Kranick",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow surgery recovery."
+          },
+          {
+            "player_id": 680730,
+            "player": "Mitchell Parker",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow inflammation."
+          },
+          {
+            "player_id": 663992,
+            "player": "Richard Lovelady",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left triceps strain."
+          },
+          {
+            "player_id": 592866,
+            "player": "Trevor Williams",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 822712,
+          "previous_game_time": "2026-07-06T22:45:00Z",
+          "previous_venue": "Nationals Park",
+          "rest_hours": 24.0,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 822712,
+          "previous_game_time": "2026-07-06T22:45:00Z",
+          "previous_venue": "Nationals Park",
+          "rest_hours": 24.0,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 7
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 837227,
+          "pitcher": "Tatsuya Imai",
+          "profile": {
+            "pitcher_id": 837227,
+            "starts": 12,
+            "ERA": 6.14,
+            "FIP": 4.979,
+            "xFIP": 4.979,
+            "K_pct": 27.91,
+            "BB_pct": 13.95,
+            "HR9": 1.49,
+            "avg_IP": 4.028,
+            "avg_pitches": 78.2,
+            "batters_faced": 215,
+            "innings": 48.333,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": 674841,
+          "pitcher": "Andrew Alvarez",
+          "profile": {
+            "pitcher_id": 674841,
+            "starts": 5,
+            "ERA": 3.05,
+            "FIP": 2.74,
+            "xFIP": 2.74,
+            "K_pct": 27.59,
+            "BB_pct": 9.2,
+            "HR9": 0.44,
+            "avg_IP": 8.267,
+            "avg_pitches": 143.6,
+            "batters_faced": 174,
+            "innings": 41.333,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "823607": {
+      "game_pk": 823607,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T23:10:00Z",
+      "away": "KCR",
+      "home": "NYM",
+      "venue": {
+        "venue_id": 3289,
+        "venue": "Citi Field",
+        "latitude": 40.75753012,
+        "longitude": -73.84559155,
+        "field_azimuth": 13.0,
+        "elevation_ft": 10.0,
+        "timezone": "America/New_York",
+        "utc_offset": -4.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        },
+        "home": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T23:00:00+00:00",
+        "dome": false,
+        "temp_f": 66.8,
+        "temperature_f": 66.8,
+        "humidity_pct": 87.0,
+        "precipitation_probability_pct": 4.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1017.8,
+        "wind_mph": 8.2,
+        "wind_direction_deg": 17.0,
+        "wind_gust_mph": 18.3,
+        "wind_out_mph": -8.18
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 679525,
+            "player": "Alec Marsh",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder impingement."
+          },
+          {
+            "player_id": 608032,
+            "player": "Carlos Est\u00e9vez",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left foot contusion."
+          },
+          {
+            "player_id": 666142,
+            "player": "Cole Ragans",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow impingement."
+          },
+          {
+            "player_id": 657756,
+            "player": "Connor Seabold",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right lat strain."
+          },
+          {
+            "player_id": 663704,
+            "player": "James McArthur",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 663697,
+            "player": "Jonathan India",
+            "position": "2B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left shoulder subluxation."
+          },
+          {
+            "player_id": 663460,
+            "player": "Kris Bubic",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow soreness."
+          },
+          {
+            "player_id": 664728,
+            "player": "Kyle Isbel",
+            "position": "CF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left plantar fasciitis."
+          },
+          {
+            "player_id": 672580,
+            "player": "Maikel Garcia",
+            "position": "3B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left hand muscle strain."
+          },
+          {
+            "player_id": 683232,
+            "player": "Nick Mears",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shoulder impingement."
+          },
+          {
+            "player_id": 686469,
+            "player": "Vinnie Pasquantino",
+            "position": "1B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right hamate fracture."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 605280,
+            "player": "Clay Holmes",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right fibula fracture."
+          },
+          {
+            "player_id": 673380,
+            "player": "Dedniel N\u00fa\u00f1ez",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Tommy John surgery recovery."
+          },
+          {
+            "player_id": 593871,
+            "player": "Jorge Polanco",
+            "position": "1B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right wrist contusion."
+          },
+          {
+            "player_id": 663795,
+            "player": "Justin Hagenman",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Rib Fracture"
+          },
+          {
+            "player_id": 673357,
+            "player": "Luis Robert Jr.",
+            "position": "CF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Lumbar spine disc herniation."
+          },
+          {
+            "player_id": 543760,
+            "player": "Marcus Semien",
+            "position": "2B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left hip flexor strain."
+          },
+          {
+            "player_id": 657585,
+            "player": "Reed Garrett",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 656731,
+            "player": "Tylor Megill",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow sprain."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 824089,
+          "previous_game_time": "2026-07-06T18:10:00Z",
+          "previous_venue": "Kauffman Stadium",
+          "rest_hours": 29.0,
+          "travel_miles": 1097.5,
+          "timezone_shift_hours": 1.0,
+          "games_last_7_days": 5
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 824900,
+          "previous_game_time": "2026-07-06T23:15:00Z",
+          "previous_venue": "Truist Park",
+          "rest_hours": 23.9,
+          "travel_miles": 751.2,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 607625,
+          "pitcher": "Seth Lugo",
+          "profile": {
+            "pitcher_id": 607625,
+            "starts": 17,
+            "ERA": 4.2,
+            "FIP": 4.238,
+            "xFIP": 4.238,
+            "K_pct": 18.67,
+            "BB_pct": 7.37,
+            "HR9": 1.12,
+            "avg_IP": 5.667,
+            "avg_pitches": 89.2,
+            "batters_faced": 407,
+            "innings": 96.333,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": null,
+          "pitcher": null,
+          "profile": {}
+        }
+      }
+    },
+    "824495": {
+      "game_pk": 824495,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T23:10:00Z",
+      "away": "PHI",
+      "home": "CIN",
+      "venue": {
+        "venue_id": 2602,
+        "venue": "Great American Ball Park",
+        "latitude": 39.097389,
+        "longitude": -84.506611,
+        "field_azimuth": 122.0,
+        "elevation_ft": 535.0,
+        "timezone": "America/New_York",
+        "utc_offset": -4.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        },
+        "home": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T23:00:00+00:00",
+        "dome": false,
+        "temp_f": 88.6,
+        "temperature_f": 88.6,
+        "humidity_pct": 43.0,
+        "precipitation_probability_pct": 3.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1014.8,
+        "wind_mph": 7.4,
+        "wind_direction_deg": 357.0,
+        "wind_gust_mph": 10.1,
+        "wind_out_mph": 4.24
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 666969,
+            "player": "Adolis Garc\u00eda",
+            "position": "RF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right latissimus dorsi tear"
+          },
+          {
+            "player_id": 641745,
+            "player": "Brad Keller",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right forearm tendinitis."
+          },
+          {
+            "player_id": 679032,
+            "player": "Johan Rojas",
+            "position": "CF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow UCL repair."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 694362,
+            "player": "Blake Dunn",
+            "position": "CF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right elbow sprain."
+          },
+          {
+            "player_id": 682227,
+            "player": "Brandon Williamson",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left shoulder fatigue."
+          },
+          {
+            "player_id": 667472,
+            "player": "Dane Myers",
+            "position": "CF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left shoulder contusion"
+          },
+          {
+            "player_id": 668933,
+            "player": "Graham Ashcraft",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right forearm UCL sprain."
+          },
+          {
+            "player_id": 663647,
+            "player": "Ke'Bryan Hayes",
+            "position": "3B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Lumbar bulging disc."
+          },
+          {
+            "player_id": 663574,
+            "player": "Tony Santillan",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left oblique strain."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 824089,
+          "previous_game_time": "2026-07-06T18:10:00Z",
+          "previous_venue": "Kauffman Stadium",
+          "rest_hours": 29.0,
+          "travel_miles": 534.7,
+          "timezone_shift_hours": 1.0,
+          "games_last_7_days": 6
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 824497,
+          "previous_game_time": "2026-07-05T17:05:00Z",
+          "previous_venue": "Great American Ball Park",
+          "rest_hours": 54.1,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": null,
+          "pitcher": null,
+          "profile": {}
+        },
+        "home": {
+          "pitcher_id": 671096,
+          "pitcher": "Andrew Abbott",
+          "profile": {
+            "pitcher_id": 671096,
+            "starts": 18,
+            "ERA": 3.88,
+            "FIP": 5.137,
+            "xFIP": 5.137,
+            "K_pct": 17.59,
+            "BB_pct": 10.84,
+            "HR9": 1.42,
+            "avg_IP": 5.278,
+            "avg_pitches": 92.4,
+            "batters_faced": 415,
+            "innings": 95.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "823687": {
+      "game_pk": 823687,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T23:40:00Z",
+      "away": "CLE",
+      "home": "MIN",
+      "venue": {
+        "venue_id": 3312,
+        "venue": "Target Field",
+        "latitude": 44.981829,
+        "longitude": -93.277891,
+        "field_azimuth": 129.0,
+        "elevation_ft": 828.0,
+        "timezone": "America/Chicago",
+        "utc_offset": -5.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        },
+        "home": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T23:00:00+00:00",
+        "dome": false,
+        "temp_f": 89.5,
+        "temperature_f": 89.5,
+        "humidity_pct": 58.0,
+        "precipitation_probability_pct": 9.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1014.4,
+        "wind_mph": 4.2,
+        "wind_direction_deg": 324.0,
+        "wind_gust_mph": 7.8,
+        "wind_out_mph": 4.06
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 682657,
+            "player": "Angel Mart\u00ednez",
+            "position": "LF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left foot non-displaced fracture."
+          },
+          {
+            "player_id": 608070,
+            "player": "Jos\u00e9 Ram\u00edrez",
+            "position": "3B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left hamate fracture."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 607455,
+            "player": "Anthony Banda",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left lat strain."
+          },
+          {
+            "player_id": 641927,
+            "player": "Bailey Ober",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 663485,
+            "player": "Cole Sands",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right forearm strain."
+          },
+          {
+            "player_id": 701581,
+            "player": "David Festa",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder impingement."
+          },
+          {
+            "player_id": 670183,
+            "player": "Garrett Acton",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder strain"
+          },
+          {
+            "player_id": 690953,
+            "player": "Mick Abel",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 641154,
+            "player": "Pablo L\u00f3pez",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Tommy John surgery."
+          },
+          {
+            "player_id": 680777,
+            "player": "Ryan Jeffers",
+            "position": "C",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left hamate bone fracture."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 824413,
+          "previous_game_time": "2026-07-05T18:00:00Z",
+          "previous_venue": "Progressive Field",
+          "rest_hours": 53.7,
+          "travel_miles": 630.5,
+          "timezone_shift_hours": 1.0,
+          "games_last_7_days": 7
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 823525,
+          "previous_game_time": "2026-07-05T17:35:00Z",
+          "previous_venue": "Yankee Stadium",
+          "rest_hours": 54.1,
+          "travel_miles": 1017.7,
+          "timezone_shift_hours": 1.0,
+          "games_last_7_days": 6
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 676282,
+          "pitcher": "Joey Cantillo",
+          "profile": {
+            "pitcher_id": 676282,
+            "starts": 18,
+            "ERA": 3.86,
+            "FIP": 4.475,
+            "xFIP": 4.475,
+            "K_pct": 23.24,
+            "BB_pct": 11.49,
+            "HR9": 1.19,
+            "avg_IP": 5.056,
+            "avg_pitches": 86.4,
+            "batters_faced": 383,
+            "innings": 91.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": 671737,
+          "pitcher": "Taj Bradley",
+          "profile": {
+            "pitcher_id": 671737,
+            "starts": 16,
+            "ERA": 3.86,
+            "FIP": 4.012,
+            "xFIP": 4.012,
+            "K_pct": 26.91,
+            "BB_pct": 10.03,
+            "HR9": 1.22,
+            "avg_IP": 5.542,
+            "avg_pitches": 96.6,
+            "batters_faced": 379,
+            "innings": 88.667,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "824579": {
+      "game_pk": 824579,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-07T23:40:00Z",
+      "away": "BOS",
+      "home": "CHW",
+      "venue": {
+        "venue_id": 4,
+        "venue": "Rate Field",
+        "latitude": 41.83,
+        "longitude": -87.634167,
+        "field_azimuth": 127.0,
+        "elevation_ft": 595.0,
+        "timezone": "America/Chicago",
+        "utc_offset": -5.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        },
+        "home": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-07T23:00:00+00:00",
+        "dome": false,
+        "temp_f": 73.3,
+        "temperature_f": 73.3,
+        "humidity_pct": 76.0,
+        "precipitation_probability_pct": 0.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1017.0,
+        "wind_mph": 3.6,
+        "wind_direction_deg": 97.0,
+        "wind_gust_mph": 7.8,
+        "wind_out_mph": -3.12
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 813349,
+            "player": "Connelly Early",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left elbow inflammation."
+          },
+          {
+            "player_id": 676979,
+            "player": "Garrett Crochet",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left shoulder inflammation."
+          },
+          {
+            "player_id": 643396,
+            "player": "Isiah Kiner-Falefa",
+            "position": "2B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left forearm inflammation"
+          },
+          {
+            "player_id": 670912,
+            "player": "Johan Oviedo",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow strain.."
+          },
+          {
+            "player_id": 676710,
+            "player": "Kutter Crawford",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right wrist surgery"
+          },
+          {
+            "player_id": 691785,
+            "player": "Marcelo Mayer",
+            "position": "2B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Bone stress reaction to the left ulna."
+          },
+          {
+            "player_id": 686765,
+            "player": "Nick Sogard",
+            "position": "3B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right oblique strain."
+          },
+          {
+            "player_id": 701350,
+            "player": "Roman Anthony",
+            "position": "LF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 656557,
+            "player": "Tanner Houck",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 596115,
+            "player": "Trevor Story",
+            "position": "SS",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Sports hernia."
+          },
+          {
+            "player_id": 671213,
+            "player": "Triston Casas",
+            "position": "1B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Recovery from left patellar tendon repair"
+          }
+        ],
+        "home": [
+          {
+            "player_id": 669720,
+            "player": "Austin Hays",
+            "position": "LF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left calf strain."
+          },
+          {
+            "player_id": 681460,
+            "player": "Brooks Baldwin",
+            "position": "LF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow sprain"
+          },
+          {
+            "player_id": 689672,
+            "player": "Drew Thorpe",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Recovery from Tommy John surgery."
+          },
+          {
+            "player_id": 677592,
+            "player": "Everson Pereira",
+            "position": "RF",
+            "status_code": "D7",
+            "status": "Injured 7-Day",
+            "injury": "Concussion."
+          },
+          {
+            "player_id": 673929,
+            "player": "Jordan Leasure",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right flexor strain."
+          },
+          {
+            "player_id": 681066,
+            "player": "Ky Bush",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 678024,
+            "player": "Mike Vasil",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Tommy John surgery recovery."
+          },
+          {
+            "player_id": 808959,
+            "player": "Munetaka Murakami",
+            "position": "1B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right hamstring strain."
+          },
+          {
+            "player_id": 672860,
+            "player": "Prelander Berroa",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Tommy John surgery recovery"
+          },
+          {
+            "player_id": 695020,
+            "player": "Tanner Murray",
+            "position": "LF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left shoulder dislocation."
+          },
+          {
+            "player_id": 656457,
+            "player": "Tyler Gilbert",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left shoulder impingement."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 824010,
+          "previous_game_time": "2026-07-06T01:30:00Z",
+          "previous_venue": "Angel Stadium",
+          "rest_hours": 46.2,
+          "travel_miles": 1731.2,
+          "timezone_shift_hours": 2.0,
+          "games_last_7_days": 6
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 824413,
+          "previous_game_time": "2026-07-05T18:00:00Z",
+          "previous_venue": "Progressive Field",
+          "rest_hours": 53.7,
+          "travel_miles": 307.9,
+          "timezone_shift_hours": 1.0,
+          "games_last_7_days": 7
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 801139,
+          "pitcher": "Payton Tolle",
+          "profile": {
+            "pitcher_id": 801139,
+            "starts": 13,
+            "ERA": 3.39,
+            "FIP": 3.617,
+            "xFIP": 3.617,
+            "K_pct": 24.26,
+            "BB_pct": 7.54,
+            "HR9": 0.97,
+            "avg_IP": 5.718,
+            "avg_pitches": 85.8,
+            "batters_faced": 305,
+            "innings": 74.333,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": 702273,
+          "pitcher": "Noah Schultz",
+          "profile": {
+            "pitcher_id": 702273,
+            "starts": 9,
+            "ERA": 5.86,
+            "FIP": 4.944,
+            "xFIP": 4.944,
+            "K_pct": 21.51,
+            "BB_pct": 13.98,
+            "HR9": 1.05,
+            "avg_IP": 4.778,
+            "avg_pitches": 82.1,
+            "batters_faced": 186,
+            "innings": 43.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "822881": {
+      "game_pk": 822881,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-08T00:05:00Z",
+      "away": "LAA",
+      "home": "TEX",
+      "venue": {
+        "venue_id": 5325,
+        "venue": "Globe Life Field",
+        "latitude": 32.747299,
+        "longitude": -97.081818,
+        "field_azimuth": 30.0,
+        "elevation_ft": 545.0,
+        "timezone": "America/Chicago",
+        "utc_offset": -5.0,
+        "roof_type": "Retractable",
+        "turf_type": "Artificial Turf"
+      },
+      "lineups": {
+        "away": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        },
+        "home": {
+          "status": "unavailable",
+          "source": null,
+          "players": []
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-08T00:00:00+00:00",
+        "dome": false,
+        "temp_f": 94.2,
+        "temperature_f": 94.2,
+        "humidity_pct": 42.0,
+        "precipitation_probability_pct": 14.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1013.4,
+        "wind_mph": 12.8,
+        "wind_direction_deg": 164.0,
+        "wind_gust_mph": 17.9,
+        "wind_out_mph": 8.89
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 624428,
+            "player": "Adam Frazier",
+            "position": "2B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 543685,
+            "player": "Anthony Rendon",
+            "position": "3B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left hip labrum surgery."
+          },
+          {
+            "player_id": 690829,
+            "player": "Ben Joyce",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder inflammation."
+          },
+          {
+            "player_id": 680570,
+            "player": "Grayson Rodriguez",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Low back inflammation."
+          },
+          {
+            "player_id": 672569,
+            "player": "Gustavo Campero",
+            "position": "C",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right hand fracture."
+          },
+          {
+            "player_id": 686799,
+            "player": "Jack Kochanowicz",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 545361,
+            "player": "Mike Trout",
+            "position": "CF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right hamstring strain."
+          },
+          {
+            "player_id": 596112,
+            "player": "Robert Stephenson",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 665861,
+            "player": "Sebasti\u00e1n Rivero",
+            "position": "C",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left hamate fracture."
+          },
+          {
+            "player_id": 518595,
+            "player": "Travis d'Arnaud",
+            "position": "C",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right foot plantar fasciitis."
+          },
+          {
+            "player_id": 660162,
+            "player": "Yo\u00e1n Moncada",
+            "position": "3B",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right knee inflammation."
+          },
+          {
+            "player_id": 579328,
+            "player": "Yusei Kikuchi",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left shoulder inflammation."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 691945,
+            "player": "Carter Baumler",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right intercostal strain."
+          },
+          {
+            "player_id": 674003,
+            "player": "Cody Bradford",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow surgery rehab."
+          },
+          {
+            "player_id": 683227,
+            "player": "Cody Freeman",
+            "position": "3B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Herniated disc"
+          },
+          {
+            "player_id": 608369,
+            "player": "Corey Seager",
+            "position": "SS",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Lower back inflammation."
+          },
+          {
+            "player_id": 643376,
+            "player": "Danny Jansen",
+            "position": "C",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right forearm strain"
+          },
+          {
+            "player_id": 683004,
+            "player": "Jack Leiter",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right ankle posterior impingement."
+          },
+          {
+            "player_id": 596001,
+            "player": "Jakob Junis",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left hip impingement."
+          },
+          {
+            "player_id": 656222,
+            "player": "Jalen Beeks",
+            "position": "P",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Low back spasms."
+          },
+          {
+            "player_id": 656756,
+            "player": "Jordan Montgomery",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Recovering from Tommy John surgery"
+          },
+          {
+            "player_id": 680737,
+            "player": "Michael Helman",
+            "position": "CF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right finger fracture"
+          },
+          {
+            "player_id": 676395,
+            "player": "Robert Garcia",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 694671,
+            "player": "Wyatt Langford",
+            "position": "LF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left hamstring strain."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 824010,
+          "previous_game_time": "2026-07-06T01:30:00Z",
+          "previous_venue": "Angel Stadium",
+          "rest_hours": 46.6,
+          "travel_miles": 1201.7,
+          "timezone_shift_hours": 2.0,
+          "games_last_7_days": 6
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 822879,
+          "previous_game_time": "2026-07-05T19:30:00Z",
+          "previous_venue": "Globe Life Field",
+          "rest_hours": 52.6,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 667755,
+          "pitcher": "Jos\u00e9 Soriano",
+          "profile": {
+            "pitcher_id": 667755,
+            "starts": 18,
+            "ERA": 3.42,
+            "FIP": 4.1,
+            "xFIP": 4.1,
+            "K_pct": 26.24,
+            "BB_pct": 11.58,
+            "HR9": 1.08,
+            "avg_IP": 5.556,
+            "avg_pitches": 94.0,
+            "batters_faced": 423,
+            "innings": 100.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": 594798,
+          "pitcher": "Jacob deGrom",
+          "profile": {
+            "pitcher_id": 594798,
+            "starts": 17,
+            "ERA": 3.48,
+            "FIP": 3.597,
+            "xFIP": 3.597,
+            "K_pct": 30.26,
+            "BB_pct": 5.26,
+            "HR9": 1.51,
+            "avg_IP": 5.627,
+            "avg_pitches": 89.7,
+            "batters_faced": 380,
+            "innings": 95.667,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "823280": {
+      "game_pk": 823280,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-08T01:40:00Z",
+      "away": "ARI",
+      "home": "SDP",
+      "venue": {
+        "venue_id": 2680,
+        "venue": "Petco Park",
+        "latitude": 32.707861,
+        "longitude": -117.157278,
+        "field_azimuth": 0.0,
+        "elevation_ft": 23.0,
+        "timezone": "America/Los_Angeles",
+        "utc_offset": -7.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Ketel Marte",
+              "position": "2B",
+              "bats": "S"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Geraldo Perdomo",
+              "position": "SS",
+              "bats": "S"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Corbin Carroll",
+              "position": "RF",
+              "bats": "L"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "Gabriel Moreno",
+              "position": "C",
+              "bats": "R"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Lourdes Gurriel",
+              "position": "DH",
+              "bats": "R"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Max Kepler",
+              "position": "LF",
+              "bats": "L"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Nolan Arenado",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Ildemaro Vargas",
+              "position": "1B",
+              "bats": "S"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Tommy Troy",
+              "position": "CF",
+              "bats": "R"
+            }
+          ]
+        },
+        "home": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Fernando Tatis",
+              "position": "RF",
+              "bats": "R"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Jake Cronenworth",
+              "position": "2B",
+              "bats": "L"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Manny Machado",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "Gavin Sheets",
+              "position": "1B",
+              "bats": "L"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Ty France",
+              "position": "DH",
+              "bats": "R"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Jackson Merrill",
+              "position": "CF",
+              "bats": "L"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Samad Taylor",
+              "position": "LF",
+              "bats": "R"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Sung-Mun Song",
+              "position": "SS",
+              "bats": "L"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Rodolfo Duran",
+              "position": "C",
+              "bats": "R"
+            }
+          ]
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-08T02:00:00+00:00",
+        "dome": false,
+        "temp_f": 70.3,
+        "temperature_f": 70.3,
+        "humidity_pct": 73.0,
+        "precipitation_probability_pct": 1.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1012.9,
+        "wind_mph": 7.0,
+        "wind_direction_deg": 310.0,
+        "wind_gust_mph": 8.5,
+        "wind_out_mph": -4.5
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 640462,
+            "player": "A.J. Puk",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left ulnar collateral ligament surgery recovery."
+          },
+          {
+            "player_id": 685314,
+            "player": "Andrew Saalfrank",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left labrum repair surgery."
+          },
+          {
+            "player_id": 686796,
+            "player": "Blake Walston",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left UCL surgery"
+          },
+          {
+            "player_id": 669203,
+            "player": "Corbin Burnes",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right ulnar collateral ligament surgery recovery."
+          },
+          {
+            "player_id": 691441,
+            "player": "Cristian Mena",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder strain"
+          },
+          {
+            "player_id": 691783,
+            "player": "Jordan Lawlar",
+            "position": "LF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right hamstring strain"
+          },
+          {
+            "player_id": 679885,
+            "player": "Justin Martinez",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Recovery from right ulnar collateral ligament surgery."
+          },
+          {
+            "player_id": 647336,
+            "player": "Michael Soroka",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left glute strain"
+          },
+          {
+            "player_id": 669194,
+            "player": "Ryne Nelson",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Strained right elbow."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 663773,
+            "player": "Bryan Hoeing",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Torn right elbow flexor tendon."
+          },
+          {
+            "player_id": 688158,
+            "player": "David Morgan",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left knee inflammation."
+          },
+          {
+            "player_id": 666023,
+            "player": "Freddy Fermin",
+            "position": "C",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Head contusion."
+          },
+          {
+            "player_id": 592094,
+            "player": "Jason Adam",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shoulder strain"
+          },
+          {
+            "player_id": 669093,
+            "player": "Jeremiah Estrada",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right knee inflammation"
+          },
+          {
+            "player_id": 605397,
+            "player": "Joe Musgrove",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 608337,
+            "player": "Lucas Giolito",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 663362,
+            "player": "Matt Waldron",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right brachialis muscle injury."
+          },
+          {
+            "player_id": 601713,
+            "player": "Nick Pivetta",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 657656,
+            "player": "Ram\u00f3n Laureano",
+            "position": "LF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 681190,
+            "player": "Randy V\u00e1squez",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right ankle contusion."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 823282,
+          "previous_game_time": "2026-07-07T01:40:00Z",
+          "previous_venue": "Petco Park",
+          "rest_hours": 24.0,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 823282,
+          "previous_game_time": "2026-07-07T01:40:00Z",
+          "previous_venue": "Petco Park",
+          "rest_hours": 24.0,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 668678,
+          "pitcher": "Zac Gallen",
+          "profile": {
+            "pitcher_id": 668678,
+            "starts": 18,
+            "ERA": 6.36,
+            "FIP": 5.428,
+            "xFIP": 5.428,
+            "K_pct": 13.53,
+            "BB_pct": 6.76,
+            "HR9": 1.66,
+            "avg_IP": 5.111,
+            "avg_pitches": 86.0,
+            "batters_faced": 414,
+            "innings": 92.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": null,
+          "pitcher": null,
+          "profile": {}
+        }
+      }
+    },
+    "823203": {
+      "game_pk": 823203,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-08T01:45:00Z",
+      "away": "TOR",
+      "home": "SFG",
+      "venue": {
+        "venue_id": 2395,
+        "venue": "Oracle Park",
+        "latitude": 37.778383,
+        "longitude": -122.389448,
+        "field_azimuth": 85.0,
+        "elevation_ft": 0.0,
+        "timezone": "America/Los_Angeles",
+        "utc_offset": -7.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Ernie Clement",
+              "position": "2B",
+              "bats": "R"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Nathan Lukes",
+              "position": "RF",
+              "bats": "L"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Vladimir Guerrero",
+              "position": "1B",
+              "bats": "R"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "Kazuma Okamoto",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Sean Keys",
+              "position": "DH",
+              "bats": "L"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Alejandro Kirk",
+              "position": "C",
+              "bats": "R"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Daulton Varsho",
+              "position": "CF",
+              "bats": "L"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Myles Straw",
+              "position": "LF",
+              "bats": "R"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Andres Gimenez",
+              "position": "SS",
+              "bats": "L"
+            }
+          ]
+        },
+        "home": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Heliot Ramos",
+              "position": "RF",
+              "bats": "R"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Luis Arraez",
+              "position": "2B",
+              "bats": "L"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Casey Schmitt",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "Rafael Devers",
+              "position": "DH",
+              "bats": "L"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Jung Hoo Lee",
+              "position": "CF",
+              "bats": "L"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Willy Adames",
+              "position": "SS",
+              "bats": "R"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Bryce Eldridge",
+              "position": "1B",
+              "bats": "L"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Victor Bericoto",
+              "position": "LF",
+              "bats": "R"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Eric Haase",
+              "position": "C",
+              "bats": "R"
+            }
+          ]
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-08T02:00:00+00:00",
+        "dome": false,
+        "temp_f": 57.7,
+        "temperature_f": 57.7,
+        "humidity_pct": 87.0,
+        "precipitation_probability_pct": 0.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1017.4,
+        "wind_mph": 18.7,
+        "wind_direction_deg": 287.0,
+        "wind_gust_mph": 31.8,
+        "wind_out_mph": 17.34
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 680718,
+            "player": "Addison Barger",
+            "position": "RF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 623993,
+            "player": "Anthony Santander",
+            "position": "RF",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left shoulder labral tear."
+          },
+          {
+            "player_id": 670102,
+            "player": "Bowden Francis",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow surgery."
+          },
+          {
+            "player_id": 664074,
+            "player": "Cody Ponce",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right knee ACL sprain."
+          },
+          {
+            "player_id": 660821,
+            "player": "Jes\u00fas S\u00e1nchez",
+            "position": "RF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right ankle sprain"
+          },
+          {
+            "player_id": 573009,
+            "player": "Joe Mantiply",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left knee inflammation."
+          },
+          {
+            "player_id": 621244,
+            "player": "Jos\u00e9 Berr\u00edos",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow stress fracture."
+          },
+          {
+            "player_id": 672820,
+            "player": "Lenyn Sosa",
+            "position": "2B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Right wrist contusion."
+          },
+          {
+            "player_id": 453286,
+            "player": "Max Scherzer",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Back spasms."
+          },
+          {
+            "player_id": 554340,
+            "player": "Yimi Garc\u00eda",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow ulnar nerve and AC joint surgery."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 691740,
+            "player": "Daniel Susac",
+            "position": "C",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Low back strain"
+          },
+          {
+            "player_id": 664056,
+            "player": "Harrison Bader",
+            "position": "CF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left plantar fasciitis"
+          },
+          {
+            "player_id": 806185,
+            "player": "Hayden Birdsong",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Tommy John surgery."
+          },
+          {
+            "player_id": 671345,
+            "player": "Jason Foley",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Recovery from right shoulder surgery."
+          },
+          {
+            "player_id": 666711,
+            "player": "Joel Peguero",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left hamstring strain"
+          },
+          {
+            "player_id": 676130,
+            "player": "Jos\u00e9 Butt\u00f3",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right arm fatigue"
+          },
+          {
+            "player_id": 676775,
+            "player": "Keaton Winn",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right elbow strain"
+          },
+          {
+            "player_id": 656305,
+            "player": "Matt Chapman",
+            "position": "3B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Abdominal strain."
+          },
+          {
+            "player_id": 657424,
+            "player": "Matt Gage",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Left elbow strain."
+          },
+          {
+            "player_id": 678495,
+            "player": "Randy Rodr\u00edguez",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 592858,
+            "player": "Rowan Wick",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Recovery from Tommy John surgery."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 823205,
+          "previous_game_time": "2026-07-07T01:45:00Z",
+          "previous_venue": "Oracle Park",
+          "rest_hours": 24.0,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 823205,
+          "previous_game_time": "2026-07-07T01:45:00Z",
+          "previous_venue": "Oracle Park",
+          "rest_hours": 24.0,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": null,
+          "pitcher": null,
+          "profile": {}
+        },
+        "home": {
+          "pitcher_id": 686790,
+          "pitcher": "Trevor McDonald",
+          "profile": {
+            "pitcher_id": 686790,
+            "starts": 11,
+            "ERA": 4.42,
+            "FIP": 3.832,
+            "xFIP": 3.832,
+            "K_pct": 20.16,
+            "BB_pct": 7.66,
+            "HR9": 0.63,
+            "avg_IP": 5.182,
+            "avg_pitches": 85.4,
+            "batters_faced": 248,
+            "innings": 57.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    },
+    "823929": {
+      "game_pk": 823929,
+      "game_date": "2026-07-07",
+      "game_time": "2026-07-08T02:10:00Z",
+      "away": "COL",
+      "home": "LAD",
+      "venue": {
+        "venue_id": 22,
+        "venue": "UNIQLO Field at Dodger Stadium",
+        "latitude": 34.07368,
+        "longitude": -118.24053,
+        "field_azimuth": 26.0,
+        "elevation_ft": 515.0,
+        "timezone": "America/Los_Angeles",
+        "utc_offset": -7.0,
+        "roof_type": "Open",
+        "turf_type": "Grass"
+      },
+      "lineups": {
+        "away": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Willi Castro",
+              "position": "2B",
+              "bats": "S"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Kyle Karros",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Hunter Goodman",
+              "position": "C",
+              "bats": "R"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "TJ Rumfield",
+              "position": "1B",
+              "bats": "L"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Cole Carrigg",
+              "position": "CF",
+              "bats": "S"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Tyler Freeman",
+              "position": "RF",
+              "bats": "R"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Jake McCarthy",
+              "position": "LF",
+              "bats": "L"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Troy Johnston",
+              "position": "DH",
+              "bats": "L"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Ezequiel Tovar",
+              "position": "SS",
+              "bats": "R"
+            }
+          ]
+        },
+        "home": {
+          "status": "projected",
+          "source": "Rotowire (projected)",
+          "players": [
+            {
+              "order": 1,
+              "player_id": null,
+              "player": "Shohei Ohtani",
+              "position": "DH",
+              "bats": "L"
+            },
+            {
+              "order": 2,
+              "player_id": null,
+              "player": "Andy Pages",
+              "position": "CF",
+              "bats": "R"
+            },
+            {
+              "order": 3,
+              "player_id": null,
+              "player": "Freddie Freeman",
+              "position": "1B",
+              "bats": "L"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "Mookie Betts",
+              "position": "SS",
+              "bats": "R"
+            },
+            {
+              "order": 5,
+              "player_id": null,
+              "player": "Kyle Tucker",
+              "position": "RF",
+              "bats": "L"
+            },
+            {
+              "order": 6,
+              "player_id": null,
+              "player": "Teoscar Hernandez",
+              "position": "LF",
+              "bats": "R"
+            },
+            {
+              "order": 7,
+              "player_id": null,
+              "player": "Max Muncy",
+              "position": "3B",
+              "bats": "L"
+            },
+            {
+              "order": 8,
+              "player_id": null,
+              "player": "Miguel Rojas",
+              "position": "2B",
+              "bats": "R"
+            },
+            {
+              "order": 9,
+              "player_id": null,
+              "player": "Dalton Rushing",
+              "position": "C",
+              "bats": "L"
+            }
+          ]
+        }
+      },
+      "weather": {
+        "status": "forecast",
+        "source": "Open-Meteo hourly best-match",
+        "forecast_time": "2026-07-08T02:00:00+00:00",
+        "dome": false,
+        "temp_f": 75.6,
+        "temperature_f": 75.6,
+        "humidity_pct": 54.0,
+        "precipitation_probability_pct": 0.0,
+        "precipitation_in": 0.0,
+        "pressure_hpa": 1011.4,
+        "wind_mph": 7.1,
+        "wind_direction_deg": 242.0,
+        "wind_gust_mph": 9.6,
+        "wind_out_mph": 5.74
+      },
+      "umpire": {
+        "status": "unannounced",
+        "umpire_id": null,
+        "umpire": null,
+        "profile": null
+      },
+      "injuries": {
+        "away": [
+          {
+            "player_id": 680604,
+            "player": "Blas Casta\u00f1o",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right pectoral strain."
+          },
+          {
+            "player_id": 686668,
+            "player": "Brenton Doyle",
+            "position": "CF",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left oblique contusion."
+          },
+          {
+            "player_id": 801403,
+            "player": "Chase Dollander",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow strain."
+          },
+          {
+            "player_id": 677955,
+            "player": "Jaden Hill",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shoulder tendonitis."
+          },
+          {
+            "player_id": 500779,
+            "player": "Jose Quintana",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow sprain."
+          },
+          {
+            "player_id": 592178,
+            "player": "Kris Bryant",
+            "position": "DH",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Lumbar degenerative disk disease."
+          },
+          {
+            "player_id": 685326,
+            "player": "McCade Brown",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder inflammation."
+          },
+          {
+            "player_id": 701487,
+            "player": "Pierson Ohl",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 678020,
+            "player": "Seth Halvorsen",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right shoulder inflammation."
+          },
+          {
+            "player_id": 608372,
+            "player": "Tomoyuki Sugano",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Back spasms."
+          },
+          {
+            "player_id": 700327,
+            "player": "Welinton Herrera",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow inflammation."
+          }
+        ],
+        "home": [
+          {
+            "player_id": 676508,
+            "player": "Ben Casparius",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder inflammation"
+          },
+          {
+            "player_id": 605483,
+            "player": "Blake Snell",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Left elbow loose bodies"
+          },
+          {
+            "player_id": 595014,
+            "player": "Blake Treinen",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Right elbow inflammation."
+          },
+          {
+            "player_id": 676272,
+            "player": "Bobby Miller",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder soreness."
+          },
+          {
+            "player_id": 660813,
+            "player": "Brusdar Graterol",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 621242,
+            "player": "Edwin D\u00edaz",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right elbow loose bodies."
+          },
+          {
+            "player_id": 571771,
+            "player": "Enrique Hern\u00e1ndez",
+            "position": "1B",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Left oblique strain."
+          },
+          {
+            "player_id": 694813,
+            "player": "Gavin Stone",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Right shoulder inflammation."
+          },
+          {
+            "player_id": 664776,
+            "player": "Jake Cousins",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 689017,
+            "player": "Landon Knack",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": null
+          },
+          {
+            "player_id": 607192,
+            "player": "Tyler Glasnow",
+            "position": "P",
+            "status_code": "D60",
+            "status": "Injured 60-Day",
+            "injury": "Low back spasms."
+          },
+          {
+            "player_id": 669257,
+            "player": "Will Smith",
+            "position": "C",
+            "status_code": "D10",
+            "status": "Injured 10-Day",
+            "injury": "Neck inflammation."
+          }
+        ]
+      },
+      "travel": {
+        "away": {
+          "status": "available",
+          "previous_game_pk": 823930,
+          "previous_game_time": "2026-07-07T02:10:00Z",
+          "previous_venue": "UNIQLO Field at Dodger Stadium",
+          "rest_hours": 24.0,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 6
+        },
+        "home": {
+          "status": "available",
+          "previous_game_pk": 823930,
+          "previous_game_time": "2026-07-07T02:10:00Z",
+          "previous_venue": "UNIQLO Field at Dodger Stadium",
+          "rest_hours": 24.0,
+          "travel_miles": 0.0,
+          "timezone_shift_hours": 0.0,
+          "games_last_7_days": 7
+        }
+      },
+      "probable_pitchers": {
+        "away": {
+          "pitcher_id": 547179,
+          "pitcher": "Michael Lorenzen",
+          "profile": {
+            "pitcher_id": 547179,
+            "starts": 18,
+            "ERA": 6.91,
+            "FIP": 4.898,
+            "xFIP": 4.898,
+            "K_pct": 16.18,
+            "BB_pct": 7.73,
+            "HR9": 1.36,
+            "avg_IP": 4.778,
+            "avg_pitches": 88.2,
+            "batters_faced": 414,
+            "innings": 86.0,
+            "data_source": "MLB Stats API season fallback"
+          }
+        },
+        "home": {
+          "pitcher_id": 680736,
+          "pitcher": "Justin Wrobleski",
+          "profile": {
+            "pitcher_id": 680736,
+            "starts": 14,
+            "ERA": 2.8,
+            "FIP": 3.586,
+            "xFIP": 3.586,
+            "K_pct": 17.25,
+            "BB_pct": 4.85,
+            "HR9": 0.77,
+            "avg_IP": 6.667,
+            "avg_pitches": 95.8,
+            "batters_faced": 371,
+            "innings": 93.333,
+            "data_source": "MLB Stats API season fallback"
+          }
+        }
+      }
+    }
+  }
+}

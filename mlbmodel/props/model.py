@@ -22,7 +22,14 @@ from mlbmodel.baseball.context import (
     umpire_run_factor,
     weather_run_factor,
 )
+from mlbmodel.baseball.metrics import (
+    opponent_offense_strength,
+    pitcher_allowed_skill_adjustment,
+    sp_split_skill_adjustment,
+)
 from mlbmodel.baseball.repository import DataRepository
+from mlbmodel.report.game_keys import parse_game_key
+from mlbmodel.sources.sync_mlbma import matchup_keys
 
 LG_BABIP = 0.295
 LG_LOB = 0.72
@@ -162,6 +169,7 @@ class PitcherProjectionEngine:
         for row in self.team_mix:
             team = str(row.get("team_abbr") or "").upper()
             self.team_mix_by_team.setdefault(team, []).append(row)
+        self.sp_metric_splits = _rows(repo.load("sp_metric_splits.csv"))
         self.pitch_baselines = self._pitch_baselines()
 
     def _preferred_mix(self, recent: str, season: str, key: str) -> list[dict]:
@@ -299,6 +307,10 @@ class PitcherProjectionEngine:
             if row is None:
                 continue
             score = _number(row.get("projOSI")) or _number(row.get("OSI"))
+            abq = _number(row.get("ABQ")) or _number(row.get("abq"))
+            rcv = _number(row.get("RCV")) or _number(row.get("rcv"))
+            if score is not None and abq is not None and rcv is not None:
+                score = 0.55 * score + 0.25 * abq + 0.20 * rcv
             if score is None:
                 continue
             weight = float(ORDER_WEIGHTS[min(index, len(ORDER_WEIGHTS) - 1)])
@@ -410,6 +422,14 @@ class PitcherProjectionEngine:
                     "lineup_whiff_pct": round(lineup_whiff, 1),
                     "pitcher_xwoba": round(pitcher_xwoba, 3),
                     "lineup_xwoba": round(lineup_xwoba, 3),
+                    "lineup_ba": (
+                        round(ba, 3) if (ba := _number(opponent_row.get("batting_avg"))) is not None else None
+                    ),
+                    "lineup_ops": (
+                        round(ops, 3)
+                        if (ops := _number(opponent_row.get("xwoba"))) is not None
+                        else round(lineup_xwoba * 2.8, 3)
+                    ),
                     "k_delta": round(score * 16, 2),
                     "er_factor_delta": round(-score * 1.8, 3),
                     "edge": direction_label(score),
@@ -567,6 +587,13 @@ class PitcherProjectionEngine:
             * travel_offense_factor(travel)
             * injury_factor
         )
+        opp_ctx = game.home_context if side == "away" else game.away_context
+        opp_osi = game.home_osi if side == "away" else game.away_osi
+        opp_strength = opponent_offense_strength(opp_ctx, opp_osi)
+        run_factor *= pitcher_allowed_skill_adjustment(profile, opp_strength)
+        run_factor *= sp_split_skill_adjustment(
+            profile, self.sp_metric_splits, pitcher_hand
+        )
         era = _number(profile.get("ERA")) or skill_era
         blended_era = skill_era * 0.70 + era * 0.30
         er_mean = max(0.2, blended_era / 9 * expected_ip * run_factor)
@@ -688,11 +715,14 @@ def build_pitcher_board(repo: DataRepository) -> list[dict]:
     if slate is None:
         return []
     board = []
-    for _, row in slate.iterrows():
+    slate_rows = [row.to_dict() for _, row in slate.iterrows()]
+    keys = matchup_keys(slate_rows)
+    for row, key in zip(slate_rows, keys, strict=True):
         away = str(row.get("Away") or "").upper().strip()
         home = str(row.get("Home") or "").upper().strip()
+        _, _, game_number = parse_game_key(key)
         try:
-            game = repo.load_game(away, home)
+            game = repo.load_game(away, home, game_number=game_number)
         except (FileNotFoundError, ValueError):
             continue
         board.append(
