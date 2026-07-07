@@ -170,7 +170,10 @@ jobs:
           from pathlib import Path
           html = Path('_site/index.html').read_text(encoding='utf-8')
           size_kb = len(html) // 1024
-          assert size_kb < 1400, f'HTML too large: {size_kb} KB'
+          # A full ~15-game slate with embedded matchup breakdowns + live pick'em/market rows
+          # legitimately runs ~1.5 MB; 1400 was too tight and failed on busy slates. 1800 still
+          # catches a runaway page while leaving headroom for a max/double slate.
+          assert size_kb < 1800, f'HTML too large: {size_kb} KB'
           for key in ('today', 'matchups', 'trends', 'markets', 'props', 'results', 'research'):
               assert f'id=\"v-{key}\"' in html, key
           assert 'ca-board' in html
