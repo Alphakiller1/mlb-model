@@ -1,7 +1,6 @@
 """Point-in-time MLBMA CSV access with explicit freshness and fallbacks."""
 from __future__ import annotations
 
-import copy
 import datetime as dt
 import json
 import math
@@ -18,15 +17,6 @@ from mlbmodel.baseball.features import (
     lineup_features,
     normalize_name,
     starter_features,
-)
-from mlbmodel.baseball.arsenal import attach_arsenal
-from mlbmodel.baseball.metrics import (
-    bullpen_allowed_adjustment,
-    bullpen_platoon_adjustment,
-    fielding_defense_factor,
-    opponent_offense_strength,
-    pitcher_allowed_skill_adjustment,
-    sp_split_skill_adjustment,
 )
 from mlbmodel.baseball.model import GameData, TeamContext, clip
 
@@ -57,8 +47,6 @@ class DataRepository:
     def __init__(self, data_dir: Path | str | None = None):
         self.data_dir = Path(data_dir or settings.DATA_DIR)
         self._cache: dict[str, pd.DataFrame | None] = {}
-        self._game_cache: dict[tuple[str, str, int], GameData] = {}
-        self._trend_cache: dict[tuple[str, str], dict] = {}
 
     def load(self, filename: str) -> pd.DataFrame | None:
         if filename not in self._cache:
@@ -82,32 +70,8 @@ class DataRepository:
         modified = dt.datetime.fromtimestamp(path.stat().st_mtime, dt.timezone.utc)
         return (dt.datetime.now(dt.timezone.utc) - modified).total_seconds() / 3600
 
-    def effective_slate_date(self) -> str:
-        from mlbmodel.sources.sync_mlbma import resolve_slate_date
-
-        manifest = self.sync_manifest()
-        pipeline_date = str(
-            manifest.get("pipeline_slate_date")
-            or manifest.get("Slate_Date_ET")
-            or ""
-        )[:10]
-        metadata = {"Slate_Date_ET": pipeline_date} if pipeline_date else {}
-        return resolve_slate_date(None, metadata=metadata)
-
     def slate(self) -> pd.DataFrame | None:
-        frame = self.load("today_matchups.csv")
-        if frame is None or frame.empty:
-            return frame
-        if "Slate_Date" not in frame.columns:
-            return frame
-        target = self.effective_slate_date()
-        filtered = frame[frame["Slate_Date"].astype(str).str[:10] == target]
-        if not filtered.empty:
-            return filtered.copy()
-        dates = sorted(frame["Slate_Date"].astype(str).str[:10].unique())
-        if len(dates) == 1:
-            return frame.copy()
-        return filtered.copy()
+        return self.load("today_matchups.csv")
 
     def sync_manifest(self) -> dict:
         path = self.data_dir / "mlbma_sync.json"
@@ -188,22 +152,10 @@ class DataRepository:
             proj_osi=_number(row.get("proj_osi")),
             osi_l7=_number(row.get("osi_l7")),
             osi_l14=_number(row.get("osi_l14")),
-            abq_l7=_number(row.get("abq_l7")),
-            abq_l14=_number(row.get("abq_l14")),
-            rcv_l7=_number(row.get("rcv_l7")),
-            rcv_l14=_number(row.get("rcv_l14")),
-            oor=_number(row.get("oor")),
             woba=_number(row.get(f"{venue}_woba")),
             platoon_osi=_number(row.get(f"osi_vs_{suffix}")),
-            abq_vs_lhp=_number(row.get("abq_vs_lhp")),
-            abq_vs_rhp=_number(row.get("abq_vs_rhp")),
-            rcv_vs_lhp=_number(row.get("rcv_vs_lhp")),
-            rcv_vs_rhp=_number(row.get("rcv_vs_rhp")),
-            obr_vs_lhp=_number(row.get("obr_vs_lhp")),
-            obr_vs_rhp=_number(row.get("obr_vs_rhp")),
             bullpen_era=_number(row.get("bullpen_era")),
             bullpen_high_lev_era=_number(row.get("bullpen_high_lev_era")),
-            bullpen_osi_allowed=_number(row.get("bullpen_osi_allowed")),
             avg_pitching_score=_number(row.get("avg_pitching_score")),
             window_direction=str(row.get("window_direction") or "").strip() or None,
         )
@@ -221,48 +173,8 @@ class DataRepository:
             factor *= 1 + settings.BULLPEN_IR_SENSITIVITY * (ir - 28.0)
         return clip(factor, *settings.PITCH_FACTOR_CLIP)
 
-    def signals_today(self) -> list[dict]:
-        frame = self.load("signals_today.csv")
-        return frame.to_dict("records") if frame is not None else []
-
-    def trend_features(self, away: str, home: str) -> dict:
-        """Cached situational-trend feature row (one parse per game per repo)."""
-        key = (away.upper().strip(), home.upper().strip())
-        if key not in self._trend_cache:
-            try:
-                from mlbmodel.trends.report import trend_features_for_game
-
-                self._trend_cache[key] = trend_features_for_game(self, away, home)
-            except Exception:
-                self._trend_cache[key] = {}
-        return self._trend_cache[key]
-
-    def enrich_trends(self, gd: GameData, away: str, home: str) -> None:
-        gd.trend_features = self.trend_features(away, home)
-
-    def load_game(
-        self,
-        away: str,
-        home: str,
-        *,
-        game_number: int = 1,
-        pitcher_rows: list[dict] | None = None,
-    ) -> GameData:
+    def load_game(self, away: str, home: str) -> GameData:
         away, home = away.upper().strip(), home.upper().strip()
-        game_number = int(game_number or 1)
-        key = (away, home, game_number)
-        if key not in self._game_cache:
-            self._game_cache[key] = self._build_game_data(away, home, game_number=game_number)
-        gd = (
-            copy.deepcopy(self._game_cache[key])
-            if pitcher_rows
-            else self._game_cache[key]
-        )
-        if pitcher_rows:
-            attach_arsenal(gd, pitcher_rows)
-        return gd
-
-    def _build_game_data(self, away: str, home: str, *, game_number: int = 1) -> GameData:
         slate = self.slate()
         if slate is None:
             raise FileNotFoundError(
@@ -273,13 +185,9 @@ class DataRepository:
         selected = slate[(slate["Away"] == away) & (slate["Home"] == home)]
         if selected.empty:
             raise ValueError(f"{away}@{home} is not on the loaded slate")
-        if "Game_Number" in selected.columns and len(selected) > 1:
-            numbered = selected[selected["Game_Number"].astype(int) == int(game_number)]
-            if not numbered.empty:
-                selected = numbered
         game = selected.iloc[0]
         game_date = str(game.get("Slate_Date") or dt.date.today().isoformat())
-        game_number = int(_number(game.get("Game_Number")) or int(game_number) or 1)
+        game_number = int(_number(game.get("Game_Number")) or 1)
         game_pk = int(
             _number(game.get("Game_PK"))
             or canonical_game_pk(game_date, away, home, game_number)
@@ -357,7 +265,7 @@ class DataRepository:
         for rows in game_logs_by_name.values():
             rows.sort(key=lambda value: str(value.get("date") or ""))
 
-        def pitcher_inputs(name: str, team: str, side: str) -> tuple[dict, dict | None]:
+        def pitcher_inputs(name: str, team: str, side: str) -> dict:
             candidates = sp_by_name.get(normalize_name(name), [])
             team_candidates = [
                 row for row in candidates
@@ -386,7 +294,7 @@ class DataRepository:
             )
             if profile is fallback_profile and fallback_profile:
                 features["source"] = "MLB Stats API season fallback"
-            return features, profile
+            return features
 
         bullpen_frame = self.load("bullpen_unit.csv")
         bullpen_rows = bullpen_frame.to_dict("records") if bullpen_frame is not None else []
@@ -400,76 +308,20 @@ class DataRepository:
             relievers_by_team.setdefault(
                 str(row.get("pitcher_team") or "").upper(), []
             ).append(row)
-        split_frame = self.load("sp_metric_splits.csv")
-        split_rows = split_frame.to_dict("records") if split_frame is not None else []
-
-        away_starter, away_sp_profile = pitcher_inputs(
-            str(game.get("Away_SP") or ""), away, "away"
-        )
-        home_starter, home_sp_profile = pitcher_inputs(
-            str(game.get("Home_SP") or ""), home, "home"
-        )
-
-        home_offense_strength = opponent_offense_strength(
-            self._context(home_profile, "home", away_hand),
-            _number(game.get("Home_OSI")),
-        )
-        away_offense_strength = opponent_offense_strength(
-            self._context(away_profile, "away", home_hand),
-            _number(game.get("Away_OSI")),
-        )
-        away_starter["skill_multiplier"] = round(
-            pitcher_allowed_skill_adjustment(away_sp_profile, home_offense_strength)
-            * sp_split_skill_adjustment(away_sp_profile, split_rows, away_hand),
-            4,
-        )
-        home_starter["skill_multiplier"] = round(
-            pitcher_allowed_skill_adjustment(home_sp_profile, away_offense_strength)
-            * sp_split_skill_adjustment(home_sp_profile, split_rows, home_hand),
-            4,
-        )
-
+        away_starter = pitcher_inputs(str(game.get("Away_SP") or ""), away, "away")
+        home_starter = pitcher_inputs(str(game.get("Home_SP") or ""), home, "home")
         away_bullpen = bullpen_features(
             bullpen_index.get(away),
             relievers_by_team.get(away, []),
             venue="away",
             game_date=game_date,
-            team_profile=away_profile.to_dict() if away_profile is not None else None,
         )
         home_bullpen = bullpen_features(
             bullpen_index.get(home),
             relievers_by_team.get(home, []),
             venue="home",
             game_date=game_date,
-            team_profile=home_profile.to_dict() if home_profile is not None else None,
         )
-        away_pen_row = bullpen_index.get(away)
-        home_pen_row = bullpen_index.get(home)
-        away_ctx = self._context(away_profile, "away", home_hand)
-        home_ctx = self._context(home_profile, "home", away_hand)
-        away_bullpen["pen_multiplier"] = round(
-            bullpen_platoon_adjustment(away_pen_row, home_hand)
-            * bullpen_allowed_adjustment(
-                away_ctx.bullpen_osi_allowed, home_offense_strength
-            ),
-            4,
-        )
-        home_bullpen["pen_multiplier"] = round(
-            bullpen_platoon_adjustment(home_pen_row, away_hand)
-            * bullpen_allowed_adjustment(
-                home_ctx.bullpen_osi_allowed, away_offense_strength
-            ),
-            4,
-        )
-
-        away_defense = fielding_defense_factor(away_profile)
-        home_defense = fielding_defense_factor(home_profile)
-        game_signals = [
-            row
-            for row in self.signals_today()
-            if str(row.get("away") or "").upper() == away
-            and str(row.get("home") or "").upper() == home
-        ]
 
         batter_frame = self.load("batter_profiles.csv")
         batter_rows = batter_frame.to_dict("records") if batter_frame is not None else []
@@ -499,7 +351,7 @@ class DataRepository:
         )
         coverage, missing = context_coverage(live_context)
 
-        gd = GameData(
+        return GameData(
             game_pk=game_pk,
             game_date=game_date,
             start_time=str(game.get("Time") or ""),
@@ -534,12 +386,6 @@ class DataRepository:
             home_lineup_features=home_lineup,
             away_injury_features=away_injuries,
             home_injury_features=home_injuries,
-            away_starter_profile=dict(away_sp_profile or {}),
-            home_starter_profile=dict(home_sp_profile or {}),
-            away_defense_factor=away_defense,
-            home_defense_factor=home_defense,
-            game_signals=game_signals,
             context_coverage_pct=coverage,
             missing_context=missing,
         )
-        return gd

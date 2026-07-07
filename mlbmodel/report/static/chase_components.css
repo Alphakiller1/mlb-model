@@ -59,7 +59,7 @@
   align-items: baseline;
   gap: 7px;
   color: #FFFFFF;
-  font-family: var(--font-wordmark, 'Oswald', 'Arial Narrow', system-ui, sans-serif);
+  font-family: 'Oswald', 'Arial Narrow', system-ui, sans-serif;
   font-size: 21px;
   font-style: italic;
   font-weight: 900;
@@ -84,7 +84,7 @@
   gap: 0.375rem;
   padding: 8px 12px;
   border-radius: 6px;
-  font-family: var(--font-primary);
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 500;
   color: rgba(174, 180, 198, 0.92);

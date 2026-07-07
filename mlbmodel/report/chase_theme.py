@@ -1,67 +1,75 @@
-"""Chase Analytics shared visual layer — vendored design system, self-contained output.
+"""Chase Analytics shared visual layer — the REAL vendored design system, self-contained output.
 
-Copies production Chase Analytics dashboard styles from mlbma-pipeline/dashboard/
-(mlbma_design_system.css, theme.css, chase_nav.css, chase_tokens, chase_components).
-The model report uses the same header, wordmark, tokens, and typography as chase-analytics.com.
-
-**Backgrounds:** ``mlbma_backgrounds.css`` in this tree is an MLB-Model-only fork — gradient
-broadcast scrim only, no stadium photo layers (smaller self-contained HTML). Do **not** overwrite
-it from mlbma-pipeline/dashboard/; chase-analytics.com keeps the full stadium photo treatment.
+These are byte-for-byte copies of the production Chase Analytics dashboard styles from
+mlbma-pipeline/dashboard/ (mlbma_design_system.css, theme.css, chase_nav.css,
+mlbma_backgrounds.css + the stadium-outfield background photo and brand icon). The model report
+renders with the *same* header, wordmark, tokens, typography, and stadium background as
+chase-analytics.com — not an approximation. Everything is inlined so each generated HTML page
+stays fully self-contained (no external CSS/asset fetches), while remaining a faithful port of
+the source. Resync by re-copying the four CSS files + the background asset if the source changes.
 """
 from __future__ import annotations
 
-import re
+import base64
 from functools import lru_cache
 from pathlib import Path
 
 _STATIC = Path(__file__).resolve().parent / "static"
 
-# Single font load for the whole bundle — Oswald is wordmark-only; DM Sans = UI/body;
-# Roboto Condensed = display headings and graded stat chips.
+# The production font import, extended with Oswald (the italic wordmark face used by
+# .chase-wordmark in chase_nav.css) which the dashboard loads globally elsewhere.
+_SRC_FONT_IMPORT = (
+    "@import url('https://fonts.googleapis.com/css2?"
+    "family=DM+Sans:wght@400;500;600;700;800&"
+    "family=Roboto+Condensed:wght@400;500;600;700&display=swap');"
+)
 _FONT_IMPORT = (
     "@import url('https://fonts.googleapis.com/css2?"
-    "family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&"
+    "family=DM+Sans:wght@400;500;600;700;800&"
     "family=Oswald:ital,wght@0,600;0,700;0,900;1,600;1,700;1,900&"
-    "family=Roboto+Condensed:wght@400;500;600;700;800&display=swap');"
-)
-_FONT_IMPORT_RE = re.compile(
-    r"@import\s+url\([^)]*fonts\.googleapis\.com[^)]*\)\s*;",
-    re.IGNORECASE,
+    "family=Roboto+Condensed:wght@400;500;600;700&display=swap');"
 )
 
 
-def _strip_font_imports(css: str) -> str:
-  """Remove duplicate Google Font @imports from vendored sheets."""
-  return _FONT_IMPORT_RE.sub("", css)
+@lru_cache(maxsize=1)
+def _bg_photo_data_uri() -> str:
+    data = (_STATIC / "assets" / "backgrounds" / "stadium-outfield-night.png").read_bytes()
+    return "data:image/png;base64," + base64.b64encode(data).decode("ascii")
 
 
 @lru_cache(maxsize=1)
 def theme_css() -> str:
     """The full production Chase Analytics stylesheet, inlined and self-contained.
 
-    Load order: design-system → theme → backgrounds → tokens → components (nav included).
-    Fonts are imported once at the top; vendored @imports are stripped to avoid double-loads.
+    Load order mirrors the site: design-system tokens/components → theme extensions →
+    header/nav → stadium backgrounds. The model's small vendored token/grade-chip files are
+    appended last so shell-specific tokens (glass panels, grade chips) resolve; duplicates share
+    the source values so the cascade is unchanged.
     """
-    design = _strip_font_imports(
-        (_STATIC / "mlbma_design_system.css")
-        .read_text(encoding="utf-8")
-        .replace("@import url('responsive.css?v=20260630a');", "")
-    )
+    design = (_STATIC / "mlbma_design_system.css").read_text(encoding="utf-8")
+    # The vendored copy is standalone: drop the responsive.css @import (not vendored) and add
+    # Oswald to the font import so the wordmark renders in its real face.
+    design = design.replace("@import url('responsive.css?v=20260630a');", "")
+    design = design.replace(_SRC_FONT_IMPORT, _FONT_IMPORT)
 
-    theme = _strip_font_imports((_STATIC / "theme.css").read_text(encoding="utf-8"))
+    theme = (_STATIC / "theme.css").read_text(encoding="utf-8")
+    nav = (_STATIC / "chase_nav.css").read_text(encoding="utf-8")
+
     backgrounds = (_STATIC / "mlbma_backgrounds.css").read_text(encoding="utf-8")
-    tokens = _strip_font_imports((_STATIC / "chase_tokens.css").read_text(encoding="utf-8"))
-    components = _strip_font_imports(
-        (_STATIC / "chase_components.css").read_text(encoding="utf-8")
+    # Inline the stadium photo so the page needs no external asset fetch on GitHub Pages.
+    backgrounds = backgrounds.replace(
+        "url('assets/backgrounds/stadium-outfield-night.png')",
+        f"url('{_bg_photo_data_uri()}')",
     )
 
-    return "\n".join([_FONT_IMPORT, design, theme, backgrounds, tokens, components])
+    tokens = (_STATIC / "chase_tokens.css").read_text(encoding="utf-8")
+    components = (_STATIC / "chase_components.css").read_text(encoding="utf-8")
+
+    return "\n".join([design, theme, nav, backgrounds, tokens, components])
 
 
 @lru_cache(maxsize=1)
 def _icon_data_uri() -> str:
-    import base64
-
     data = (_STATIC / "assets" / "chase-icon-filled.png").read_bytes()
     return "data:image/png;base64," + base64.b64encode(data).decode("ascii")
 
