@@ -69,11 +69,9 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     cache_dir = Path(data_dir) if data_dir else settings.CACHE_DIR
     cache_dir.mkdir(parents=True, exist_ok=True)
     slate_frame = repo.slate()
-    slate_date = (
-        str(slate_frame.iloc[0].get("Slate_Date", ""))[:10]
-        if slate_frame is not None and len(slate_frame)
-        else str((repo.sync_manifest() or {}).get("slate_date") or "")[:10]
-    )
+    slate_date = repo.effective_slate_date()
+    if not slate_date and slate_frame is not None and len(slate_frame):
+        slate_date = str(slate_frame.iloc[0].get("Slate_Date", ""))[:10]
     board = load_board(
         fetch=fetch,
         cache_path=cache_dir / "odds_latest.json",

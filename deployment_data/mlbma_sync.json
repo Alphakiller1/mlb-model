@@ -1,5 +1,5 @@
 {
-  "sync_id": "ec97fd42bc066fc7",
+  "sync_id": "c75b91840fe2f10b",
   "status": "fallback",
   "source": "mlb_live_schedule_fallback",
   "message": "MLBMA pipeline slate is 2026-07-07; using Chase Analytics' live MLB schedule fallback for 2026-07-07.",
@@ -24,7 +24,7 @@
     "COL@LAD"
   ],
   "pipeline_slate_date": "2026-07-07",
-  "pipeline_updated_at": "2026-07-06T20:06:26-04:00",
+  "pipeline_updated_at": "2026-07-06T21:52:19-04:00",
   "hub_updated_at": {
     "Team_Profiles": "2026-07-07T00:31:50.564741+00:00",
     "SP_Profiles": "2026-07-07T00:31:53.964119+00:00",
@@ -46,8 +46,8 @@
     "Team_L10_SP_Hand": "2026-07-07T00:32:35.37455+00:00",
     "Signals_Today": "2026-07-07T00:32:36.902985+00:00"
   },
-  "live_context_fetched_at": "2026-07-07T01:15:37+00:00",
+  "live_context_fetched_at": "2026-07-07T02:22:35+00:00",
   "live_context_games": 16,
   "live_context_error": null,
-  "fetched_at": "2026-07-07T01:15:26+00:00"
+  "fetched_at": "2026-07-07T02:22:26+00:00"
 }

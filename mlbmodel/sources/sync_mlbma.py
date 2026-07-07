@@ -68,16 +68,19 @@ def resolve_slate_date(
     metadata: dict[str, str] | None = None,
     now: dt.datetime | None = None,
 ) -> str:
-    """Pick the model slate date: explicit flag > MLBMA hub date > evening next-day rollover > today."""
+    """Pick the model slate date: explicit > hub future slate > evening rollover > hub today > today."""
     if explicit:
         return str(explicit)[:10]
     current = (now or dt.datetime.now(dt.timezone.utc)).astimezone(ET)
     today = current.date().isoformat()
+    tomorrow = (current.date() + dt.timedelta(days=1)).isoformat()
     pipeline_date = str((metadata or {}).get("Slate_Date_ET") or "")[:10]
-    if pipeline_date and pipeline_date >= today:
+    if pipeline_date and pipeline_date > today:
         return pipeline_date
     if current.hour >= EVENING_ROLLOVER_HOUR:
-        return (current.date() + dt.timedelta(days=1)).isoformat()
+        return tomorrow
+    if pipeline_date == today:
+        return pipeline_date
     return today
 
 

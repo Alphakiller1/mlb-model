@@ -82,8 +82,32 @@ class DataRepository:
         modified = dt.datetime.fromtimestamp(path.stat().st_mtime, dt.timezone.utc)
         return (dt.datetime.now(dt.timezone.utc) - modified).total_seconds() / 3600
 
+    def effective_slate_date(self) -> str:
+        from mlbmodel.sources.sync_mlbma import resolve_slate_date
+
+        manifest = self.sync_manifest()
+        pipeline_date = str(
+            manifest.get("pipeline_slate_date")
+            or manifest.get("Slate_Date_ET")
+            or ""
+        )[:10]
+        metadata = {"Slate_Date_ET": pipeline_date} if pipeline_date else {}
+        return resolve_slate_date(None, metadata=metadata)
+
     def slate(self) -> pd.DataFrame | None:
-        return self.load("today_matchups.csv")
+        frame = self.load("today_matchups.csv")
+        if frame is None or frame.empty:
+            return frame
+        if "Slate_Date" not in frame.columns:
+            return frame
+        target = self.effective_slate_date()
+        filtered = frame[frame["Slate_Date"].astype(str).str[:10] == target]
+        if not filtered.empty:
+            return filtered.copy()
+        dates = sorted(frame["Slate_Date"].astype(str).str[:10].unique())
+        if len(dates) == 1:
+            return frame.copy()
+        return filtered.copy()
 
     def sync_manifest(self) -> dict:
         path = self.data_dir / "mlbma_sync.json"

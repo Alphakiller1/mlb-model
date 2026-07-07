@@ -114,3 +114,8 @@ def test_resolve_slate_date_rolls_evening_without_pipeline():
 def test_resolve_slate_date_stays_today_morning():
     now = __import__("datetime").datetime(2026, 7, 6, 10, 0, tzinfo=__import__("zoneinfo").ZoneInfo("America/New_York"))
     assert resolve_slate_date(None, metadata={"Slate_Date_ET": "2026-07-06"}, now=now) == "2026-07-06"
+
+
+def test_resolve_slate_date_rolls_evening_when_pipeline_still_today():
+    now = __import__("datetime").datetime(2026, 7, 6, 22, 0, tzinfo=__import__("zoneinfo").ZoneInfo("America/New_York"))
+    assert resolve_slate_date(None, metadata={"Slate_Date_ET": "2026-07-06"}, now=now) == "2026-07-07"
