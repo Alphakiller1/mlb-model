@@ -10,10 +10,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-ET = ZoneInfo("America/New_York")
-
 from mlbmodel import settings
 from mlbmodel.market.oddsmath import american_to_implied, devig_two_way
+
+ET = ZoneInfo("America/New_York")
 
 
 @dataclass(frozen=True)

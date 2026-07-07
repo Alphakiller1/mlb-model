@@ -1,5 +1,3 @@
-import html
-
 from mlbmodel.report.trends_ui import (
     _sample_chip,
     mag_chip_html,

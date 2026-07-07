@@ -43,7 +43,7 @@ from mlbmodel.report.html_fmt import (
     val_chip_html,
     val_grade_html,
 )
-from mlbmodel.report.pitch_mix_ui import pitch_mix_board_html, pitch_mix_runs_chip
+from mlbmodel.report.pitch_mix_ui import pitch_mix_runs_chip
 from mlbmodel.report.matchup_ui import (
     advantage_panel_html,
     f5_section_html,

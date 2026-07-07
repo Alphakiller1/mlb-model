@@ -86,7 +86,6 @@ def _prop_trend_from_projection(pitcher: dict, prop_key: str) -> Trend | None:
         f"vs {base:.1f} starter prior ({z:.1f}σ)."
     )
     category = _PROP_CATEGORY[prop_key]
-    lane_implication = f"{side_word} {label}"
     return Trend(
         trend_id=f"{team}_{name}_{prop_key}_proj".replace(" ", "_"),
         team=team,

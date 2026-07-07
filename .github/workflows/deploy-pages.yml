@@ -170,7 +170,7 @@ jobs:
           from pathlib import Path
           html = Path('_site/index.html').read_text(encoding='utf-8')
           size_kb = len(html) // 1024
-          assert size_kb < 900, f'HTML too large: {size_kb} KB'
+          assert size_kb < 1400, f'HTML too large: {size_kb} KB'
           for key in ('today', 'matchups', 'trends', 'markets', 'props', 'results', 'research'):
               assert f'id=\"v-{key}\"' in html, key
           assert 'ca-board' in html

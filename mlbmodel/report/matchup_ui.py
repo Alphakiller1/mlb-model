@@ -8,10 +8,8 @@ from functools import lru_cache
 
 from mlbmodel.report.html_fmt import (
     edge_grade,
-    pct_chip_html,
     section_head,
     val_chip_html,
-    val_grade_html,
 )
 from mlbmodel.report.pitch_mix_ui import pitch_mix_board_html
 
@@ -445,7 +443,7 @@ def matchup_context_html(r, gd, repo, esc) -> str:
             _bullpen_block(home_prof, gd.home_pen_factor, gd.home_bullpen_features, esc),
         ),
         _breakdown_section_row(
-            f"Pitch mix vs lineup",
+            "Pitch mix vs lineup",
             f'<div class=matchup-breakdown__mix-tag>vs {esc(gd.home)}</div>{away_mix}',
             f'<div class=matchup-breakdown__mix-tag>vs {esc(gd.away)}</div>{home_mix}',
         ),
