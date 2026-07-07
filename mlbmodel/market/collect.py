@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
-from pathlib import Path
 
 from mlbmodel import settings
 from mlbmodel.baseball.repository import DataRepository
@@ -83,9 +82,7 @@ def run(*, data_dir=None, fetch=True) -> tuple[list[dict], list[dict]]:
     slate = repo.slate()
     if slate is None:
         raise RuntimeError("today_matchups.csv is unavailable")
-    slate_date = str(slate.iloc[0].get("Slate_Date", ""))[:10] if len(slate) else ""
-    cache_path = Path(data_dir) / "odds_latest.json" if data_dir else None
-    board = load_board(fetch=fetch, cache_path=cache_path, slate_date=slate_date or None)
+    board = load_board(fetch=fetch)
     signals, observations = [], []
     for _, row in slate.iterrows():
         away = str(row["Away"]).upper().strip()

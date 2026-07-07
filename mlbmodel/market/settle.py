@@ -1,11 +1,7 @@
 """Settle sharp observations against final MLB outcomes through Supabase REST."""
 from __future__ import annotations
 
-import logging
-
 from mlbmodel.storage.supabase import SupabaseReader, SupabaseWriter
-
-log = logging.getLogger(__name__)
 
 
 def grade(observation: dict, game: dict, outcome: dict) -> tuple[bool | None, bool | None]:
@@ -72,18 +68,8 @@ def run() -> int:
     return settled
 
 
-def run_all() -> tuple[int, int]:
-    """Settle sharp observations and model leans."""
-    sharp_settled = run()
-    from mlbmodel.leans.grade import settle_leans
-
-    lean_settled = settle_leans(reader=SupabaseReader(), writer=SupabaseWriter())
-    return sharp_settled, lean_settled
-
-
 def main() -> None:
-    sharp, leans = run_all()
-    print(f"settled sharp observations={sharp} model_leans={leans}")
+    print(f"settled sharp observations={run()}")
 
 
 if __name__ == "__main__":

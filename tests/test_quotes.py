@@ -1,6 +1,6 @@
 import math
 
-from mlbmodel.market.quotes import build_board, filter_events_for_slate
+from mlbmodel.market.quotes import build_board
 
 
 def _event():
@@ -30,24 +30,6 @@ def _event():
             },
         ],
     }
-
-
-def test_filter_events_for_slate_uses_eastern_date():
-    events = [
-        {
-            "commence_time": "2026-07-07T01:30:00Z",  # Jul 6 ET evening
-            "away_team": "New York Yankees",
-            "home_team": "Tampa Bay Rays",
-        },
-        {
-            "commence_time": "2026-07-07T23:05:00Z",  # Jul 7 ET evening
-            "away_team": "New York Yankees",
-            "home_team": "Tampa Bay Rays",
-        },
-    ]
-    kept = filter_events_for_slate(events, "2026-07-07")
-    assert len(kept) == 1
-    assert kept[0]["commence_time"].startswith("2026-07-07T23")
 
 
 def test_board_pairs_books_before_devigging():

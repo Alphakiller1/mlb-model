@@ -18,17 +18,3 @@ jobs:
         run: python -c "import mlbmodel.report.app; import mlbmodel.market.collect"
       - name: pytest (Constitution invariants)
         run: pytest -q
-      - name: checkout mlbma-pipeline (CSS source)
-        uses: actions/checkout@v6
-        with:
-          repository: Alphakiller1/mlbma-pipeline
-          path: mlbma-pipeline
-          fetch-depth: 1
-        continue-on-error: true
-        id: mlbma
-      - name: chase css drift
-        if: steps.mlbma.outcome == 'success'
-        run: python scripts/sync_chase_css.py --source mlbma-pipeline --check
-      - name: chase icon drift
-        if: steps.mlbma.outcome == 'success'
-        run: python scripts/sync_chase_icons.py --source mlbma-pipeline --check

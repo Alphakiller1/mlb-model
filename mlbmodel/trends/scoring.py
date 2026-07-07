@@ -27,17 +27,6 @@ _EDGE_WEIGHT = {
     "bullpen_fatigue": 0.9,
     "platoon": 0.7,
     "park": 0.0,
-    "prop_strikeouts": 0.75,
-    "prop_walks": 0.45,
-    "prop_earned_runs": 0.7,
-    "prop_outs": 0.55,
-    "prop_hits": 0.55,
-    "prop_f5_er": 0.65,
-    "fantasy_dk": 0.8,
-    "fantasy_pp": 0.85,
-    "market_total": 0.35,
-    "market_ml": 0.4,
-    "market_runline": 0.35,
 }
 
 
@@ -74,11 +63,6 @@ def signed_team_contribution(trend: Trend) -> tuple[str, float]:
     base = trend.trend_score * trend.effect_size * weight
     if trend.category == "bullpen_fatigue":
         return trend.team, -abs(base)
-    if trend.category.startswith("market_"):
-        return trend.team, abs(base) if trend.direction == RUN_BOOST else -abs(base)
-    if trend.category.startswith(("prop_", "fantasy_")):
-        # Prop/fantasy trends describe pitcher output — boost is positive for OVER leans on team's SP
-        return trend.team, abs(base) if trend.direction == RUN_BOOST else -abs(base)
     if trend.direction == RUN_BOOST:
         return trend.team, abs(base)
     if trend.direction == RUN_SUPPRESSION:

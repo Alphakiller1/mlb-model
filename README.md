@@ -89,15 +89,6 @@ entry price remain intentionally ineligible.
 Apply `migrations/0002_paper_portfolio.sql` to enable the Portfolio view. It tracks paper
 positions and correlated exposure only; sizing remains zero until the promotion gate passes.
 
-### Self-tracked leans (`model_leans`)
-
-Apply `migrations/0003_model_leans.sql` on the shared Supabase project. Each Pages build
-records model leans (markets, pick'em, props) when `SUPABASE_URL` + `SUPABASE_KEY`
-(service role) are set as GitHub Actions secrets on this repo. The nightly
-`.github/workflows/settle.yml` job refreshes finals and grades leans; the **Results** view
-shows W-L-P, calibration buckets, and by-source hit rates. Without credentials, every view
-degrades to an honest empty state — the build never fails.
-
 ## Governance
 
 The versioned charter and migration evidence live in `governance/`. Governance documents

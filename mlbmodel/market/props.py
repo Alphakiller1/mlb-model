@@ -12,7 +12,6 @@ from pathlib import Path
 
 from mlbmodel import settings
 from mlbmodel.baseball.model import normal_cdf
-from mlbmodel.market.prizepicks import normalize_name
 from mlbmodel.market.oddsmath import (
     american_to_implied,
     devig_two_way,
@@ -57,11 +56,11 @@ class PropOddsBoard:
         self.error = error
 
     def for_player(self, player: str) -> list[PropQuote]:
-        key = normalize_name(player)
+        key = " ".join(str(player).lower().replace(".", "").split())
         return [
             quote
             for quote in self.quotes
-            if normalize_name(quote.player) == key
+            if " ".join(quote.player.lower().replace(".", "").split()) == key
         ]
 
 

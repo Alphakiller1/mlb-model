@@ -21,24 +21,8 @@ def load_dotenv(path: Path | None = None) -> None:
 
 load_dotenv()
 
-_DEPLOYMENT_DATA = ROOT / "deployment_data"
-
-
-def default_data_dir() -> Path:
-    """Prefer a directory that actually has a slate; local `data/` is often odds-only."""
-    env = os.getenv("MLBMA_DATA_DIR")
-    if env:
-        return Path(env)
-    primary = ROOT / "data"
-    if (primary / "today_matchups.csv").exists():
-        return primary
-    if (_DEPLOYMENT_DATA / "today_matchups.csv").exists():
-        return _DEPLOYMENT_DATA
-    return primary
-
-
-DATA_DIR = default_data_dir()
-CACHE_DIR = Path(os.getenv("MLBMODEL_CACHE_DIR", DATA_DIR))
+DATA_DIR = Path(os.getenv("MLBMA_DATA_DIR", ROOT / "data"))
+CACHE_DIR = Path(os.getenv("MLBMODEL_CACHE_DIR", ROOT / "data"))
 
 MODEL_VERSION = os.getenv("BET_MODEL_VERSION", "v3-context-props")
 METRIC_VERSION = os.getenv("MLBMA_METRIC_VERSION", "2026.06")
@@ -95,22 +79,6 @@ PITCH_FACTOR_CLIP = (0.60, 1.70)
 # additionally regressed toward the mean before use.
 ARSENAL_FACTOR_CLIP = (0.95, 1.05)
 IMPLAUSIBLE_EDGE = 0.15
-# Incremental MLBMA metric layers (regressed; applied after primary OSI step)
-METRIC_RUN_SENSITIVITY = 0.004
-PALS_BLEND_WEIGHT = 0.08
-PROJ_OSI_BLEND_WEIGHT = 0.12
-OFF_DEPTH_CLIP = (0.97, 1.03)
-ALLOWED_METRIC_SENSITIVITY = 0.0018
-TREND_RUN_SENSITIVITY = 0.008
-TREND_PEN_SENSITIVITY = 0.006
-TREND_INTERACTION_SENSITIVITY = 0.004
-TREND_PARK_SENSITIVITY = 0.003
-TREND_FACTOR_CLIP = (0.97, 1.03)
-LEAGUE_TEAM_ERA = 4.30
-DEFENSE_FACTOR_CLIP = (0.96, 1.04)
-SIGNAL_EDGE_SCALE = 0.0015
-SIGNAL_EDGE_CAP = 0.025
-SIGNAL_HIGH_CONVERGENCE = 3
 
 PARK_FACTORS = {
     "COL": 1.38, "BOS": 1.12, "CIN": 1.10, "TEX": 1.08, "PHI": 1.07,

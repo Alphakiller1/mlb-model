@@ -1,8 +1,11 @@
 /**
- * MLBMA broadcast gradient backgrounds — full-page only (never banners/heroes).
- * Must load last in <head>. No stadium photo layers (perf + self-contained HTML size).
+ * MLBMA stadium photo backgrounds — full-page only (never banners/heroes).
+ * Must load last in <head>.
  */
 :root {
+  --ca-bg-photo-outfield: url('assets/backgrounds/stadium-outfield-night.png');
+  --ca-bg-photo-catcher: url('assets/backgrounds/stadium-catcher-view.png');
+  --ca-bg-photo-plate: url('assets/backgrounds/stadium-plate-pov.png');
   --ca-bg-base: #08090f;
   --ca-bg-scrim: linear-gradient(
     180deg,
@@ -36,7 +39,7 @@ html:has(body.pitcher-profile-page) {
   min-height: 100%;
 }
 
-/* Hub / platform — violet broadcast scrim only */
+/* Hub — outfield skyline (important beats inline page + theme body resets) */
 body.opening-dashboard,
 body.platform-dashboard,
 body.ca-bg-outfield {
@@ -44,13 +47,15 @@ body.ca-bg-outfield {
   background-image:
     var(--ca-bg-scrim),
     var(--ca-bg-violet-top),
-    var(--ca-bg-violet-bottom) !important;
-  background-size: 100% 100%, auto, auto !important;
-  background-position: center top, center top, center top !important;
-  background-repeat: no-repeat !important;
+    var(--ca-bg-violet-bottom),
+    var(--ca-bg-photo-outfield) !important;
+  background-size: 100% 100%, auto, auto, max(100vw, 1600px) auto !important;
+  background-position: center top, center top, center top, center top !important;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat-y !important;
   background-attachment: scroll !important;
 }
 
+/* Opening landing — lighter scrim so stadium photo reads through panels */
 html.view-opening body.opening-dashboard.platform-dashboard,
 html.view-opening body.opening-dashboard.ca-bg-outfield,
 html.view-opening body.platform-dashboard.ca-bg-outfield {
@@ -58,17 +63,32 @@ html.view-opening body.platform-dashboard.ca-bg-outfield {
   background-image:
     var(--ca-bg-scrim-opening),
     var(--ca-bg-violet-top),
-    var(--ca-bg-violet-bottom) !important;
-  background-size: 100% 100%, auto, auto !important;
-  background-position: center top, center top, center top !important;
+    var(--ca-bg-violet-bottom),
+    var(--ca-bg-photo-outfield) !important;
+  background-size: 100% 100%, auto, auto, max(100vw, 1600px) auto !important;
+  background-position: center top, center top, center top, center top !important;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat-y !important;
+  background-attachment: scroll !important;
+}
+
+/* Team / org — catcher view */
+body.team-profile-page:not(.batter-profile-page):not(.pitcher-profile-page),
+body.bullpen-profile-page,
+body.ca-bg-catcher,
+body.ca-bg-compare {
+  background-color: var(--ca-bg-base) !important;
+  background-image:
+    var(--ca-bg-scrim),
+    var(--ca-bg-violet-top),
+    var(--ca-bg-violet-bottom),
+    var(--ca-bg-photo-catcher) !important;
+  background-size: auto, auto, auto, cover !important;
+  background-position: center, center, center, center center !important;
   background-repeat: no-repeat !important;
   background-attachment: scroll !important;
 }
 
-body.team-profile-page:not(.batter-profile-page):not(.pitcher-profile-page),
-body.bullpen-profile-page,
-body.ca-bg-catcher,
-body.ca-bg-compare,
+/* Player profiles — plate POV */
 body.batter-profile-page,
 body.pitcher-profile-page,
 body.ca-bg-plate {
@@ -76,9 +96,10 @@ body.ca-bg-plate {
   background-image:
     var(--ca-bg-scrim),
     var(--ca-bg-violet-top),
-    var(--ca-bg-violet-bottom) !important;
-  background-size: 100% 100%, auto, auto !important;
-  background-position: center top, center top, center top !important;
+    var(--ca-bg-violet-bottom),
+    var(--ca-bg-photo-plate) !important;
+  background-size: auto, auto, auto, cover !important;
+  background-position: center, center, center, center center !important;
   background-repeat: no-repeat !important;
   background-attachment: scroll !important;
 }
