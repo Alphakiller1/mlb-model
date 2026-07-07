@@ -43,6 +43,23 @@ def test_impact_runs_html_signed_chip():
     assert "-0.63 R" in out
 
 
+def test_matchup_breakdown_pitcher_rl_populated():
+    from mlbmodel.report.matchup_ui import _pitcher_rl_rows, _sp_metric_split
+
+    class Repo:
+        def load(self, name):
+            import pandas as pd
+            if name != "sp_metric_splits.csv":
+                return None
+            return pd.read_csv("deployment_data/sp_metric_splits.csv")
+
+    splits = _sp_metric_split(Repo(), "Tarik Skubal", "hand")
+    assert "LHH" in splits and "RHH" in splits
+    rows = _pitcher_rl_rows(splits)
+    assert "c-na" not in rows or rows.count("c-na") < 4
+    assert "28.6" in rows or "29.8" in rows
+
+
 def test_matchup_breakdown_symmetric_columns():
     gd = type("GD", (), {
         "away": "NYY", "home": "BOS",

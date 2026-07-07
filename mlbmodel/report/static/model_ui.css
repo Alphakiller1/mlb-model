@@ -633,17 +633,16 @@
   overflow: visible;
 }
 .matchup-breakdown__lane--home .matchup-split-table {
-  direction: rtl;
+  text-align: right;
 }
-.matchup-breakdown__lane--home .matchup-split-table th,
-.matchup-breakdown__lane--home .matchup-split-table td {
-  direction: ltr;
+.matchup-breakdown__lane--home .matchup-split-table th:first-child,
+.matchup-breakdown__lane--home .matchup-split-table td:first-child {
+  text-align: left;
 }
 .matchup-breakdown__lane--home .matchup-bullpen-strip {
-  direction: rtl;
+  text-align: right;
 }
 .matchup-breakdown__lane--home .matchup-bullpen-strip > div {
-  direction: ltr;
   text-align: right;
 }
 .pitch-mix-legend--sym {
@@ -759,8 +758,7 @@
   .matchup-breakdown__spine--vs { display: none; }
   .matchup-breakdown__lane--home { justify-content: flex-start; }
   .matchup-breakdown__lane--home .matchup-split-table,
-  .matchup-breakdown__lane--home .matchup-bullpen-strip { direction: ltr; }
-  .matchup-breakdown__lane--home .matchup-bullpen-strip > div { text-align: left; }
+  .matchup-breakdown__lane--home .matchup-bullpen-strip { text-align: left; }
   .matchup-team-col__head--home { flex-direction: row; text-align: left; }
   .matchup-banner--v2 .matchup-banner__hero { grid-template-columns: 1fr; }
   .matchup-banner--v2 .matchup-banner__center { order: -1; }

@@ -115,12 +115,15 @@ def _norm_name(name: str) -> str:
 
 
 def _sp_metric_split(repo, pitcher_name: str, dimension: str) -> dict[str, dict]:
+    if not pitcher_name or str(pitcher_name).strip().upper() == "TBD":
+        return {}
     frame = repo.load("sp_metric_splits.csv")
     if frame is None or frame.empty:
         return {}
+    dim = "batter_hand" if dimension in {"hand", "batter_hand"} else dimension
     sub = frame[
         (frame["pitcher_name"].astype(str).map(_norm_name) == _norm_name(pitcher_name))
-        & (frame["split_dimension"].astype(str) == dimension)
+        & (frame["split_dimension"].astype(str) == dim)
     ]
     out: dict[str, dict] = {}
     for _, row in sub.iterrows():
@@ -302,7 +305,7 @@ def _metric_cells(value, context: str, *, invert: bool | None = None, digits: in
 
 def _pitcher_rl_rows(splits) -> str:
     rows = ""
-    for label, key in (("vs LHB", "L"), ("vs RHB", "R")):
+    for label, key in (("vs LHB", "LHH"), ("vs RHB", "RHH")):
         row = splits.get(key, {})
         rows += (
             f'<tr><td class=mut>{label}</td>'
