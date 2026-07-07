@@ -1,11 +1,14 @@
 """App shell: navigation, layout CSS, and in-page view switching JS."""
 from __future__ import annotations
 
+import datetime as dt
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from mlbmodel.report.interactive import TABLE_UI_CSS, TABLE_UI_JS
 
 _STATIC = Path(__file__).resolve().parent / "static"
+_ET = ZoneInfo("America/New_York")
 
 NAV = [
     ("today", "Today"),
@@ -16,6 +19,23 @@ NAV = [
     ("results", "Results"),
     ("research", "Research"),
 ]
+
+
+def slate_view_label(slate_date: str | None) -> str:
+    """Nav label for the slate landing view — Tomorrow when the board is next day."""
+    raw = str(slate_date or "").strip()[:10]
+    if not raw:
+        return "Today"
+    try:
+        slate = dt.date.fromisoformat(raw)
+    except ValueError:
+        return "Slate"
+    today = dt.datetime.now(_ET).date()
+    if slate == today:
+        return "Today"
+    if slate == today + dt.timedelta(days=1):
+        return "Tomorrow"
+    return slate.strftime("%b %d")
 
 _SHELL_BASE = """
 body{padding:0;min-height:100vh}
@@ -46,6 +66,7 @@ margin-top:4px;line-height:1.05;letter-spacing:-.01em}
 .gamepick:hover b{color:var(--teal)}
 .pagehead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px}
 .pagehead h2{font-family:var(--display);font-weight:800;font-size:30px;font-variation-settings:'wdth' 125;letter-spacing:-.02em;margin:0 0 5px;line-height:1.05}
+.pagehead-sub{margin:0;font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
 .pagehead .ctx{margin:0}
 .pagehead select{min-width:180px;background:var(--card);color:var(--ink);border:1px solid var(--border-2);border-radius:10px;padding:10px 13px;font:600 13px var(--sans);transition:border-color .15s ease}
 .pagehead select:hover{border-color:var(--ca-panel-border)}
@@ -132,25 +153,9 @@ def shell_js() -> str:
         "function togglePitcherCard(i){const c=document.getElementById('prop-card-'+i);"
         "if(c){c.classList.toggle('on');const b=c.querySelector('.pitcher-prop-head');"
         "if(b)b.setAttribute('aria-expanded',c.classList.contains('on')?'true':'false');}}"
-        "function toggleTrendCard(i){const c=document.getElementById('trend-card-'+i);"
-        "if(c){c.classList.toggle('on');const b=c.querySelector('.trend-game-head');"
-        "if(b)b.setAttribute('aria-expanded',c.classList.contains('on')?'true':'false');}}"
-        "function filterTrends(key){document.querySelectorAll('[data-trend-filter]').forEach(function(p){"
-        "p.classList.toggle('active',p.getAttribute('data-trend-filter')===key);});"
-        "document.querySelectorAll('.trend-row').forEach(function(row){"
-        "const cat=row.getAttribute('data-cat')||'';const lane=row.getAttribute('data-lane')||'';"
-        "const side=row.getAttribute('data-side')||'';"
-        "let show=key==='all'||(key==='over'&&side==='over')||(key==='under'&&side==='under')"
-        "||cat===key||lane===key;"
-        "row.style.display=show?'':'none';});"
-        "document.querySelectorAll('.trend-lane').forEach(function(laneEl){"
-        "const rows=laneEl.querySelectorAll('.trend-row');"
-        "const any=Array.prototype.some.call(rows,function(row){return row.style.display!==\"none\";});"
-        "laneEl.style.display=(key==='all'||any)?'':'none';});"
-        "document.querySelectorAll('.trend-game-card').forEach(function(card){"
-        "const rows=card.querySelectorAll('.trend-row');"
-        "const any=Array.prototype.some.call(rows,function(row){return row.style.display!==\"none\";});"
-        "card.style.display=(key==='all'||any)?'':'none';});}"
+        "function switchTrendGame(g){document.querySelectorAll('.trend-matchup-panel').forEach(function(p){"
+        "p.classList.toggle('on',p.getAttribute('data-game')===g);});"
+        "const s=document.getElementById('trendGameSelect');if(s)s.value=g;}"
         "function togglePitcher(i){togglePitcherCard(i);}"
         "function showReportTab(b,k){const r=b.closest('.rtabs');"
         "r.querySelectorAll('.rtabbar button').forEach(x=>x.classList.remove('on'));"

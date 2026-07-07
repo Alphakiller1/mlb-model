@@ -1,10 +1,10 @@
-"""Situational trends UI — matchup-first cards grouped by game, props, fantasy, and markets."""
+"""Situational trends UI — one matchup at a time via page select; Game / Props / Fantasy / Markets lanes."""
 from __future__ import annotations
 
 import html
 import re
 
-from mlbmodel.report.html_fmt import lean_dir_html, section_head, val_chip_html
+from mlbmodel.report.html_fmt import lean_dir_html, val_chip_html
 from mlbmodel.report.matchup import _logo
 from mlbmodel.trends.types import RUN_BOOST, RUN_SUPPRESSION
 
@@ -27,24 +27,6 @@ _CAT_LABEL = {
     "market_ml": "ML",
     "market_runline": "Run line",
 }
-_CAT_FILTER = {
-    "bullpen_fatigue": "bullpen",
-    "form_vs_hand": "form",
-    "starter_quality": "sp",
-    "platoon": "form",
-    "park": "park",
-    "prop_strikeouts": "props",
-    "prop_walks": "props",
-    "prop_earned_runs": "props",
-    "prop_outs": "props",
-    "prop_hits": "props",
-    "prop_f5_er": "props",
-    "fantasy_dk": "fantasy",
-    "fantasy_pp": "fantasy",
-    "market_total": "markets",
-    "market_ml": "markets",
-    "market_runline": "markets",
-}
 _CAT_TONE = {
     "bullpen_fatigue": "warnc",
     "form_vs_hand": "side",
@@ -58,10 +40,10 @@ _CAT_TONE = {
     "market_ml": "pos",
 }
 _LANES = (
-    ("game", "Game & situational"),
-    ("props", "Prop trends"),
-    ("fantasy", "Fantasy score"),
-    ("markets", "Market edges"),
+    ("game", "Game"),
+    ("props", "Props"),
+    ("fantasy", "Fantasy"),
+    ("markets", "Markets"),
 )
 
 
@@ -158,21 +140,14 @@ def _direction_pill(direction: str | None) -> str:
     return ""
 
 
-def _trend_filter_attrs(trend) -> str:
-    category = str(_get(trend, "category") or "")
-    cat_filter = _CAT_FILTER.get(category, category.replace("_", "-"))
-    lane = _trend_lane(category)
-    implication = (_get(trend, "betting_implications") or [None])[0]
-    side_filter = ""
-    if implication:
-        upper = str(implication).upper()
-        if "UNDER" in upper:
-            side_filter = "under"
-        elif "OVER" in upper:
-            side_filter = "over"
-    return (
-        f'data-cat="{e(cat_filter)}" data-lane="{e(lane)}" data-side="{e(side_filter)}"'
-    )
+def _sample_chip(sample) -> str:
+    if sample is None:
+        return '<span class="c-na">—</span>'
+    try:
+        value = float(sample)
+    except (TypeError, ValueError):
+        return '<span class="c-na">—</span>'
+    return val_chip_html(value, "sample_n", digits=0)
 
 
 def _trend_table_row(game: str, trend, *, detail: bool = False, show_game: bool = False) -> str:
@@ -199,29 +174,17 @@ def _trend_table_row(game: str, trend, *, detail: bool = False, show_game: bool 
         if show_game else ""
     )
     return (
-        f'<tr class="trend-row" {_trend_filter_attrs(trend)}>'
+        f'<tr class=trend-row>'
         f'{game_cell}'
         f'<td><span class=gcell>{_logo(team, "tlogo sm")}{e(team)}</span></td>'
         f'<td><span class="pill {_CAT_TONE.get(category, "mut")}">'
         f'{e(_CAT_LABEL.get(category, category.replace("_", " ").title()))}</span></td>'
         f'<td class=trend-headline>{e(trend_headline(trend))}</td>'
         f'<td class=num>{mag_chip_html(effect)}</td>'
-        f'<td class=num>{sample if sample is not None else "—"}</td>'
+        f'<td class=num>{_sample_chip(sample)}</td>'
         f'<td>{trend_bet_html(implication)}</td>'
         f'<td class=trend-pills>{pills}</td></tr>{detail_row}'
     )
-
-
-def _top_trend_summary(report) -> str:
-    trends = [t for t in (_get(report, "trends") or []) if _get(t, "category") != "park"]
-    if not trends:
-        return "No ranked trends"
-    top = max(trends, key=lambda t: float(_get(t, "trend_score") or 0))
-    implication = (_get(top, "betting_implications") or [None])[0]
-    lean = trend_bet_html(implication)
-    lane = _trend_lane(_get(top, "category"))
-    lane_label = next((lbl for key, lbl in _LANES if key == lane), "Trend")
-    return f'{e(lane_label)} · {e(_CAT_LABEL.get(_get(top, "category"), "Signal"))} · {lean}'
 
 
 def _lane_block(game: str, lane_key: str, lane_label: str, trends: list) -> str:
@@ -237,13 +200,8 @@ def _lane_block(game: str, lane_key: str, lane_label: str, trends: list) -> str:
 </div>"""
 
 
-def game_trend_card(index: int, report, *, expanded: bool = False) -> str:
+def _matchup_lanes_html(report) -> str:
     game = str(_get(report, "game") or "")
-    away = str(_get(report, "away") or "")
-    home = str(_get(report, "home") or "")
-    away_edge = float(_get(report, "away_edge_score") or 50)
-    home_edge = float(_get(report, "home_edge_score") or 50)
-    lean = str(_get(report, "edge_lean") or "even")
     trends = [t for t in (_get(report, "trends") or []) if _get(t, "category") != "park"]
     by_lane: dict[str, list] = {key: [] for key, _ in _LANES}
     for trend in trends:
@@ -254,95 +212,48 @@ def game_trend_card(index: int, report, *, expanded: bool = False) -> str:
         _lane_block(game, key, label, by_lane[key]) for key, label in _LANES
     )
     if not lanes:
-        lanes = '<div class=mut>No ranked trends for this matchup.</div>'
-    lean_cls = "pos" if lean not in ("", "even", "—") else "mut"
-    on_cls = " on" if expanded else ""
-    counts = " · ".join(
-        f'{label.split()[0]} {len(by_lane[key])}'
-        for key, label in _LANES
-        if by_lane[key]
-    )
-    return f"""<div class="trend-game-card{on_cls}" id="trend-card-{index}">
-  <button type=button class=trend-game-head onclick="toggleTrendCard({index})" aria-expanded="{'true' if expanded else 'false'}">
-    <div class=trend-game-id>
-      <span class=gcell>{_logo(away, "tlogo sm")}<b>{e(away)}</b><span class=mut>@</span>{_logo(home, "tlogo sm")}<b>{e(home)}</b></span>
-      <span class=trend-game-edge>{val_chip_html(away_edge, "osi", digits=0, suffix=f" {away}")} · {val_chip_html(home_edge, "osi", digits=0, suffix=f" {home}")}</span>
-    </div>
-    <div class=trend-game-summary>
-      <span class="pill {lean_cls}">Lean {e(lean)}</span>
-      <span class=mut>{e(counts)}</span>
-      <span class=trend-game-top>{_top_trend_summary(report)}</span>
-    </div>
-    <span class=trend-game-chevron aria-hidden=true>▸</span>
-  </button>
-  <div class=trend-game-body>
-    {lanes}
-  </div>
-</div>"""
+        return '<div class=mut>No ranked trends for this matchup.</div>'
+    return lanes
 
 
-def trends_filter_bar() -> str:
-    pills = [
-        ("all", "All", True),
-        ("game", "Game", False),
-        ("props", "Props", False),
-        ("fantasy", "Fantasy", False),
-        ("markets", "Markets", False),
-        ("sp", "SP", False),
-        ("bullpen", "Bullpen", False),
-        ("over", "Overs", False),
-        ("under", "Unders", False),
-    ]
-    body = "".join(
-        f'<button type=button class="hub-pill{" active" if active else ""}" '
-        f'data-trend-filter="{key}" onclick="filterTrends(\'{key}\')">{label}</button>'
-        for key, label, active in pills
+def trend_matchup_panel(report, *, active: bool = False) -> str:
+    game = str(_get(report, "game") or "")
+    if not game:
+        away = str(_get(report, "away") or "")
+        home = str(_get(report, "home") or "")
+        game = f"{away}@{home}" if away and home else ""
+    on_cls = " on" if active else ""
+    return (
+        f'<div class="trend-matchup-panel{on_cls}" data-game="{e(game)}">'
+        f'{_matchup_lanes_html(report)}</div>'
     )
-    return f'<div class="hub-control-bar trend-filter-bar">{body}</div>'
 
 
 def trends_section_html(reports) -> str:
     if not reports:
-        return "<h2>Situational Trends</h2><div class=empty>No slate loaded.</div>"
+        return (
+            '<div class=pagehead><div><h2>Trends</h2></div></div>'
+            '<div class=empty>No slate loaded.</div>'
+        )
 
-    flat = []
-    for report in reports:
+    options = []
+    panels = []
+    for index, report in enumerate(reports):
         game = str(_get(report, "game") or "")
-        for trend in _get(report, "trends") or []:
-            if _get(trend, "category") == "park":
-                continue
-            flat.append((game, trend))
-    flat.sort(key=lambda item: float(_get(item[1], "trend_score") or 0), reverse=True)
+        away = str(_get(report, "away") or "")
+        home = str(_get(report, "home") or "")
+        if not game and away and home:
+            game = f"{away}@{home}"
+        selected = " selected" if index == 0 else ""
+        options.append(
+            f'<option value="{e(game)}"{selected}>{e(away)} @ {e(home)}</option>'
+        )
+        panels.append(trend_matchup_panel(report, active=(index == 0)))
 
-    deck = "".join(
-        game_trend_card(index, report, expanded=(index == 0))
-        for index, report in enumerate(reports)
+    return (
+        f'<div class=pagehead>'
+        f'<div><h2>Trends</h2><p class=pagehead-sub>Signals by matchup</p></div>'
+        f'<select id=trendGameSelect aria-label="Matchup" onchange="switchTrendGame(this.value)">'
+        f'{"".join(options)}</select></div>'
+        f'<div class=trend-matchup-deck id=trend-matchup-deck>{"".join(panels)}</div>'
     )
-
-    total = len(flat)
-    strongest = float(_get(flat[0][1], "effect_size") or 0) if flat else 0.0
-    prop_count = sum(1 for _, t in flat if _trend_lane(_get(t, "category")) == "props")
-    fantasy_count = sum(1 for _, t in flat if _trend_lane(_get(t, "category")) == "fantasy")
-    market_count = sum(1 for _, t in flat if _trend_lane(_get(t, "category")) == "markets")
-    top_lean_report = max(
-        reports,
-        key=lambda r: max(
-            float(_get(r, "away_edge_score") or 50),
-            float(_get(r, "home_edge_score") or 50),
-        ),
-    )
-    top_lean = str(_get(top_lean_report, "edge_lean") or "—")
-    top_game = str(_get(top_lean_report, "game") or "—")
-
-    return f"""<h2>Situational Trends</h2>
- <div class=cards>
-   <div class=card><div class=k>Matchups</div><div class=v>{len(reports)}</div></div>
-   <div class=card><div class=k>Signals</div><div class=v>{total}</div></div>
-   <div class=card><div class=k>Props · Fantasy · Markets</div><div class="v v-sm">{prop_count} · {fantasy_count} · {market_count}</div></div>
-   <div class=card><div class=k>Strongest σ</div><div class=v>{mag_chip_html(strongest)}</div></div>
-   <div class=card><div class=k>Top lean</div><div class="v v-sm">{e(top_lean)}<span class=mut> · {e(top_game)}</span></div></div>
- </div>
- {trends_filter_bar()}
- <div class=ca-board>{section_head("Trends by matchup", icon="matchups")}<div class=body>
-   <div class=trend-game-deck id=trend-game-deck>{deck}</div>
- </div></div>"""

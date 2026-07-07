@@ -44,6 +44,16 @@ def test_metric_grade_inverted_era():
     assert metric_grade(5.5, "era") == "c-poor"
 
 
+def test_metric_grade_game_total_context():
+    assert metric_grade(10.5, "game_total") == "c-good"
+    assert metric_grade(6.5, "game_total") in {"c-weak", "c-poor"}
+
+
+def test_metric_grade_prop_k_projection():
+    assert metric_grade(7.0, "prop_k") == "c-good"
+    assert metric_grade(3.0, "prop_k") in {"c-weak", "c-poor"}
+
+
 def test_val_chip_html_wraps_graded_value():
     html = val_chip_html(55, "osi", digits=0)
     assert 'class="chip c-good"' in html

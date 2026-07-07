@@ -127,12 +127,16 @@ def _pitch_row(pitch: dict, *, compact: bool) -> str:
     )
 
 
-def pitch_mix_board_html(pitch_matchup: dict, *, compact: bool = False) -> str:
+def pitch_mix_board_html(
+    pitch_matchup: dict,
+    *,
+    compact: bool = False,
+    show_title: bool = True,
+    show_legend: bool = True,
+) -> str:
     """Summary strip + table explaining how each pitch type moves K% and runs."""
     pm = pitch_matchup or {}
     pitches = pm.get("pitches") or []
-    whiff_head = "" if compact else "<th>Opp whiff</th>"
-    ba_ops_head = "" if compact else "<th>Opp BA</th><th>Opp OPS</th>"
     if not pitches:
         cols = 7 if compact else 9
         body = f'<tr><td class=mut colspan={cols}>No reliable pitch-type overlap with this lineup.</td></tr>'
@@ -144,13 +148,22 @@ def pitch_mix_board_html(pitch_matchup: dict, *, compact: bool = False) -> str:
         "<b>Δ K%</b> = whiff/chase edge · "
         "<b>Δ runs</b> = contact shift (green = fewer runs allowed) · "
         "Opp BA/OPS = how the lineup hits this pitch type.</p>"
+        if show_legend else ""
+    )
+    board_cls = "pitch-mix-board pitch-mix-board--compact" if compact else "pitch-mix-board"
+    xwoba_head = "xwOBA" if compact else "Opp xwOBA"
+    whiff_head = "" if compact else "<th>Whiff</th>"
+    ba_ops_head = "" if compact else "<th>BA</th><th>OPS</th>"
+    title_block = (
+        '<div class="ca-subhead">Pitch mix vs opposing lineup</div>'
+        if show_title else ""
     )
     return (
         f"{pitch_mix_net_html(pm)}"
-        f'<div class="ca-subhead">Pitch mix vs opposing lineup</div>'
+        f"{title_block}"
         f'<p class="pitch-mix-source">{source}</p>'
-        f'<div class=table-scroll><table class="pitch-mix-table">'
-        f"<tr><th>Pitch</th>{ba_ops_head}<th>Opp xwOBA</th>{whiff_head}"
+        f'<div class="{board_cls}"><table class="pitch-mix-table">'
+        f"<tr><th>Pitch</th>{ba_ops_head}<th>{xwoba_head}</th>{whiff_head}"
         f"<th>Δ K%</th><th>Δ runs</th><th>Lean</th></tr>{body}</table></div>"
         f"{legend}"
     )

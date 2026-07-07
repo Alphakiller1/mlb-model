@@ -180,6 +180,7 @@ _CONTEXT_DEFAULTS: dict[str, dict[str, float | bool]] = {
     "pitching": {"mean": 50.0, "std": 12.0, "hi": True},
     "rate": {"mean": 50.0, "std": 10.0, "hi": True},
     "woba": {"mean": 0.320, "std": 0.035, "hi": True},
+    "ops": {"mean": 0.720, "std": 0.080, "hi": True},
     "game_total": {"mean": 8.80, "std": 1.40, "hi": True},
     "margin": {"mean": 0.0, "std": 1.50, "hi": True},
     "era": {"mean": 4.10, "std": 0.85, "hi": False},
@@ -190,7 +191,25 @@ _CONTEXT_DEFAULTS: dict[str, dict[str, float | bool]] = {
     "bbpct": {"mean": 8.0, "std": 1.8, "hi": False},
     "park": {"mean": 1.00, "std": 0.08, "hi": True},
     "clv": {"mean": 0.0, "std": 2.5, "hi": True},
+    "team_runs": {"mean": 4.40, "std": 1.35, "hi": True},
+    "prop_k": {"mean": 5.6, "std": 1.8, "hi": True},
+    "prop_er": {"mean": 2.8, "std": 1.2, "hi": False},
+    "prop_outs": {"mean": 16.5, "std": 2.5, "hi": True},
+    "prop_h": {"mean": 5.4, "std": 1.6, "hi": False},
+    "fantasy_dk": {"mean": 18.0, "std": 6.0, "hi": True},
+    "sample_n": {"mean": 10.0, "std": 4.0, "hi": True},
 }
+
+
+def _context_cfg(context: str) -> dict[str, float | bool]:
+    key = str(context or "default").lower()
+    if key in _CONTEXT_DEFAULTS:
+        return _CONTEXT_DEFAULTS[key]
+    stripped = key.replace("_", "")
+    for name, cfg in _CONTEXT_DEFAULTS.items():
+        if name.replace("_", "") == stripped:
+            return cfg
+    return _CONTEXT_DEFAULTS["default"]
 
 _SOLID_CHIP_CLASS = {
     "elite": "c-elite",
@@ -206,13 +225,12 @@ _SOLID_CHIP_CLASS = {
 def _resolve_invert(context: str, invert: bool | None) -> bool:
     if invert is not None:
         return invert
-    cfg = _CONTEXT_DEFAULTS.get(context.lower(), _CONTEXT_DEFAULTS["default"])
+    cfg = _context_cfg(context)
     return not bool(cfg.get("hi", True))
 
 
 def _z_score(value: float, context: str) -> float:
-    key = context.lower().replace("_", "")
-    cfg = _CONTEXT_DEFAULTS.get(key, _CONTEXT_DEFAULTS["default"])
+    cfg = _context_cfg(context)
     std = float(cfg.get("std") or 12.0)
     if std < 1e-6:
         std = 12.0
@@ -247,7 +265,7 @@ def metric_grade(value, context: str = "osi", *, invert: bool | None = None) -> 
         return "c-na"
     if not math.isfinite(number):
         return "c-na"
-    key = context.lower().replace("_", "")
+    key = context.lower()
     if key in {"oor"}:
         if number >= 55:
             return "c-good"

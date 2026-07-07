@@ -63,11 +63,35 @@ def league_avg_html(value, *, digits: int = 2, suffix: str = "") -> str:
     return f'<span class="league-avg">{number:.{digits}f}{suffix}</span>'
 
 
+def _adv_value_chip(value, context: str, *, invert: bool | None, digits: int, suffix: str = "") -> str:
+    if value is None:
+        return '<span class="c-na">—</span>'
+    return val_chip_html(value, context, invert=invert, digits=digits, suffix=suffix)
+
+
+def _adv_edge_html(row: dict, away: str, home: str, esc) -> str:
+    edge = str(row.get("edge") or "—")
+    if edge == "—":
+        return '<span class="c-na">—</span>'
+    if edge == "even":
+        return '<span class="pill mut">Even</span>'
+    ap = row.get("a_pct")
+    hp = row.get("h_pct")
+    if isinstance(ap, (int, float)) and isinstance(hp, (int, float)):
+        gap = abs(float(ap) - float(hp))
+        score = min(100.0, 50.0 + gap * 0.45)
+        return val_chip_html(score, "osi", digits=0, display_text=esc(edge))
+    return f'<span class="pill pos">{esc(edge)}</span>'
+
+
 def impact_runs_html(runs: float | None) -> str:
     if runs is None:
         return '<span class="c-na">—</span>'
-    cls = edge_grade(runs / 2.5)
-    return f'<b class="{cls}">{runs:+.2f}</b>'
+    try:
+        value = float(runs)
+    except (TypeError, ValueError):
+        return '<span class="c-na">—</span>'
+    return val_chip_html(value, "margin", display_text=f"{value:+.2f} R")
 
 
 @lru_cache(maxsize=512)
@@ -187,7 +211,7 @@ def _weather_wind_label(weather: dict) -> str:
 
 
 def matchup_banner_html(r: dict, esc) -> str:
-    """Teams · weather/wind · full-game + F5 projection · score."""
+    """Symmetric banner: team + SP columns flanking a single FG projection; F5 + weather below."""
     from mlbmodel.report.matchup import _f5_projection, _logo, _headshot
 
     gd, prob = r["gd"], r["probs"]
@@ -208,63 +232,59 @@ def matchup_banner_html(r: dict, esc) -> str:
         f5_home = prob.exp_home_runs * 0.54
         f5_total = prob.exp_total * 0.54
     away_id, home_id = ex.get("a_id"), ex.get("h_id")
+    away_fav = " matchup-banner__side--favored" if favored == gd.away else ""
+    home_fav = " matchup-banner__side--favored" if favored == gd.home else ""
+    away_k = (
+        val_chip_html(gd.away_k, "kpct", digits=1, suffix="% K")
+        if gd.away_k else ""
+    )
+    home_k = (
+        val_chip_html(gd.home_k, "kpct", digits=1, suffix="% K")
+        if gd.home_k else ""
+    )
 
     return f"""<div class="matchup-banner matchup-banner--v2">
-  <div class=matchup-banner__teams>
-    <div class="matchup-banner__team matchup-banner__team--away">
+  <div class=matchup-banner__hero>
+    <div class="matchup-banner__side matchup-banner__side--away{away_fav}">
       {_logo(gd.away, "tlogo lg")}
-      <div class=matchup-banner__team-copy>
+      <div class=matchup-banner__side-body>
         <span class=matchup-banner__abbr>{esc(gd.away)}</span>
-        <span class=mut>{esc(gd.away_sp)}</span>
+        <div class=matchup-banner__sp-line>{_headshot(away_id)}<span class=mut>{esc(gd.away_sp)}</span></div>
+        {away_k}
       </div>
     </div>
     <div class=matchup-banner__center>
       <span class=matchup-banner__label>Projected score</span>
       <div class=matchup-banner__score>
-        <span class=matchup-banner__runs>{prob.exp_away_runs:.1f}</span>
+        <span class=matchup-banner__runs>{val_chip_html(prob.exp_away_runs, "team_runs", digits=1)}</span>
         <span class=matchup-banner__dash>–</span>
-        <span class=matchup-banner__runs>{prob.exp_home_runs:.1f}</span>
+        <span class=matchup-banner__runs>{val_chip_html(prob.exp_home_runs, "team_runs", digits=1)}</span>
       </div>
       <div class=matchup-banner__meta>
-        {val_chip_html(prob.exp_total, "game_total", digits=1, suffix=" FG total")}
+        {val_chip_html(prob.exp_total, "game_total", digits=1, suffix=" total")}
         <span class=mut>·</span>
         <span>Lean <b class="{lean_cls}">{esc(favored)} {lean_margin:+.1f}</b></span>
       </div>
     </div>
-    <div class="matchup-banner__team matchup-banner__team--home">
-      <div class=matchup-banner__team-copy>
+    <div class="matchup-banner__side matchup-banner__side--home{home_fav}">
+      <div class=matchup-banner__side-body>
         <span class=matchup-banner__abbr>{esc(gd.home)}</span>
-        <span class=mut>{esc(gd.home_sp)}</span>
+        <div class=matchup-banner__sp-line><span class=mut>{esc(gd.home_sp)}</span>{_headshot(home_id)}</div>
+        {home_k}
       </div>
       {_logo(gd.home, "tlogo lg")}
     </div>
   </div>
-  <div class=matchup-banner__proj-row>
-    <div class=matchup-proj-card>
-      <span class=k>Full game</span>
-      <span class=v>{prob.exp_away_runs:.1f} – {prob.exp_home_runs:.1f}</span>
-      <span class=mut>{val_chip_html(prob.exp_total, "game_total", digits=1, suffix=" total")}</span>
-    </div>
+  <div class="matchup-banner__proj-row matchup-banner__proj-row--duo">
     <div class=matchup-proj-card>
       <span class=k>First 5</span>
-      <span class=v>{f5_away:.1f} – {f5_home:.1f}</span>
+      <span class=v>{val_chip_html(f5_away, "team_runs", digits=1)} – {val_chip_html(f5_home, "team_runs", digits=1)}</span>
       <span class=mut>{val_chip_html(f5_total, "game_total", digits=1, suffix=" F5 total")}</span>
     </div>
     <div class=matchup-proj-card>
       <span class=k>Weather · wind</span>
       <span class=v>{esc(_weather_wind_label(weather))}</span>
       {f'<span class=mut>{esc(start)}</span>' if start else ''}
-    </div>
-  </div>
-  <div class=matchup-banner__pitchers>
-    <div class=matchup-banner__sp>
-      {_headshot(away_id)}<b>{esc(gd.away_sp)}</b>
-      {val_chip_html(gd.away_k, "kpct", digits=1, suffix="% K") if gd.away_k else ""}
-    </div>
-    <div class=matchup-banner__vs>VS</div>
-    <div class=matchup-banner__sp>
-      <b>{esc(gd.home_sp)}</b>{_headshot(home_id)}
-      {val_chip_html(gd.home_k, "kpct", digits=1, suffix="% K") if gd.home_k else ""}
     </div>
   </div>
 </div>"""
@@ -279,7 +299,89 @@ def _split_table(headers: str, rows: str, *, empty_cols: int = 4) -> str:
 
 
 def _metric_cells(value, context: str, *, invert: bool | None = None, digits: int = 1, suffix: str = ""):
-    return val_grade_html(value, context, invert=invert, digits=digits, suffix=suffix, bold=True)
+    return val_chip_html(value, context, invert=invert, digits=digits, suffix=suffix)
+
+
+def _pitcher_rl_rows(splits) -> str:
+    rows = ""
+    for label, key in (("vs LHB", "L"), ("vs RHB", "R")):
+        row = splits.get(key, {})
+        rows += (
+            f'<tr><td class=mut>{label}</td>'
+            f'<td>{_metric_cells(row.get("FIP"), "fip", invert=True)}</td>'
+            f'<td>{_metric_cells(row.get("K_pct"), "kpct", digits=1, suffix="%")}</td>'
+            f'<td>{_metric_cells(row.get("HR9"), "hr9", invert=True)}</td>'
+            f'<td>{_metric_cells(row.get("OPS"), "woba", invert=True, digits=3)}</td></tr>'
+        )
+    return rows
+
+
+def _pitcher_ha_rows(splits) -> str:
+    rows = ""
+    for label, key in (("Away", "away"), ("Home", "home")):
+        row = splits.get(key, {})
+        rows += (
+            f'<tr><td class=mut>{label}</td>'
+            f'<td>{_metric_cells(row.get("FIP"), "fip", invert=True)}</td>'
+            f'<td>{_metric_cells(row.get("ERA"), "era", invert=True)}</td>'
+            f'<td>{_metric_cells(row.get("K_pct"), "kpct", digits=1, suffix="%")}</td>'
+            f'<td>{_metric_cells(row.get("F5_ERA"), "era", invert=True)}</td></tr>'
+        )
+    return rows
+
+
+def _lineup_rl_rows(prof) -> str:
+    return (
+        f'<tr><td class=mut>vs LHP</td>'
+        f'<td>{_metric_cells(prof.get("osi_vs_lhp"), "osi", digits=0)}</td>'
+        f'<td>{_metric_cells(prof.get("abq_vs_lhp"), "abq", digits=0)}</td></tr>'
+        f'<tr><td class=mut>vs RHP</td>'
+        f'<td>{_metric_cells(prof.get("osi_vs_rhp"), "osi", digits=0)}</td>'
+        f'<td>{_metric_cells(prof.get("abq_vs_rhp"), "abq", digits=0)}</td></tr>'
+    )
+
+
+def _lineup_ha_rows(prof) -> str:
+    return (
+        f'<tr><td class=mut>Road</td>'
+        f'<td>{_metric_cells(prof.get("away_osi"), "osi", digits=0)}</td>'
+        f'<td>{_metric_cells(prof.get("away_woba"), "woba", digits=3)}</td>'
+        f'<td>{_metric_cells(prof.get("away_wrc"), "wrc", digits=0)}</td></tr>'
+        f'<tr><td class=mut>Home</td>'
+        f'<td>{_metric_cells(prof.get("home_osi"), "osi", digits=0)}</td>'
+        f'<td>{_metric_cells(prof.get("home_woba"), "woba", digits=3)}</td>'
+        f'<td>{_metric_cells(prof.get("home_wrc"), "wrc", digits=0)}</td></tr>'
+    )
+
+
+def _bullpen_block(prof: dict, pen_factor, pen_features: dict, esc) -> str:
+    workload = pen_features.get("pitches_1d", "—")
+    return (
+        f'<div class=matchup-bullpen-strip>'
+        f'<div><span class=k>Run factor</span>{_metric_cells(pen_factor, "park", invert=True, digits=3)}</div>'
+        f'<div><span class=k>High-lev ERA</span>{_metric_cells(prof.get("bullpen_high_lev_era"), "era", invert=True)}</div>'
+        f'<div><span class=k>Workload</span><span class=mut>{esc(str(workload))} pitches yesterday</span></div>'
+        f'</div>'
+    )
+
+
+def _breakdown_team_head(team: str, sp_name: str, side: str, esc) -> str:
+    from mlbmodel.report.matchup import _logo
+
+    logo = _logo(team, "tlogo sm")
+    meta = f'<div class=matchup-team-col__meta><b>{esc(team)}</b><span class=mut>{esc(sp_name)}</span></div>'
+    if side == "home":
+        return f'<div class="matchup-team-col__head matchup-team-col__head--{side}">{meta}{logo}</div>'
+    return f'<div class="matchup-team-col__head matchup-team-col__head--{side}">{logo}{meta}</div>'
+
+
+def _breakdown_section_row(label: str, away_body: str, home_body: str) -> str:
+    return f"""<div class="matchup-breakdown__row matchup-breakdown__row--section">
+  <div class=matchup-breakdown__section-label>{label}</div>
+  <div class="matchup-breakdown__lane matchup-breakdown__lane--away"><div class=matchup-breakdown__block>{away_body}</div></div>
+  <div class=matchup-breakdown__spine aria-hidden=true></div>
+  <div class="matchup-breakdown__lane matchup-breakdown__lane--home"><div class=matchup-breakdown__block>{home_body}</div></div>
+</div>"""
 
 
 def matchup_context_html(r, gd, repo, esc) -> str:
@@ -290,108 +392,69 @@ def matchup_context_html(r, gd, repo, esc) -> str:
     away_sp_loc = _sp_metric_split(repo, gd.away_sp, "location")
     home_sp_loc = _sp_metric_split(repo, gd.home_sp, "location")
 
-    def pitcher_rl_rows(name, splits):
-        rows = ""
-        for label, key, ctx, inv in (
-            ("vs LHB", "L", "fip", True),
-            ("vs RHB", "R", "fip", True),
-        ):
-            row = splits.get(key, {})
-            rows += (
-                f'<tr><td><b>{esc(name)}</b><span class=mut> {label}</span></td>'
-                f'<td>{_metric_cells(row.get("FIP"), "fip", invert=True)}</td>'
-                f'<td>{_metric_cells(row.get("K_pct"), "kpct", digits=1, suffix="%")}</td>'
-                f'<td>{_metric_cells(row.get("HR9"), "hr9", invert=True)}</td>'
-                f'<td>{_metric_cells(row.get("OPS"), "woba", invert=True, digits=3)}</td></tr>'
-            )
-        return rows
-
-    def pitcher_ha_rows(name, splits):
-        rows = ""
-        for label, key in (("Away", "away"), ("Home", "home")):
-            row = splits.get(key, {})
-            rows += (
-                f'<tr><td><b>{esc(name)}</b><span class=mut> {label}</span></td>'
-                f'<td>{_metric_cells(row.get("FIP"), "fip", invert=True)}</td>'
-                f'<td>{_metric_cells(row.get("ERA"), "era", invert=True)}</td>'
-                f'<td>{_metric_cells(row.get("K_pct"), "kpct", digits=1, suffix="%")}</td>'
-                f'<td>{_metric_cells(row.get("F5_ERA"), "era", invert=True)}</td></tr>'
-            )
-        return rows
-
-    def lineup_rl_row(team, prof):
-        return (
-            f'<tr><td><b>{esc(team)}</b></td>'
-            f'<td>{_metric_cells(prof.get("osi_vs_lhp"), "osi", digits=0)}</td>'
-            f'<td>{_metric_cells(prof.get("osi_vs_rhp"), "osi", digits=0)}</td>'
-            f'<td>{_metric_cells(prof.get("abq_vs_lhp"), "abq", digits=0)}</td>'
-            f'<td>{_metric_cells(prof.get("abq_vs_rhp"), "abq", digits=0)}</td></tr>'
-        )
-
-    def lineup_ha_row(team, prof):
-        away = team == str(prof.get("team") or "").upper()
-        if away:
-            osi, woba, wrc = prof.get("away_osi"), prof.get("away_woba"), prof.get("away_wrc")
-        else:
-            osi, woba, wrc = prof.get("home_osi"), prof.get("home_woba"), prof.get("home_wrc")
-        return (
-            f'<tr><td><b>{esc(team)}</b><span class=mut> {"road" if away else "home"}</span></td>'
-            f'<td>{_metric_cells(osi, "osi", digits=0)}</td>'
-            f'<td>{_metric_cells(woba, "woba", digits=3)}</td>'
-            f'<td>{_metric_cells(wrc, "wrc", digits=0)}</td></tr>'
-        )
-
-    bullpen_rows = (
-        f'<tr><td><b>{esc(gd.away)}</b></td>'
-        f'<td>{_metric_cells(gd.away_pen_factor, "park", invert=True, digits=3)}</td>'
-        f'<td>{_metric_cells(away_prof.get("bullpen_high_lev_era"), "era", invert=True)}</td>'
-        f'<td class=mut>{gd.away_bullpen_features.get("pitches_1d", "—")} pitches yesterday</td></tr>'
-        f'<tr><td><b>{esc(gd.home)}</b></td>'
-        f'<td>{_metric_cells(gd.home_pen_factor, "park", invert=True, digits=3)}</td>'
-        f'<td>{_metric_cells(home_prof.get("bullpen_high_lev_era"), "era", invert=True)}</td>'
-        f'<td class=mut>{gd.home_bullpen_features.get("pitches_1d", "—")} pitches yesterday</td></tr>'
-    )
-
     pitchers = {row.get("team"): row for row in r.get("pitchers", []) if row.get("team")}
-    away_mix = pitch_mix_board_html((pitchers.get(gd.away) or {}).get("pitch_matchup") or {}, compact=True)
-    home_mix = pitch_mix_board_html((pitchers.get(gd.home) or {}).get("pitch_matchup") or {}, compact=True)
-    pitch_mix_block = (
-        f'<div class=matchup-pitchmix-duo>'
-        f'<div><div class=ca-subhead>{esc(gd.away_sp)} vs {esc(gd.home)} lineup</div>{away_mix}</div>'
-        f'<div><div class=ca-subhead>{esc(gd.home_sp)} vs {esc(gd.away)} lineup</div>{home_mix}</div>'
-        f'</div>'
+    away_mix = pitch_mix_board_html(
+        (pitchers.get(gd.away) or {}).get("pitch_matchup") or {},
+        compact=True,
+        show_title=False,
+        show_legend=False,
+    )
+    home_mix = pitch_mix_board_html(
+        (pitchers.get(gd.home) or {}).get("pitch_matchup") or {},
+        compact=True,
+        show_title=False,
+        show_legend=False,
     )
 
-    return f"""<div class=ca-board>{section_head("Matchup context", icon="matchups")}<div class=body>
-  <div class=matchup-context-stack>
-    <div class=matchup-context-block>
-      <div class=ca-subhead>Pitcher R/L splits</div>
-      {_split_table("<th>Pitcher</th><th>FIP</th><th>K%</th><th>HR/9</th><th>OPS allowed</th>",
-                    pitcher_rl_rows(gd.away_sp, away_sp_hand) + pitcher_rl_rows(gd.home_sp, home_sp_hand), empty_cols=5)}
-    </div>
-    <div class=matchup-context-block>
-      <div class=ca-subhead>Pitcher H/A splits</div>
-      {_split_table("<th>Pitcher</th><th>FIP</th><th>ERA</th><th>K%</th><th>F5 ERA</th>",
-                    pitcher_ha_rows(gd.away_sp, away_sp_loc) + pitcher_ha_rows(gd.home_sp, home_sp_loc), empty_cols=5)}
-    </div>
-    <div class=matchup-context-block>
-      <div class=ca-subhead>Lineup R/L splits</div>
-      {_split_table("<th>Team</th><th>OSI vs LHP</th><th>OSI vs RHP</th><th>ABQ vs LHP</th><th>ABQ vs RHP</th>",
-                    lineup_rl_row(gd.away, away_prof) + lineup_rl_row(gd.home, home_prof), empty_cols=5)}
-    </div>
-    <div class=matchup-context-block>
-      <div class=ca-subhead>Lineup H/A splits</div>
-      {_split_table("<th>Team</th><th>OSI</th><th>wOBA</th><th>wRC+</th>",
-                    lineup_ha_row(gd.away, away_prof) + lineup_ha_row(gd.home, home_prof), empty_cols=4)}
-    </div>
-    <div class=matchup-context-block>
-      <div class=ca-subhead>Bullpen implications</div>
-      {_split_table("<th>Team</th><th>Run factor</th><th>High-lev ERA</th><th>Workload</th>", bullpen_rows, empty_cols=4)}
-    </div>
-    <div class=matchup-context-block matchup-context-block--wide>
-      <div class=ca-subhead>Pitch mix vs opposing lineup</div>
-      {pitch_mix_block}
-    </div>
+    pitcher_rl_hdr = "<th>Split</th><th>FIP</th><th>K%</th><th>HR/9</th><th>OPS</th>"
+    pitcher_ha_hdr = "<th>Split</th><th>FIP</th><th>ERA</th><th>K%</th><th>F5 ERA</th>"
+    lineup_rl_hdr = "<th>Split</th><th>OSI</th><th>ABQ</th>"
+    lineup_ha_hdr = "<th>Split</th><th>OSI</th><th>wOBA</th><th>wRC+</th>"
+
+    head_row = f"""<div class="matchup-breakdown__row matchup-breakdown__row--head">
+  <div class="matchup-breakdown__lane matchup-breakdown__lane--away">{_breakdown_team_head(gd.away, gd.away_sp, "away", esc)}</div>
+  <div class=matchup-breakdown__spine matchup-breakdown__spine--vs><span>@</span></div>
+  <div class="matchup-breakdown__lane matchup-breakdown__lane--home">{_breakdown_team_head(gd.home, gd.home_sp, "home", esc)}</div>
+</div>"""
+
+    rows = [
+        head_row,
+        _breakdown_section_row(
+            "Pitcher R/L",
+            _split_table(pitcher_rl_hdr, _pitcher_rl_rows(away_sp_hand), empty_cols=5),
+            _split_table(pitcher_rl_hdr, _pitcher_rl_rows(home_sp_hand), empty_cols=5),
+        ),
+        _breakdown_section_row(
+            "Pitcher H/A",
+            _split_table(pitcher_ha_hdr, _pitcher_ha_rows(away_sp_loc), empty_cols=5),
+            _split_table(pitcher_ha_hdr, _pitcher_ha_rows(home_sp_loc), empty_cols=5),
+        ),
+        _breakdown_section_row(
+            "Lineup R/L",
+            _split_table(lineup_rl_hdr, _lineup_rl_rows(away_prof), empty_cols=3),
+            _split_table(lineup_rl_hdr, _lineup_rl_rows(home_prof), empty_cols=3),
+        ),
+        _breakdown_section_row(
+            "Lineup H/A",
+            _split_table(lineup_ha_hdr, _lineup_ha_rows(away_prof), empty_cols=4),
+            _split_table(lineup_ha_hdr, _lineup_ha_rows(home_prof), empty_cols=4),
+        ),
+        _breakdown_section_row(
+            "Bullpen",
+            _bullpen_block(away_prof, gd.away_pen_factor, gd.away_bullpen_features, esc),
+            _bullpen_block(home_prof, gd.home_pen_factor, gd.home_bullpen_features, esc),
+        ),
+        _breakdown_section_row(
+            f"Pitch mix vs lineup",
+            f'<div class=matchup-breakdown__mix-tag>vs {esc(gd.home)}</div>{away_mix}',
+            f'<div class=matchup-breakdown__mix-tag>vs {esc(gd.away)}</div>{home_mix}',
+        ),
+    ]
+
+    return f"""<div class=ca-board>{section_head("Matchup breakdown", icon="matchups")}<div class=body>
+  <div class=matchup-breakdown-sym>
+    {"".join(rows)}
+    <p class="pitch-mix-legend pitch-mix-legend--sym">Δ K% = whiff/chase edge · Δ runs = contact shift (green = fewer runs allowed)</p>
   </div>
 </div></div>"""
 
@@ -400,17 +463,25 @@ def advantage_panel_html(gd, advantage_rows, esc) -> str:
     if not advantage_rows:
         return ""
 
+    away = str(gd.away or "")
+    home = str(gd.home or "")
+
     def adv_row(a):
         unit, lb = a.get("unit", ""), a.get("lower_better")
-        av = val_grade_html(a.get("a_val"), _adv_ctx(a["cat"]), invert=lb, digits=_adv_digits(a, unit), suffix=unit)
-        hv = val_grade_html(a.get("h_val"), _adv_ctx(a["cat"]), invert=lb, digits=_adv_digits(a, unit), suffix=unit)
-        base = league_avg_html(a.get("base"), digits=_adv_digits(a, unit), suffix=unit)
-        edge = esc(str(a.get("edge") or "—"))
-        if edge not in ("—", "even"):
-            edge = f'<b class="side">{edge}</b>'
+        ctx = _adv_ctx(a["cat"])
+        digits = _adv_digits(a, unit)
+        av = _adv_value_chip(a.get("a_val"), ctx, invert=lb, digits=digits, suffix=unit)
+        hv = _adv_value_chip(a.get("h_val"), ctx, invert=lb, digits=digits, suffix=unit)
+        base = league_avg_html(a.get("base"), digits=digits, suffix=unit)
+        edge = _adv_edge_html(a, away, home, esc)
+        away_win = a.get("edge") == away
+        home_win = a.get("edge") == home
+        away_cls = " adv-edge-win" if away_win else ""
+        home_cls = " adv-edge-win" if home_win else ""
         return (
             f'<tr><td><b>{esc(a["cat"])}</b></td>'
-            f'<td class=side>{av}</td><td>{hv}</td>'
+            f'<td class="side{away_cls}">{av}</td>'
+            f'<td class="num{home_cls}">{hv}</td>'
             f'<td>{base}</td><td>{edge}</td></tr>'
         )
 
@@ -418,7 +489,7 @@ def advantage_panel_html(gd, advantage_rows, esc) -> str:
     return (
         f'<div class=ca-board>{section_head("Matchup advantage", icon="matchups")}<div class=body>'
         f'<div class=table-scroll><table class=matchup-adv-table>'
-        f'<tr><th>Category</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th>'
+        f'<tr><th>Category</th><th>{esc(away)}</th><th>{esc(home)}</th>'
         f'<th>League avg</th><th>Edge</th></tr>{rows}</table></div></div></div>'
     )
 
@@ -446,7 +517,7 @@ def run_impacts_html(factors: list[dict], esc) -> str:
     ) or '<tr><td class=mut colspan=3>No modeled run drivers.</td></tr>'
     return (
         f'<div class=ca-board>{section_head("Biggest run impacts", icon="matchups")}<div class=body>'
-        f'<div class=table-scroll><table><tr><th>Factor</th><th>Impact</th><th>Affects</th></tr>'
+        f'<div class=table-scroll><table class=run-impact-table><tr><th>Factor</th><th>Impact</th><th>Affects</th></tr>'
         f'{rows}</table></div></div></div>'
     )
 
@@ -465,7 +536,7 @@ def f5_section_html(r, gd, repo, esc) -> str:
         cells = []
         for row in starts:
             val = row.get("inn1_er")
-            cell = val_grade_html(val, "game_total", digits=0) if val is not None else '<span class=c-na>—</span>'
+            cell = val_chip_html(val, "prop_er", digits=0) if val is not None else '<span class=c-na>—</span>'
             cells.append(
                 f'<span class=f5-inn1-chip title="{esc(row.get("date", ""))} vs {esc(row.get("opp", ""))}">'
                 f'{cell}</span>'
@@ -478,7 +549,7 @@ def f5_section_html(r, gd, repo, esc) -> str:
             f'<div class=f5-team-col><div class=f5-team-head><b>{esc(team)}</b>'
             f'<span class=mut>L10 {esc(_l10_record(repo, team))}</span>'
             f'<span class=mut>vs {esc(hand)}HP {esc(rec)}</span></div>'
-            f'<div class=f5-run-line>{runs_mean:.2f} runs</div>'
+            f'<div class=f5-run-line>{val_chip_html(runs_mean, "team_runs", digits=2, suffix=" runs")}</div>'
             f'<div class=f5-sp-line><span class=mut>{esc(sp_name)}</span>'
             f'<span class=mut>1st-inn ER · last 5</span></div>'
             f'<div class=f5-inn1-row>{"".join(cells)}</div></div>'
@@ -521,25 +592,35 @@ def pitcher_deck_html(r, gd, repo, esc) -> str:
                 ops = sub.iloc[0].get("ops")
                 woba = sub.iloc[0].get("woba")
                 if ops is not None:
-                    team_ops = f'OPS {float(ops):.3f} · wOBA {float(woba):.3f}'
+                    team_ops = (
+                        f'OPS {val_chip_html(float(ops), "ops", digits=3)} '
+                        f'· wOBA {val_chip_html(float(woba), "woba", digits=3)}'
+                    )
 
         stat_cards = []
-        for key, label, ctx in (
-            ("K", "Strikeouts", "kpct"),
-            ("ER", "Earned runs", "game_total"),
-            ("Outs", "Outs", "rate"),
-            ("H", "Hits", "rate"),
-            ("Fantasy", "DK pts", "osi"),
+        prop_ctx = {
+            "K": "prop_k",
+            "ER": "prop_er",
+            "Outs": "prop_outs",
+            "H": "prop_h",
+            "Fantasy": "fantasy_dk",
+        }
+        for key, label in (
+            ("K", "Strikeouts"),
+            ("ER", "Earned runs"),
+            ("Outs", "Outs"),
+            ("H", "Hits"),
+            ("Fantasy", "DK pts"),
         ):
             dist = projections.get(key) or {}
             mean = dist.get("mean")
             if mean is None:
                 continue
-            inv = key in {"ER", "H"}
+            ctx = prop_ctx[key]
             stat_cards.append(
                 f'<div class=pitcher-stat-card>'
                 f'<span class=k>{label}</span>'
-                f'<span class=v>{val_grade_html(mean, ctx, invert=inv, digits=1)}</span>'
+                f'<span class=v>{val_chip_html(mean, ctx, digits=1)}</span>'
                 f'<span class=mut>{dist.get("p10", "—"):.0f}–{dist.get("p90", "—"):.0f}</span></div>'
             )
         pitch_mix = pitch_mix_board_html(row.get("pitch_matchup") or {}, compact=False)

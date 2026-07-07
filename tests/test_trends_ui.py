@@ -1,6 +1,7 @@
 import html
 
 from mlbmodel.report.trends_ui import (
+    _sample_chip,
     mag_chip_html,
     trend_bet_html,
     trend_headline,
@@ -51,6 +52,12 @@ def test_prop_detector_fantasy_trend():
     assert "prop_strikeouts" in cats
 
 
+def test_sample_chip_color_coded():
+    out = _sample_chip(18)
+    assert "chip" in out
+    assert "18" in out
+
+
 def test_trends_section_matchup_first():
     trend = type(
         "Trend",
@@ -83,10 +90,9 @@ def test_trends_section_matchup_first():
         },
     )()
     panel = trends_section_html([report])
-    assert "Trends by matchup" in panel
-    assert "Dominant trend board" not in panel
-    assert "data-trend-filter" in panel
-    assert "trend-game-card" in panel
-    assert "Fantasy score" in panel
-    assert "data-lane=\"fantasy\"" in panel
-    assert "Props · Fantasy · Markets" in panel
+    assert "trendGameSelect" in panel
+    assert "trend-matchup-panel on" in panel
+    assert "data-trend-filter" not in panel
+    assert "Props · Fantasy · Markets" not in panel
+    assert "Fantasy" in panel
+    assert 'data-lane="fantasy"' in panel

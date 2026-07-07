@@ -43,7 +43,7 @@ from mlbmodel.market.pickem import (
     load_pickem_lines,
     pickem_market_reports,
 )
-from mlbmodel.report.shell import NAV as _NAV, shell_css, shell_js
+from mlbmodel.report.shell import NAV as _NAV, shell_css, shell_js, slate_view_label
 from mlbmodel.report.views import (
     props as _props,
     research as _research,
@@ -198,7 +198,8 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         )
     options = "".join(option_rows)
     matchups = (
-        f'<div class=pagehead><div><h2>Matchups</h2></div>'
+        f'<div class=pagehead><div><h2>Matchups</h2>'
+        f'<p class=pagehead-sub>{e(sd or "Slate pending")}</p></div>'
         f'<select id=gameSelect aria-label="Matchup" onchange="switchGame(this.value)">{options}</select></div>'
         f'{"".join(matchup_reports)}'
     )
@@ -298,7 +299,10 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "results": _results(reader),
         "research": _research(reader, gate, f5_board, clv_summary),
     }
-    nav_items = [(k, lbl, f"show('{k}')") for k, lbl in _NAV]
+    nav_items = [
+        (k, slate_view_label(sd) if k == "today" else lbl, f"show('{k}')")
+        for k, lbl in _NAV
+    ]
     sections = "".join(
         f'<section class="view{" on" if k == "today" else ""}" id="v-{k}">{html_}</section>'
         for k, html_ in views.items()

@@ -99,8 +99,7 @@ def test_trends_view_renders_board():
         trends=[trend],
     )
     html_out = trends([report])
-    assert "Trends by matchup" in html_out
-    assert "Game &amp; situational" in html_out
-    assert "data-trend-filter" in html_out
-    assert "data-lane=\"game\"" in html_out
+    assert "trendGameSelect" in html_out
+    assert "Game" in html_out
+    assert 'data-lane="game"' in html_out
     assert "NYY@BOS" in html_out

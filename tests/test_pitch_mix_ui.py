@@ -38,5 +38,6 @@ def test_pitch_mix_board_shows_net_drivers_and_legend():
     assert "Pitch mix vs opposing lineup" in html
     assert "Δ K%" in html
     assert "Δ runs" in html
-    assert "pitcher edge" not in html.lower() or "Pitcher" in html
+    assert "pitch-mix-board" in html
+    assert "table-scroll" not in html
     assert pitch_mix_net_html({}) == ""

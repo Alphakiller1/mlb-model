@@ -21,8 +21,24 @@ def load_dotenv(path: Path | None = None) -> None:
 
 load_dotenv()
 
-DATA_DIR = Path(os.getenv("MLBMA_DATA_DIR", ROOT / "data"))
-CACHE_DIR = Path(os.getenv("MLBMODEL_CACHE_DIR", ROOT / "data"))
+_DEPLOYMENT_DATA = ROOT / "deployment_data"
+
+
+def default_data_dir() -> Path:
+    """Prefer a directory that actually has a slate; local `data/` is often odds-only."""
+    env = os.getenv("MLBMA_DATA_DIR")
+    if env:
+        return Path(env)
+    primary = ROOT / "data"
+    if (primary / "today_matchups.csv").exists():
+        return primary
+    if (_DEPLOYMENT_DATA / "today_matchups.csv").exists():
+        return _DEPLOYMENT_DATA
+    return primary
+
+
+DATA_DIR = default_data_dir()
+CACHE_DIR = Path(os.getenv("MLBMODEL_CACHE_DIR", DATA_DIR))
 
 MODEL_VERSION = os.getenv("BET_MODEL_VERSION", "v3-context-props")
 METRIC_VERSION = os.getenv("MLBMA_METRIC_VERSION", "2026.06")

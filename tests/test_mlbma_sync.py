@@ -3,6 +3,7 @@ from mlbmodel.sources.sync_mlbma import (
     matchup_keys,
     merge_pipeline_slate,
     pipeline_metadata,
+    resolve_slate_date,
 )
 from mlbmodel.sources.build_today_matchups import et_time
 
@@ -97,3 +98,19 @@ def test_pipeline_metadata_reads_last_updated_matrix():
     ])
 
     assert metadata["Slate_Date_ET"] == "2026-06-27"
+
+
+def test_resolve_slate_date_prefers_pipeline_tomorrow():
+    metadata = {"Slate_Date_ET": "2026-07-07"}
+    now = __import__("datetime").datetime(2026, 7, 6, 21, 0, tzinfo=__import__("zoneinfo").ZoneInfo("America/New_York"))
+    assert resolve_slate_date(None, metadata=metadata, now=now) == "2026-07-07"
+
+
+def test_resolve_slate_date_rolls_evening_without_pipeline():
+    now = __import__("datetime").datetime(2026, 7, 6, 18, 30, tzinfo=__import__("zoneinfo").ZoneInfo("America/New_York"))
+    assert resolve_slate_date(None, metadata={}, now=now) == "2026-07-07"
+
+
+def test_resolve_slate_date_stays_today_morning():
+    now = __import__("datetime").datetime(2026, 7, 6, 10, 0, tzinfo=__import__("zoneinfo").ZoneInfo("America/New_York"))
+    assert resolve_slate_date(None, metadata={"Slate_Date_ET": "2026-07-06"}, now=now) == "2026-07-06"

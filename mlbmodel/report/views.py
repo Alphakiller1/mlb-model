@@ -24,6 +24,7 @@ from mlbmodel.report.html_fmt import (
     val_grade_html,
 )
 from mlbmodel.report.matchup import _logo
+from mlbmodel.report.shell import slate_view_label
 from mlbmodel.report.props_ui import pitcher_prop_deck, prop_channel_counts
 from mlbmodel.report.trends_ui import trends_section_html
 
@@ -86,7 +87,7 @@ def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
     sync_label = "Exact" if sync.get("status") == "exact" else (
         "Live fallback" if sync.get("status") == "fallback" else "Untracked"
     )
-    return f"""<h2>Today</h2>
+    return f"""<h2>{e(slate_view_label(sd))}</h2>
  {edge_command}
  <div class=cards>
    <div class=card><div class=k>Games</div><div class=v>{n}</div></div>
