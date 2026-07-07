@@ -76,46 +76,73 @@
 .prop-chip--sm > b { font-size: 14px; }
 .prop-chip--sm > i { font-size: 8px; }
 
-/* ── Props page — compact deck ── */
-.props-meta {
-  font-size: 12px;
-  margin: -6px 0 12px;
-  letter-spacing: 0.02em;
+/* ── Prop engine — one toggle per pitcher ── */
+.pitcher-prop-deck { gap: 10px; }
+.pitcher-prop-card { border-radius: 14px; border-width: 2px; }
+.pitcher-prop-head { padding: 12px 14px; align-items: center; }
+.pitcher-prop-summary { flex: 1; min-width: 0; justify-content: flex-end; }
+.prop-primary-lean { font-size: 13px; line-height: 1.35; text-align: right; }
+.prop-play {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
 }
-.pitcher-prop-deck { gap: 8px; }
-.pitcher-prop-card {
-  border-radius: 12px;
-  border-width: 1.5px;
+.prop-play__line {
+  font-family: var(--display);
+  font-weight: 800;
+  color: var(--ink);
 }
-.pitcher-prop-head { padding: 10px 12px; }
-.pitcher-prop-body { padding: 0 12px 10px; }
-.pitcher-prop-body .prop-proj-strip { margin: 8px 0 6px; gap: 6px; }
-.prop-panel {
+.prop-proj-strip--inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.prop-proj-strip--inline span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
   border: 1px solid var(--border-2);
-  border-radius: 10px;
-  margin-top: 6px;
-  background: rgba(6, 10, 18, 0.4);
+  border-radius: 8px;
+  background: rgba(6, 10, 18, 0.45);
+  min-width: 52px;
 }
-.prop-panel > summary {
-  cursor: pointer;
-  padding: 8px 10px;
-  font-size: 11px;
+.prop-proj-strip--inline i {
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
-  list-style: none;
+  font-style: normal;
 }
-.prop-panel > summary::before {
-  content: "▸ ";
-  color: var(--accent);
+.prop-proj-strip--inline b {
+  font: 800 15px var(--display);
+  color: var(--ink);
 }
-.prop-panel[open] > summary::before { content: "▾ "; }
-.prop-panel .table-scroll { border: 0; border-radius: 0 0 10px 10px; }
-.prop-panel .table-scroll table { font-size: 12px; }
-.prop-panel .table-scroll th,
-.prop-panel .table-scroll td { padding: 7px 10px; }
-.pitcher-prop-body .ca-board--inner { display: none; }
+.prop-engine-table { font-size: 13px; }
+.prop-engine-table th { font-size: 10px; }
+.prop-engine-pitchmix {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-2);
+}
+.prop-engine-pitchmix .pitch-mix-net { margin-top: 0; }
+.pitcher-prop-body { padding: 0 14px 14px; }
+.pitcher-prop-body .ca-subhead { margin-top: 4px; }
+
+.prop-engine-section { margin-bottom: 14px; }
+.prop-engine-section:last-of-type { margin-bottom: 0; }
+.prop-engine-empty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 10px 12px;
+  border: 1px dashed var(--border-2);
+  border-radius: 8px;
+  background: rgba(6, 10, 18, 0.35);
+}
 
 .lean-dir--over,
 .pill.lean-dir--over {
@@ -293,6 +320,39 @@
 #main b.pos { color: #4ADE80; }
 #main b.warnc { color: #FBBF24; }
 #main b.neg { color: #F87171; }
+
+/* ── Pitch mix (matchup + props) ── */
+.pitch-mix-net {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  margin: 0 0 10px;
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  background: rgba(6, 10, 18, 0.55);
+}
+.pitch-mix-net__label {
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pitch-mix-net__sep { color: var(--muted); font-weight: 700; }
+.pitch-mix-net__meta { font-size: 11px; margin-left: auto; }
+.pitch-mix-source { font-size: 11px; color: var(--muted); margin: 0 0 8px; }
+.pitch-mix-legend {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 10px 0 0;
+}
+.pitch-mix-table td.num { white-space: nowrap; }
+.prop-panel .pitch-mix-net { margin-top: 4px; }
+.prop-panel .pitch-mix-legend { margin-bottom: 4px; }
 
 /* ── Cards row variants ── */
 .cards.cards--tight { margin-bottom: 12px; }

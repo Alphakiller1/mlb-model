@@ -4,8 +4,6 @@ from __future__ import annotations
 import html
 
 from mlbmodel.baseball.model import model_probabilities
-from mlbmodel.market import prizepicks
-from mlbmodel.market.probability import p_over_line_erf
 from mlbmodel.leans.calibration import calibration_buckets, summarize_record
 from mlbmodel.analytics.edge_intel import (
     clv_from_snapshots,
@@ -26,6 +24,7 @@ from mlbmodel.report.html_fmt import (
     val_grade_html,
 )
 from mlbmodel.report.matchup import _logo
+from mlbmodel.report.props_ui import pitcher_prop_deck, prop_channel_counts
 
 e = html.escape
 
@@ -97,156 +96,6 @@ def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
  <div class=ca-board>{section_head("Slate", icon="slate")}<div class=body>
    <div class=table-scroll><table class=sortable><tr><th>Game</th><th>Time</th><th>Win%(H)</th><th>Tot</th><th>Margin</th><th>Lean</th><th>SPs</th><th>K%</th><th>Sharp</th></tr>{rows or '<tr><td class=mut colspan=9>No slate loaded.</td></tr>'}</table></div></div></div>"""
 
-def _p_over(line, mean, sd):
-    """P(stat > line) via a normal approximation of the simulated distribution."""
-    return p_over_line_erf(line, mean, sd or 0)
-
-
-# Order the pick'em board surfaces PrizePicks pitcher markets (fantasy first, then the rest).
-_PICKEM_ORDER = ["PP_Fantasy", "K", "Outs", "ER", "H", "BB"]
-
-
-def _pickem_rows(pitchers, sources):
-    """Grade each pitcher's model projection against pick'em lines from one or more books.
-
-    ``sources`` is a list of (book_label, board) where board maps normalized-name -> proj_key ->
-    line. Rows are grouped by pitcher, then book, with a Book column so the same market can be
-    compared across books.
-    """
-    rows = ""
-    count = 0
-    for row in pitchers:
-        name_key = prizepicks.normalize_name(row.get("pitcher"))
-        projections = row.get("projections") or {}
-        for label, board in sources:
-            lines = board.get(name_key, {})
-            if not lines:
-                continue
-            for key in _PICKEM_ORDER:
-                line, proj = lines.get(key), projections.get(key)
-                if not line or not proj:
-                    continue
-                mean, sd = proj.get("mean"), proj.get("sd")
-                p_over = _p_over(line["line"], mean, sd or 0)
-                lean = "OVER" if p_over >= 0.5 else "UNDER"
-                variant = (
-                    "" if line.get("odds_type") == "standard"
-                    else f' <span class="mut odds-variant">{e(str(line.get("odds_type")))}</span>'
-                )
-                count += 1
-                rows += (
-                    f'<tr><td><b>{e(str(row.get("pitcher") or ""))}</b></td>'
-                    f'<td>{_logo(row.get("team"), "tlogo sm")}{e(str(row.get("team") or ""))}</td>'
-                    f'<td><span class="pill mut">{e(label)}</span></td>'
-                    f'<td>{prizepicks.STAT_LABEL.get(key, key)}{variant}</td>'
-                    f'<td class=num><b>{line["line"]:g}</b></td>'
-                    f'<td class=num>{val_grade_html(mean, "margin", digits=1, suffix="")}</td>'
-                    f'<td class=num>{prob_chip_html(p_over)}</td>'
-                    f'<td>{lean_dir_html(lean)}</td></tr>'
-                )
-    return rows, count
-
-
-def _prop_edge_table(pitchers, *, limit: int = 48) -> str:
-    """All graded prop lines — flat sortable board."""
-    ranked: list[tuple[float, dict, dict]] = []
-    for row in pitchers:
-        for rep in row.get("market_report") or []:
-            edge = rep.get("edge")
-            score = abs(float(edge)) if edge is not None else abs(float(rep.get("model_probability") or 0.5) - 0.5)
-            ranked.append((score, row, rep))
-    ranked.sort(key=lambda item: -item[0])
-    if not ranked:
-        return (
-            f'<div class=ca-board>{section_head("Graded lines", icon="props")}<div class=body>'
-            '<div class=empty>No prop lines matched today&apos;s starters.</div></div></div>'
-        )
-    rows = ""
-    for _, row, rep in ranked[:limit]:
-        side_key = str(rep.get("side") or "").upper()
-        lean_cell = (
-            lean_dir_html(side_key)
-            if side_key in {"OVER", "UNDER"}
-            else e(side_key.title())
-        )
-        prop_label = prizepicks.STAT_LABEL.get(rep["prop"], rep["prop"])
-        book = str(rep.get("best_book") or "—")
-        edge_val = rep.get("edge")
-        edge_cell = (
-            f'<b class={_edge_grade(edge_val)}>{float(edge_val) * 100:+.1f}pt</b>'
-            if edge_val is not None
-            else '<span class=mut>—</span>'
-        )
-        rows += (
-            f'<tr><td><b>{e(str(row.get("pitcher") or ""))}</b></td>'
-            f'<td>{_logo(row.get("team"), "tlogo sm")}{e(str(row.get("team") or ""))}</td>'
-            f'<td>{e(prop_label)}</td>'
-            f'<td>{lean_cell}</td>'
-            f'<td class=num><b>{rep["line"]:g}</b></td>'
-            f'<td class=num>{prob_chip_html(rep.get("model_probability"))}</td>'
-            f'<td class=num>{edge_cell}</td>'
-            f'<td><span class="pill mut">{e(book)}</span></td></tr>'
-        )
-    return (
-        f'<div class=ca-board>{section_head("Graded lines", icon="props")}<div class=body>'
-        f'<div class=table-scroll><table class=sortable id=props-graded-table>'
-        f'<tr><th>Pitcher</th><th>Team</th><th>Stat</th><th>Lean</th><th>Line</th>'
-        f'<th>Model</th><th>Edge</th><th>Book</th></tr>{rows}</table></div></div></div>'
-    )
-
-
-def _pickem_slate_table(pitchers, sources) -> str:
-    """All pick'em lines across the slate — one table."""
-    _, count = _pickem_rows(pitchers, sources)
-    if not count:
-        return (
-            f'<div class=ca-board>{section_head("Pick&apos;em board", icon="props")}<div class=body>'
-            '<div class=empty>No pick&apos;em lines for today&apos;s starters.</div></div></div>'
-        )
-    body, _ = _pickem_rows(pitchers, sources)
-    return (
-        f'<div class=ca-board>{section_head("Pick&apos;em board", icon="props")}<div class=body>'
-        f'<div class=table-scroll><table class=sortable id=props-pickem-table>'
-        f'<tr><th>Pitcher</th><th>Team</th><th>Book</th><th>Stat</th><th>Line</th><th>Model</th>'
-        f'<th>P(over)</th><th>Lean</th></tr>{body}</table></div></div></div>'
-    )
-
-
-def _projections_matrix(pitchers) -> str:
-    """Compact projection grid — one row per starter."""
-    rows = ""
-    for row in pitchers:
-        proj = row.get("projections") or {}
-        if not proj:
-            continue
-        cells = []
-        for key in ("K", "BB", "ER", "Outs", "H"):
-            val = proj.get(key, {}).get("mean")
-            cells.append(
-                f'<td class=num>{val_grade_html(val, "margin", digits=1)}</td>'
-                if val is not None else '<td class=mut>—</td>'
-            )
-        best = (row.get("market_report") or [None])[0]
-        lean_cell = '<span class=mut>—</span>'
-        if best:
-            side_key = str(best.get("side") or "").upper()
-            if side_key in {"OVER", "UNDER"}:
-                lean_cell = lean_dir_html(side_key)
-        rows += (
-            f'<tr><td><b>{e(str(row.get("pitcher") or ""))}</b></td>'
-            f'<td>{_logo(row.get("team"), "tlogo sm")}{e(str(row.get("team") or ""))}</td>'
-            f'{"".join(cells)}'
-            f'<td>{lean_cell}</td></tr>'
-        )
-    if not rows:
-        return ""
-    return (
-        f'<div class=ca-board>{section_head("Projections", icon="props")}<div class=body>'
-        f'<div class=table-scroll><table class=sortable>'
-        f'<tr><th>Pitcher</th><th>Team</th><th>K</th><th>BB</th><th>ER</th><th>Outs</th><th>H</th><th>Lean</th></tr>'
-        f'{rows}</table></div></div></div>'
-    )
-
 
 def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None):
     pp_board = pp_board or {}
@@ -258,17 +107,15 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None):
         ("Sleeper", sl_board),
     ]
 
-    priced = sum(len(row.get("market_report") or []) for row in pitchers)
-    _, pickem_count = _pickem_rows(pitchers, pickem_sources)
+    book_n, fantasy_n = prop_channel_counts(pitchers, pickem_sources)
+    deck = pitcher_prop_deck(pitchers, pickem_sources)
     return f"""<h2>Pitcher Props</h2>
  <div class=cards>
    <div class=card><div class=k>Starters</div><div class=v>{len(pitchers)}</div></div>
-   <div class=card><div class=k>Graded lines</div><div class=v>{priced}</div></div>
-   <div class=card><div class=k>Pick&apos;em</div><div class=v>{pickem_count}</div></div>
+   <div class=card><div class=k>Book lines</div><div class=v>{book_n}</div></div>
+   <div class=card><div class=k>Fantasy lines</div><div class=v>{fantasy_n}</div></div>
  </div>
- {_projections_matrix(pitchers)}
- {_prop_edge_table(pitchers)}
- {_pickem_slate_table(pitchers, pickem_sources)}"""
+ {deck}"""
 
 
 def results(reader):

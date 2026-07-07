@@ -43,6 +43,7 @@ from mlbmodel.report.html_fmt import (
     val_chip_html,
     val_grade_html,
 )
+from mlbmodel.report.pitch_mix_ui import pitch_mix_board_html, pitch_mix_runs_chip
 from mlbmodel.storage.supabase import SupabaseReader
 
 
@@ -946,10 +947,9 @@ def _matchup_context_panel(gd, probability, context, esc):
         woba = ctx.woba
         arsenal_note = ""
         if arsenal.get("er_factor") is not None:
-            delta = (arsenal.get("er_factor") - 1.0) * 100
             arsenal_note = (
-                f' · pitch-mix runs {delta:+.1f}%'
-                f' ({arsenal.get("batters_matched", 0)} batters)'
+                f' · pitch-mix {pitch_mix_runs_chip(arsenal.get("er_factor"))}'
+                f' <span class=mut>({arsenal.get("batters_matched", 0)} batters)</span>'
             )
         return (
             f'<tr><td><b>{esc(team)}</b><span class=mut> vs {esc(opposing_hand)}HP</span></td>'
@@ -976,7 +976,7 @@ def _matchup_context_panel(gd, probability, context, esc):
       <div class=matchup-env-strip>{"".join(env_bits)}</div>
       <div class=matchup-context-grid>
         <div><div class=ca-subhead>Splits &amp; handedness</div>
-          <div class=table-scroll><table><tr><th>Team</th><th>Platoon OSI</th><th>wOBA</th><th>OSI</th><th>Trend · pitch mix</th></tr>{splits_rows}</table></div>
+          <div class=table-scroll><table><tr><th>Team</th><th>Platoon OSI</th><th>wOBA</th><th>OSI</th><th>Trend · pitch-mix runs</th></tr>{splits_rows}</table></div>
         </div>
         <div><div class=ca-subhead>Bullpen, workload &amp; inputs</div>
           <div class=table-scroll><table><tr><th>Input</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th><th>Meaning</th></tr>{workload_rows}</table></div>
@@ -1300,16 +1300,7 @@ def report_body(r):
             )
         projections = pitcher["projections"]
         pitch_matchup = pitcher.get("pitch_matchup") or {}
-        pitch_rows = "".join(
-            f'<tr><td><b>{esc(str(pitch["pitch"]))}</b>'
-            f'<span class="mut pitch-name-meta">{pitch["usage_pct"]:.0f}% usage</span></td>'
-            f'<td>{val_chip_html(pitch["lineup_xwoba"], "woba", digits=3)}</td>'
-            f'<td>{val_chip_html(pitch["lineup_whiff_pct"], "rate", digits=1, suffix="%")}</td>'
-            f'<td>{val_grade_html(pitch["k_delta"], "margin", digits=2, suffix=" K%")}</td>'
-            f'<td>{val_grade_html(-pitch["er_factor_delta"] * 100, "margin", digits=1, suffix="% runs")}</td>'
-            f'<td>{esc(pitch["edge"])}</td></tr>'
-            for pitch in pitch_matchup.get("pitches", [])[:5]
-        ) or '<tr><td class=mut colspan=6>No reliable pitch overlap.</td></tr>'
+        pitch_mix_block = pitch_mix_board_html(pitch_matchup, compact=False)
         state_tone = "neg" if pitcher["state"] == "REGRESSION" else (
             "pos" if pitcher["state"] == "PROGRESSION" else (
                 "warnc" if pitcher["state"] == "LIMITED SAMPLE" else "side"
@@ -1325,9 +1316,7 @@ def report_body(r):
               <span><b>{projections["Fantasy"]["mean"]:.1f}</b>DK pts <i>{projections["Fantasy"]["p10"]:.0f}–{projections["Fantasy"]["p90"]:.0f}</i></span>
               <span><em class={state_tone}>{esc(pitcher["state"])}</em><i>{esc(pitcher["confidence"])} confidence</i></span>
             </div>
-            <div class=pitch-source>{esc(str(pitch_matchup.get("response_source") or "No response source"))} · expected contact below .320 favors the pitcher</div>
-            <div class=table-scroll><table><tr><th>Pitch</th><th>Opponent expected contact</th>
-              <th>Opponent whiff</th><th>K effect</th><th>Run effect</th><th>Edge</th></tr>{pitch_rows}</table></div>
+            {pitch_mix_block}
           </div></div>"""
 
     pitcher_panels = pitcher_panel(gd.away) + pitcher_panel(gd.home)

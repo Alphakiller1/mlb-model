@@ -10,22 +10,22 @@ DATA = Path(__file__).resolve().parents[1] / "deployment_data"
 
 
 def test_matchup_summary_html_compact():
-    report = build_report("HOU", "DET", fetch=False, data_dir=DATA)
+    report = build_report("NYY", "TBR", fetch=False, data_dir=DATA)
     html = matchup_summary_html(report)
     assert "matchup-summary" in html
-    assert "HOU" in html and "DET" in html
+    assert "NYY" in html and "TBR" in html
 
 
 def test_build_app_renders_all_views():
-    html = build_app("HOU@DET", fetch=False, data_dir=DATA)
+    html = build_app("NYY@TBR", fetch=False, data_dir=DATA)
     for key, _label in _NAV:
         assert f'id="v-{key}"' in html
     assert "chase-nav-link" in html
     assert "sortable" in html
     assert "function show(k)" in html
     assert "location.hash" in html
-    assert "props-graded-table" in html or "Graded lines" in html
-    assert "pitcher-prop-deck" not in html.split("v-props")[1].split("</section>")[0]
+    assert "pitcher-prop-deck" in html.split("v-props")[1].split("</section>")[0]
+    assert "prop-engine-table" in html
     assert "Matchup context" in html
     assert "edge-command" in html
     assert "Where we have edge today" in html
@@ -36,7 +36,7 @@ def test_build_app_renders_all_views():
 
 def test_build_app_matchup_switch_hybrid_terminals():
     """Featured game is full; others ship compact + deferred full terminal in <template>."""
-    html = build_app("NYY@BOS", fetch=False, data_dir=DATA)
+    html = build_app("NYY@TBR", fetch=False, data_dir=DATA)
     assert html.count('class="matchup-report') >= 2
     assert "matchup-full-src" in html
     assert "matchup-summary" in html
