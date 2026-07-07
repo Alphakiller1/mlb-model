@@ -26,6 +26,7 @@ from mlbmodel.report.html_fmt import (
 from mlbmodel.report.matchup import _logo
 from mlbmodel.report.shell import slate_view_label
 from mlbmodel.report.props_ui import pitcher_prop_deck, prop_channel_counts
+from mlbmodel.report.game_keys import assign_slate_keys
 from mlbmodel.report.trends_ui import trends_section_html
 
 e = html.escape
@@ -57,6 +58,7 @@ def slate(repo, pitcher_rows=None):
         except Exception:
             rec["err"] = True
         out.append(rec)
+    assign_slate_keys(out)
     return out, sd
 
 
@@ -68,7 +70,7 @@ def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
             rows += f'<tr><td>{e(g["away"])}@{e(g["home"])}</td><td colspan=6 class=mut>no model inputs</td></tr>'
             continue
         sc = len(sharp_by_pk.get(g["pk"], []))
-        game = f'{g["away"]}@{g["home"]}'
+        game = g.get("key") or f'{g["away"]}@{g["home"]}'
         rows += (f'<tr><td><button class=gamepick onclick="openGame(\'{game}\')">'
                  f'<span class=gcell>{_logo(g["away"],"tlogo sm")}<b>{e(g["away"])}</b>'
                  f'<span class=mut>@</span>{_logo(g["home"],"tlogo sm")}<b>{e(g["home"])}</b></span></button></td>'
@@ -203,8 +205,8 @@ def results(reader):
  </div></div>"""
 
 
-def trends(reports):
-    return trends_section_html(reports)
+def trends(reports, *, slate=None):
+    return trends_section_html(reports, slate=slate)
 
 
 def research(reader, pv, f5_board=None, clv_summary=None):

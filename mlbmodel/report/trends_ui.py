@@ -5,6 +5,7 @@ import html
 import re
 
 from mlbmodel.report.html_fmt import lean_dir_html, val_chip_html
+from mlbmodel.report.game_keys import game_option_label
 from mlbmodel.report.matchup import _logo
 from mlbmodel.trends.types import RUN_BOOST, RUN_SUPPRESSION
 
@@ -229,7 +230,7 @@ def trend_matchup_panel(report, *, active: bool = False) -> str:
     )
 
 
-def trends_section_html(reports) -> str:
+def trends_section_html(reports, *, slate: list[dict] | None = None) -> str:
     if not reports:
         return (
             '<div class=pagehead><div><h2>Trends</h2></div></div>'
@@ -244,9 +245,19 @@ def trends_section_html(reports) -> str:
         home = str(_get(report, "home") or "")
         if not game and away and home:
             game = f"{away}@{home}"
+        label = game
+        if slate:
+            match = next(
+                (g for g in slate if g.get("key") == game),
+                None,
+            )
+            if match:
+                label = game_option_label(match, slate)
+            elif away and home:
+                label = f"{away} @ {home}"
         selected = " selected" if index == 0 else ""
         options.append(
-            f'<option value="{e(game)}"{selected}>{e(away)} @ {e(home)}</option>'
+            f'<option value="{e(game)}"{selected}>{e(label)}</option>'
         )
         panels.append(trend_matchup_panel(report, active=(index == 0)))
 

@@ -42,3 +42,13 @@ def test_build_app_matchup_switch_hybrid_terminals():
     assert "matchup-summary" in html
     assert "matchup-body" in html
     assert "matchup-banner" in html
+
+
+def test_build_app_single_font_import_and_typography_tokens():
+    html = build_app("NYY@TBR", fetch=False, data_dir=DATA)
+    assert html.count("fonts.googleapis.com") == 1
+    assert "--mm-text-base" in html
+    assert "--mm-text-display" in html
+    assert "font-size: var(--mm-text-md) !important" in html
+    assert "font-size:var(--mm-text-hero)" in html
+    assert "font-size:9px" not in html.split('id="main"')[1] if 'id="main"' in html else True

@@ -38,9 +38,15 @@ def test_run_impacts_no_trust_column():
 
 
 def test_impact_runs_html_signed_chip():
-    out = impact_runs_html(-0.63)
-    assert "chip" in out
-    assert "-0.63 R" in out
+    pos = impact_runs_html(0.42)
+    neg = impact_runs_html(-0.63)
+    assert "chip" in pos and "chip" in neg
+    assert "+0.42 R" in pos
+    assert "-0.63 R" in neg
+    assert "c-good" in pos or "c-elite" in pos
+    assert "c-weak" in neg or "c-poor" in neg
+    assert "c-mid" not in pos
+    assert "c-mid" not in neg
 
 
 def test_matchup_breakdown_pitcher_rl_populated():

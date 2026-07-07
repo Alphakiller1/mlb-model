@@ -8,6 +8,7 @@ from functools import lru_cache
 
 from mlbmodel.report.html_fmt import (
     edge_grade,
+    run_impact_grade,
     section_head,
     val_chip_html,
 )
@@ -89,7 +90,8 @@ def impact_runs_html(runs: float | None) -> str:
         value = float(runs)
     except (TypeError, ValueError):
         return '<span class="c-na">—</span>'
-    return val_chip_html(value, "margin", display_text=f"{value:+.2f} R")
+    cls = run_impact_grade(value)
+    return f'<span class="chip {cls}">{value:+.2f} R</span>'
 
 
 @lru_cache(maxsize=512)

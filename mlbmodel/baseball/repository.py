@@ -57,7 +57,7 @@ class DataRepository:
     def __init__(self, data_dir: Path | str | None = None):
         self.data_dir = Path(data_dir or settings.DATA_DIR)
         self._cache: dict[str, pd.DataFrame | None] = {}
-        self._game_cache: dict[tuple[str, str], GameData] = {}
+        self._game_cache: dict[tuple[str, str, int], GameData] = {}
         self._trend_cache: dict[tuple[str, str], dict] = {}
 
     def load(self, filename: str) -> pd.DataFrame | None:
@@ -240,11 +240,19 @@ class DataRepository:
     def enrich_trends(self, gd: GameData, away: str, home: str) -> None:
         gd.trend_features = self.trend_features(away, home)
 
-    def load_game(self, away: str, home: str, *, pitcher_rows: list[dict] | None = None) -> GameData:
+    def load_game(
+        self,
+        away: str,
+        home: str,
+        *,
+        game_number: int = 1,
+        pitcher_rows: list[dict] | None = None,
+    ) -> GameData:
         away, home = away.upper().strip(), home.upper().strip()
-        key = (away, home)
+        game_number = int(game_number or 1)
+        key = (away, home, game_number)
         if key not in self._game_cache:
-            self._game_cache[key] = self._build_game_data(away, home)
+            self._game_cache[key] = self._build_game_data(away, home, game_number=game_number)
         gd = (
             copy.deepcopy(self._game_cache[key])
             if pitcher_rows
@@ -254,7 +262,7 @@ class DataRepository:
             attach_arsenal(gd, pitcher_rows)
         return gd
 
-    def _build_game_data(self, away: str, home: str) -> GameData:
+    def _build_game_data(self, away: str, home: str, *, game_number: int = 1) -> GameData:
         slate = self.slate()
         if slate is None:
             raise FileNotFoundError(
@@ -265,9 +273,13 @@ class DataRepository:
         selected = slate[(slate["Away"] == away) & (slate["Home"] == home)]
         if selected.empty:
             raise ValueError(f"{away}@{home} is not on the loaded slate")
+        if "Game_Number" in selected.columns and len(selected) > 1:
+            numbered = selected[selected["Game_Number"].astype(int) == int(game_number)]
+            if not numbered.empty:
+                selected = numbered
         game = selected.iloc[0]
         game_date = str(game.get("Slate_Date") or dt.date.today().isoformat())
-        game_number = int(_number(game.get("Game_Number")) or 1)
+        game_number = int(_number(game.get("Game_Number")) or int(game_number) or 1)
         game_pk = int(
             _number(game.get("Game_PK"))
             or canonical_game_pk(game_date, away, home, game_number)

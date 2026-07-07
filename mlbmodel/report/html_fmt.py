@@ -277,6 +277,26 @@ def metric_grade(value, context: str = "osi", *, invert: bool | None = None) -> 
     return _SOLID_CHIP_CLASS.get(grade, "c-mid")
 
 
+def run_impact_grade(runs: float) -> str:
+    """Signed run-delta coloring — green adds runs, red/orange suppresses."""
+    if not math.isfinite(runs):
+        return "c-na"
+    if abs(runs) < 0.05:
+        return "c-mid"
+    if runs > 0:
+        if runs >= 1.0:
+            return "c-elite"
+        if runs >= 0.35:
+            return "c-good"
+        return "c-good"
+    mag = abs(runs)
+    if mag >= 1.0:
+        return "c-poor"
+    if mag >= 0.35:
+        return "c-weak"
+    return "c-weak"
+
+
 def val_chip_html(
     value,
     context: str = "osi",

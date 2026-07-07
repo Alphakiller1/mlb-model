@@ -70,8 +70,8 @@ TABLE_UI_JS = r"""
 TABLE_UI_CSS = """
 .table-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
 .table-filter{flex:1;min-width:160px;max-width:320px;background:var(--card);color:var(--ink);
-border:1px solid var(--border-2);border-radius:8px;padding:9px 12px;font:600 13px var(--sans)}
-.pickem-books{display:flex;gap:6px;flex-wrap:wrap;font-size:11px}
+border:1px solid var(--border-2);border-radius:8px;padding:9px 12px;font:600 var(--mm-text-base) var(--sans)}
+.pickem-books{display:flex;gap:6px;flex-wrap:wrap;font-size:var(--mm-text-xs)}
 .pickem-books span{padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.06)}
 .pickem-books .best{border:1px solid var(--teal);color:var(--teal)}
 @media (prefers-reduced-motion:reduce){.table-scroll table.sortable th{transition:none}}

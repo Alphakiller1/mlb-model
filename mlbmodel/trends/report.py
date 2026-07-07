@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 
-from mlbmodel.baseball.repository import DataRepository
+from mlbmodel.sources.sync_mlbma import matchup_keys
 from mlbmodel.trends.context import SituationalContext
 from mlbmodel.trends.detectors import run_detectors
 from mlbmodel.trends.features import trend_features
@@ -104,19 +104,22 @@ def build_slate_reports(
     out: list[SituationalEdge] = []
     if slate is None or slate.empty:
         return out
-    for _, row in slate.iterrows():
+    slate_rows = [row.to_dict() for _, row in slate.iterrows()]
+    keys = matchup_keys(slate_rows)
+    for index, row in enumerate(slate_rows):
         away = str(row.get("Away") or "").strip()
         home = str(row.get("Home") or "").strip()
         if not away or not home:
             continue
+        game_key = keys[index]
         try:
             edge = build_situational_report(repo, away, home, top_n=top_n)
+            edge.game = game_key
             if pitchers is not None or model_by_pk is not None:
-                game_key = f"{away}@{home}"
                 model_rows: list[dict] = []
                 if model_by_pk and pkmap:
-                    for pk, gname in pkmap.items():
-                        if gname == game_key:
+                    for pk, mapped_key in pkmap.items():
+                        if mapped_key == game_key:
                             model_rows = list(model_by_pk.get(pk) or [])
                             break
                 edge = _enrich_with_prop_and_market_trends(
@@ -130,7 +133,7 @@ def build_slate_reports(
                 )
             out.append(edge)
         except Exception:
-            logger.exception("situational report failed for %s@%s", away, home)
+            logger.exception("situational report failed for %s", game_key)
     return out
 
 

@@ -139,7 +139,7 @@ def collect_model_market_plays(
 ) -> list[dict]:
     """Model fair values and priced edges — fills the board when sharp signals are absent."""
     thresholds = thresholds or DEFAULT_THRESHOLDS
-    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
+    pkmap = {g["pk"]: g.get("key") or f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
     plays: list[dict] = []
     rank_base = {"STRONG": 4, "BET": 3, "LEAN": 2, "MODEL": 2, "SHARP": 1, "CONFLICT": 0}
 
@@ -216,7 +216,7 @@ def collect_market_plays(
     model_by_pk,
     thresholds: DecisionThresholds | None = None,
 ) -> list[dict]:
-    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
+    pkmap = {g["pk"]: g.get("key") or f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
     plays = []
     seen: set[tuple] = set()
     for pk, sigs in sharp_by_pk.items():

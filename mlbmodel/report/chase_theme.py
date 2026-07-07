@@ -10,48 +10,52 @@ it from mlbma-pipeline/dashboard/; chase-analytics.com keeps the full stadium ph
 """
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 from pathlib import Path
 
 _STATIC = Path(__file__).resolve().parent / "static"
 
-# The production font import, extended with Oswald (the italic wordmark face used by
-# .chase-wordmark in chase_nav.css) which the dashboard loads globally elsewhere.
-_SRC_FONT_IMPORT = (
-    "@import url('https://fonts.googleapis.com/css2?"
-    "family=DM+Sans:wght@400;500;600;700;800&"
-    "family=Roboto+Condensed:wght@400;500;600;700&display=swap');"
-)
+# Single font load for the whole bundle — Oswald is wordmark-only; DM Sans = UI/body;
+# Roboto Condensed = display headings and graded stat chips.
 _FONT_IMPORT = (
     "@import url('https://fonts.googleapis.com/css2?"
-    "family=DM+Sans:wght@400;500;600;700;800&"
+    "family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&"
     "family=Oswald:ital,wght@0,600;0,700;0,900;1,600;1,700;1,900&"
-    "family=Roboto+Condensed:wght@400;500;600;700&display=swap');"
+    "family=Roboto+Condensed:wght@400;500;600;700;800&display=swap');"
 )
+_FONT_IMPORT_RE = re.compile(
+    r"@import\s+url\([^)]*fonts\.googleapis\.com[^)]*\)\s*;",
+    re.IGNORECASE,
+)
+
+
+def _strip_font_imports(css: str) -> str:
+  """Remove duplicate Google Font @imports from vendored sheets."""
+  return _FONT_IMPORT_RE.sub("", css)
 
 
 @lru_cache(maxsize=1)
 def theme_css() -> str:
     """The full production Chase Analytics stylesheet, inlined and self-contained.
 
-    Load order mirrors the site: design-system tokens/components → theme extensions →
-    header/nav → broadcast gradient backgrounds (MLB Model fork; no stadium photos).
+    Load order: design-system → theme → backgrounds → tokens → components (nav included).
+    Fonts are imported once at the top; vendored @imports are stripped to avoid double-loads.
     """
-    design = (_STATIC / "mlbma_design_system.css").read_text(encoding="utf-8")
-    # The vendored copy is standalone: drop the responsive.css @import (not vendored) and add
-    # Oswald to the font import so the wordmark renders in its real face.
-    design = design.replace("@import url('responsive.css?v=20260630a');", "")
-    design = design.replace(_SRC_FONT_IMPORT, _FONT_IMPORT)
+    design = _strip_font_imports(
+        (_STATIC / "mlbma_design_system.css")
+        .read_text(encoding="utf-8")
+        .replace("@import url('responsive.css?v=20260630a');", "")
+    )
 
-    theme = (_STATIC / "theme.css").read_text(encoding="utf-8")
-    nav = (_STATIC / "chase_nav.css").read_text(encoding="utf-8")
-
+    theme = _strip_font_imports((_STATIC / "theme.css").read_text(encoding="utf-8"))
     backgrounds = (_STATIC / "mlbma_backgrounds.css").read_text(encoding="utf-8")
+    tokens = _strip_font_imports((_STATIC / "chase_tokens.css").read_text(encoding="utf-8"))
+    components = _strip_font_imports(
+        (_STATIC / "chase_components.css").read_text(encoding="utf-8")
+    )
 
-    tokens = (_STATIC / "chase_tokens.css").read_text(encoding="utf-8")
-    components = (_STATIC / "chase_components.css").read_text(encoding="utf-8")
-
-    return "\n".join([design, theme, nav, backgrounds, tokens, components])
+    return "\n".join([_FONT_IMPORT, design, theme, backgrounds, tokens, components])
 
 
 @lru_cache(maxsize=1)

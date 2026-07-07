@@ -43,6 +43,11 @@ from mlbmodel.market.pickem import (
     load_pickem_lines,
     pickem_market_reports,
 )
+from mlbmodel.report.game_keys import (
+    game_option_label,
+    parse_game_key,
+    resolve_featured_game,
+)
 from mlbmodel.report.shell import NAV as _NAV, shell_css, shell_js, slate_view_label
 from mlbmodel.report.views import (
     props as _props,
@@ -118,9 +123,10 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             pitcher["market_state"] = str(reports[0].get("state") or "NO MARKET")
     slate, sd = _slate(repo, pitchers)
     sync = repo.sync_manifest()
-    games = [f'{g["away"]}@{g["home"]}' for g in slate if not g.get("err")]
-    if games and featured_game.upper() not in games:
-        featured_game = games[0]
+    featured_key = resolve_featured_game(featured_game, slate)
+    games = [g["key"] for g in slate if not g.get("err") and g.get("key")]
+    if games and featured_key not in games:
+        featured_key = games[0]
     pks = {g["pk"] for g in slate if "pk" in g}
     sharp_by_pk = {}
     for game in slate:
@@ -160,11 +166,13 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     matchup_reports = []
     model_by_pk = {}
     for game in slate:
-        game_name = f'{game["away"]}@{game["home"]}'
+        game_key = game.get("key") or f'{game["away"]}@{game["home"]}'
+        _, _, game_number = parse_game_key(game_key)
         try:
             r = build_report(
                 game["away"], game["home"], fetch=False, data_dir=data_dir,
                 board=board, reader=reader, gate=gate,
+                game_number=game_number,
                 pitcher_rows=[
                     pitcher for pitcher in pitchers
                     if pitcher.get("team") in {game["away"], game["home"]}
@@ -173,7 +181,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             if "pk" in game:
                 model_by_pk[game["pk"]] = r.get("markets", [])
             full_terminal = report_body(r)
-            if game_name == featured_game.upper():
+            if game_key == featured_key:
                 report = f'<div class=matchup-body>{full_terminal}</div>'
             else:
                 report = (
@@ -181,18 +189,18 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                     f'<template class=matchup-full-src>{full_terminal}</template>'
                 )
         except Exception as exc:
-            report = f'<div class=empty>Could not build {e(game_name)}: {e(str(exc))}</div>'
-        active = " on" if game_name == featured_game.upper() else ""
+            report = f'<div class=empty>Could not build {e(game_key)}: {e(str(exc))}</div>'
+        active = " on" if game_key == featured_key else ""
         matchup_reports.append(
-            f'<div class="matchup-report{active}" data-game="{e(game_name)}">{report}</div>'
+            f'<div class="matchup-report{active}" data-game="{e(game_key)}">{report}</div>'
         )
     option_rows = []
     for game in slate:
-        game_name = f'{game["away"]}@{game["home"]}'
-        selected = " selected" if game_name == featured_game.upper() else ""
+        game_key = game.get("key") or f'{game["away"]}@{game["home"]}'
+        selected = " selected" if game_key == featured_key else ""
         option_rows.append(
-            f'<option value="{game_name}"{selected}>'
-            f'{game["away"]} @ {game["home"]}</option>'
+            f'<option value="{game_key}"{selected}>'
+            f'{e(game_option_label(game, slate))}</option>'
         )
     options = "".join(option_rows)
     matchups = (
@@ -202,7 +210,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         f'{"".join(matchup_reports)}'
     )
 
-    pkmap = {g["pk"]: f'{g["away"]}@{g["home"]}' for g in slate if "pk" in g}
+    pkmap = {g["pk"]: g["key"] for g in slate if "pk" in g and g.get("key")}
     try:
         slate_reports = build_slate_reports(
             repo,
@@ -291,7 +299,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     views = {
         "today": _today(slate, sd, sharp_by_pk, sync, edge_command),
         "matchups": matchups,
-        "trends": _trends(slate_reports),
+        "trends": _trends(slate_reports, slate=slate),
         "markets": _markets(slate, sharp_by_pk, model_by_pk, decision_thresholds),
         "props": _props(pitchers, prop_prices, pp_board, ud_board, sl_board),
         "results": _results(reader),

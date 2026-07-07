@@ -6,8 +6,6 @@
  * that file. If MLBMA's tokens change, resync this file by hand — it intentionally has no
  * runtime dependency on the mlbma-pipeline repo so this product stays independently deployable.
  */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Roboto+Condensed:wght@400;500;600;700;800&display=swap');
-
 :root {
   color-scheme: dark;
 
@@ -75,12 +73,26 @@
 
   /* Typography */
   --font-primary: 'DM Sans', system-ui, -apple-system, sans-serif;
-  --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-body: var(--font-primary);
   --font-display: 'Roboto Condensed', 'DM Sans', system-ui, sans-serif;
-  --sans: 'DM Sans', system-ui, -apple-system, sans-serif;
-  --display: 'Roboto Condensed', 'DM Sans', system-ui, sans-serif;
-  --mono: 'Roboto Condensed', ui-sans-serif, system-ui, sans-serif;
+  --sans: var(--font-primary);
+  --display: var(--font-display);
+  --mono: var(--font-display);
+  --font-wordmark: 'Oswald', 'Arial Narrow', system-ui, sans-serif;
   --ca-editorial-caps: 0.1em;
+
+  /* MLB Model type scale — dense broadcast UI */
+  --mm-text-2xs: 10px;
+  --mm-text-xs: 11px;
+  --mm-text-sm: 12px;
+  --mm-text-base: 13px;
+  --mm-text-md: 14px;
+  --mm-text-lg: 15px;
+  --mm-text-xl: 17px;
+  --mm-text-2xl: 20px;
+  --mm-text-3xl: 24px;
+  --mm-text-display: 28px;
+  --mm-text-hero: 32px;
 
   /* Nav (chase_nav.css) */
   --chase-nav-height: 68px;
@@ -88,30 +100,6 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  font-family: var(--font-primary);
-}
-
-body {
-  margin: 0;
-  color: var(--text);
-  font-family: var(--font-body);
-  background:
-    radial-gradient(ellipse 80% 52% at 76% 0%, rgba(124, 77, 255, 0.13), transparent 62%),
-    radial-gradient(ellipse 85% 55% at 8% 106%, rgba(91, 43, 224, 0.10), transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
-}
-
-h1, h2, h3, .ca-page-title, .ca-section-title {
-  font-family: var(--font-display);
-  font-variation-settings: 'wdth' 125;
-  letter-spacing: -0.015em;
-}
 
 .num, td, th, .chip, .mval { font-variant-numeric: tabular-nums; }
 .pos { color: var(--ca-green); }
