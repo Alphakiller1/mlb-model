@@ -95,7 +95,13 @@ def impact_runs_html(runs: float | None) -> str:
 
 
 @lru_cache(maxsize=512)
-def _inn1_runs_allowed(game_pk: int, pitcher_is_home: bool) -> int | None:
+def _f5_runs_allowed(game_pk: int, pitcher_is_home: bool) -> int | None:
+    """Runs the pitcher's team allowed through the first 5 innings (F5) of a start.
+
+    Summed from the game's linescore innings 1-5 (opponent's side). This is runs, not strictly
+    earned runs, and it is the pitching team's total through 5 (relievers included if the starter
+    left before the 5th) — a standard F5 recent-form read, not a 1st-inning-only figure.
+    """
     try:
         url = f"https://statsapi.mlb.com/api/v1.1/game/{game_pk}/feed/live"
         request = urllib.request.Request(url, headers={"User-Agent": "mlb-model/1.0"})
@@ -103,12 +109,15 @@ def _inn1_runs_allowed(game_pk: int, pitcher_is_home: bool) -> int | None:
             feed = json.loads(response.read().decode())
         innings = feed.get("liveData", {}).get("linescore", {}).get("innings", [])
         opp_side = "away" if pitcher_is_home else "home"
+        total, found = 0, False
         for inn in innings:
-            if inn.get("num") == 1:
-                return int(inn.get(opp_side, {}).get("runs", 0) or 0)
+            num = inn.get("num")
+            if isinstance(num, int) and 1 <= num <= 5:
+                total += int(inn.get(opp_side, {}).get("runs", 0) or 0)
+                found = True
+        return total if found else None
     except (OSError, json.JSONDecodeError, TypeError, ValueError):
         return None
-    return None
 
 
 def _norm_name(name: str) -> str:
@@ -185,16 +194,16 @@ def _sp_last5_inn1(repo, pitcher_name: str) -> list[dict]:
     for _, row in sub.iterrows():
         game_pk = row.get("game_pk")
         is_home = str(row.get("home_away") or "").lower() == "home"
-        inn1 = None
+        f5 = None
         if game_pk is not None:
             try:
-                inn1 = _inn1_runs_allowed(int(game_pk), is_home)
+                f5 = _f5_runs_allowed(int(game_pk), is_home)
             except (TypeError, ValueError):
-                inn1 = None
+                f5 = None
         rows.append({
             "date": str(row.get("date") or "")[:10],
             "opp": str(row.get("opponent_team") or ""),
-            "inn1_er": inn1,
+            "f5_er": f5,
             "er": row.get("ER"),
         })
     return rows
@@ -538,7 +547,7 @@ def f5_section_html(r, gd, repo, esc) -> str:
     def inn1_strip(team, sp_name, starts, runs_mean):
         cells = []
         for row in starts:
-            val = row.get("inn1_er")
+            val = row.get("f5_er")
             cell = val_chip_html(val, "prop_er", digits=0) if val is not None else '<span class=c-na>—</span>'
             cells.append(
                 f'<span class=f5-inn1-chip title="{esc(row.get("date", ""))} vs {esc(row.get("opp", ""))}">'
@@ -554,7 +563,7 @@ def f5_section_html(r, gd, repo, esc) -> str:
             f'<span class=mut>vs {esc(hand)}HP {esc(rec)}</span></div>'
             f'<div class=f5-run-line>{val_chip_html(runs_mean, "team_runs", digits=2, suffix=" runs")}</div>'
             f'<div class=f5-sp-line><span class=mut>{esc(sp_name)}</span>'
-            f'<span class=mut>1st-inn ER · last 5</span></div>'
+            f'<span class=mut>R thru 5 · last 5</span></div>'
             f'<div class=f5-inn1-row>{"".join(cells)}</div></div>'
         )
 
