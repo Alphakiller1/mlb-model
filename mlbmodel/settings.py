@@ -46,6 +46,9 @@ METRIC_VERSION = os.getenv("MLBMA_METRIC_VERSION", "2026.06")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+# Dedicated write key (service_role / sb_secret_...). Required to INSERT model_leans — the
+# anon/publishable read key can SELECT but RLS blocks writes. Falls back to SUPABASE_KEY.
+SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "")
 
 ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
 ODDS_API_BASE = "https://api.the-odds-api.com/v4"
@@ -145,3 +148,8 @@ def team_abbr(name: str) -> str:
 
 def supabase_read_key() -> str:
     return SUPABASE_PUBLISHABLE_KEY or SUPABASE_KEY
+
+
+def supabase_write_key() -> str:
+    """Key used for warehouse writes (model_leans). Prefers the dedicated service key."""
+    return SUPABASE_SECRET_KEY or SUPABASE_KEY

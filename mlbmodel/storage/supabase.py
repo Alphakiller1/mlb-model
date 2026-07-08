@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
@@ -36,7 +37,7 @@ class SupabaseReader:
 class SupabaseWriter:
     def __init__(self, url: str | None = None, key: str | None = None):
         self.url = (url if url is not None else settings.SUPABASE_URL).rstrip("/")
-        self.key = key if key is not None else settings.SUPABASE_KEY
+        self.key = key if key is not None else settings.supabase_write_key()
 
     def upsert(self, table: str, rows: list[dict], on_conflict: str) -> int:
         if not rows:
@@ -54,8 +55,15 @@ class SupabaseWriter:
             },
             method="POST",
         )
-        with urllib.request.urlopen(request, timeout=30):
-            return len(rows)
+        try:
+            with urllib.request.urlopen(request, timeout=30):
+                return len(rows)
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode(errors="replace")[:400]
+            raise RuntimeError(
+                f"supabase upsert {table} failed HTTP {exc.code}: {body} "
+                "(SUPABASE_SECRET_KEY must be a write/service key)"
+            ) from exc
 
     def insert(self, table: str, rows: list[dict]) -> int:
         if not rows:
