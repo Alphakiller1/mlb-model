@@ -150,7 +150,13 @@ def _l10_record(repo, team: str, hand: str | None = None) -> str:
     sub = frame[frame["team"].astype(str).str.upper() == team.upper()].copy()
     if sub.empty:
         return "—"
-    sub = sub.sort_values("game_date", ascending=False).head(10)
+    # game_results.csv dates the game in a `date` column (MLBMA schema); tolerate the
+    # legacy `game_date` name too, and don't hard-fail if neither is present.
+    date_col = next((c for c in ("date", "game_date") if c in sub.columns), None)
+    if date_col:
+        sub = sub.sort_values(date_col, ascending=False).head(10)
+    else:
+        sub = sub.head(10)
     wins = int((sub["result"] == "W").sum())
     losses = int((sub["result"] == "L").sum())
     ties = int((sub["result"] == "T").sum())
