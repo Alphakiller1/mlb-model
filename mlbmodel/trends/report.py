@@ -9,6 +9,7 @@ edge scores → engineers model features → writes the narrative, returning one
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from mlbmodel.sources.sync_mlbma import matchup_keys
 from mlbmodel.trends.context import SituationalContext
@@ -18,6 +19,9 @@ from mlbmodel.trends.narrative import build_narrative
 from mlbmodel.trends.scoring import rank_and_score, team_edge_scores
 from mlbmodel.trends.prop_detectors import trends_for_game
 from mlbmodel.trends.types import SituationalEdge
+
+if TYPE_CHECKING:  # annotation-only; avoids a runtime import cycle with baseball.repository
+    from mlbmodel.baseball.repository import DataRepository
 
 logger = logging.getLogger("mlbmodel.trends")
 
