@@ -11,6 +11,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from mlbmodel import settings
+from mlbmodel.market import usage
 from mlbmodel.market.oddsmath import american_to_implied, devig_two_way
 
 ET = ZoneInfo("America/New_York")
@@ -207,6 +208,7 @@ def fetch_events(*, cache_path: Path | None = None) -> tuple[list[dict], str]:
     url = f"{settings.ODDS_API_BASE}/sports/{settings.ODDS_SPORT_KEY}/odds?{params}"
     with urllib.request.urlopen(url, timeout=30) as response:
         events = json.loads(response.read().decode())
+        usage.record(response, "game-lines")
     if settings.ODDS_F5_ENABLED and isinstance(events, list):
         # Best-effort and fully isolated: F5 is an add-on, it must never break (or block the
         # caching of) the core full-game odds.
@@ -243,6 +245,7 @@ def _merge_f5_markets(events: list[dict]) -> None:
         try:
             with urllib.request.urlopen(f"{base}/{event_id}/odds?{params}", timeout=30) as response:
                 payload = json.loads(response.read().decode())
+                usage.record(response, "f5")
         except Exception:
             continue
         # Merge the F5 markets into the matching bookmaker entries already on the event.
