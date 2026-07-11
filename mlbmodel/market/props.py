@@ -12,6 +12,7 @@ from pathlib import Path
 
 from mlbmodel import settings
 from mlbmodel.baseball.model import normal_cdf
+from mlbmodel.market import usage
 from mlbmodel.market.prizepicks import normalize_name
 from mlbmodel.market.oddsmath import (
     american_to_implied,
@@ -198,6 +199,7 @@ def fetch_prop_payloads(cache_path: Path | None = None) -> tuple[list[dict], str
         try:
             with urllib.request.urlopen(url, timeout=30) as response:
                 payloads.append(json.loads(response.read().decode("utf-8")))
+                usage.record(response, "props")
         except (OSError, ValueError, json.JSONDecodeError):
             continue
     fetched = datetime.now(timezone.utc).isoformat(timespec="seconds")
