@@ -1083,3 +1083,67 @@
 #main .trend-detail-row td {
   font-size: var(--mm-text-sm) !important;
 }
+
+/* ── 2026 modern pass — sharper surfaces, calmer chrome, denser data ──
+   Elevation replaces outlines: hairline borders + layered shadows carry depth,
+   violet is reserved for the accent line, hover states, and data emphasis. */
+
+/* Boards: keep the signature top scrim, soften the heavy 2px violet frame */
+#main .ca-board {
+  border-width: 1px;
+  border-color: rgba(154, 107, 255, 0.20);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.07) inset,
+    0 22px 54px rgba(0, 0, 0, 0.55);
+}
+#main .ca-board::before { box-shadow: 0 0 12px rgba(124, 77, 255, 0.45); }
+
+/* Tables: hairline frames, condensed micro-headers, tighter rows */
+#main .table-scroll,
+#main .pitch-mix-board {
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: rgba(10, 12, 20, 0.72);
+}
+#main .table-scroll::before,
+#main .pitch-mix-board::before { height: 2px; opacity: 0.9; }
+#main .table-scroll thead th {
+  background: rgba(8, 9, 15, 0.92);
+  color: var(--text-3);
+  letter-spacing: 0.12em;
+  padding: 10px 13px 8px;
+  border-bottom: 1px solid var(--border-soft);
+}
+#main .table-scroll tbody td {
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* State pills: filled tints, no outline weight */
+#main .pill {
+  border-width: 0;
+  padding: 4px 11px;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+/* Filter + select chrome */
+#main .pagehead select,
+#main .table-filter {
+  background: var(--bg-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+}
+#main .pagehead select:hover,
+#main .table-filter:hover { border-color: var(--border-violet); }
+#main .table-filter:focus-visible,
+#main .pagehead select:focus-visible {
+  outline: 2px solid rgba(124, 77, 255, 0.55);
+  outline-offset: 1px;
+}
+
+/* Notice banner: quieter, glassier */
+#main .deployment-notice {
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(135deg, rgba(124, 77, 255, 0.10), rgba(45, 212, 191, 0.03));
+  color: var(--text-2);
+}

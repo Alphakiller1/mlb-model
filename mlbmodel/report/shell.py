@@ -43,23 +43,28 @@ body{padding:0;min-height:100vh}
 .view{display:none}.view.on{display:block;animation:viewin .28s ease both}
 @keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.view.on{animation:none}.card{transition:none}}
-#main>.view>h2:first-child{font-family:var(--display);font-weight:800;font-size:var(--mm-text-display);font-variation-settings:'wdth' 125;
-letter-spacing:-.02em;margin:0 0 5px;line-height:1.05}
+#main>.view>h2:first-child{font-family:var(--display);font-weight:800;font-size:var(--mm-text-hero);font-variation-settings:'wdth' 125;
+letter-spacing:-.02em;margin:0 0 6px;line-height:1.02;text-transform:uppercase;color:var(--text)}
+.pagehead h2{color:var(--text)}
+#main>.view>h2:first-child::before,.pagehead h2::before{content:"Chase Analytics · MLB Intelligence";display:block;
+font-family:var(--display);font-weight:700;font-size:var(--mm-text-2xs);letter-spacing:.22em;text-transform:uppercase;
+color:var(--gold);margin-bottom:9px}
 .ctx{color:var(--muted);font-size:var(--mm-text-sm);margin-bottom:10px;line-height:1.35}
 .note{color:var(--muted);font-size:var(--mm-text-xs);margin-top:6px;line-height:1.35}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
 .card{position:relative;background:linear-gradient(180deg,var(--ca-board-top, #181B26),var(--ca-board-bottom, #12141D));
-border:2px solid var(--ca-panel-border, var(--border-violet));border-radius:14px;
-padding:12px 14px 11px;overflow:hidden;box-shadow:var(--ca-card-shadow);
+border:1px solid var(--border-soft);border-radius:16px;
+padding:14px 16px 13px;overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 14px 38px rgba(0,0,0,.45);
 transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-.card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--v-grad);opacity:.7}
-.card:hover{transform:translateY(-2px);border-color:var(--ca-panel-border);
-box-shadow:0 10px 34px rgba(0,0,0,.5),0 0 0 1px rgba(196,176,255,.12)}
-.card .k{color:var(--muted);font-size:var(--mm-text-xs);text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--v-grad);opacity:.8}
+.card:hover{transform:translateY(-2px);border-color:var(--border-violet);
+box-shadow:0 16px 44px rgba(0,0,0,.55),0 0 0 1px rgba(196,176,255,.10),0 0 26px rgba(124,77,255,.14)}
+.card .k{color:var(--muted);font-size:var(--mm-text-2xs);text-transform:uppercase;letter-spacing:.13em;font-weight:800}
 .card .v{color:var(--ink);font-family:var(--display);font-weight:800;font-size:var(--mm-text-3xl);font-variation-settings:'wdth' 120;
-margin-top:4px;line-height:1.05;letter-spacing:-.01em}
+margin-top:6px;line-height:1.05;letter-spacing:-.01em}
 .cols{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start}
-.empty{color:var(--muted);font-size:var(--mm-text-sm);padding:12px;border:1px dashed var(--border-2);border-radius:8px}
+.empty{color:var(--muted);font-size:var(--mm-text-sm);padding:14px 16px;border:1px dashed var(--border-2);border-radius:12px;
+background:linear-gradient(180deg,rgba(24,26,42,.5),rgba(5,6,12,.5))}
 @media(max-width:880px){.cols{grid-template-columns:1fr}}
 .gcell{display:inline-flex;align-items:center;gap:5px}
 .gamepick{border:0;background:none;color:inherit;font:inherit;padding:0;cursor:pointer;text-align:left}
@@ -77,7 +82,10 @@ background:linear-gradient(135deg,rgba(124,77,255,.12),rgba(45,212,191,.04));col
 .deployment-notice::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--v-light),var(--teal))}
 .empty ul{margin:8px 0 0;padding-left:18px}.empty li{margin:3px 0}
 .pitcher-prop-deck{display:flex;flex-direction:column;gap:10px}
-.pitcher-prop-card{border:2px solid var(--ca-panel-border,var(--border-violet));border-radius:16px;overflow:hidden}
+.pitcher-prop-card{border:1px solid var(--border-soft);border-radius:16px;overflow:hidden;
+background:linear-gradient(180deg,var(--ca-board-top,#181A2A),var(--ca-board-bottom,#05060C));
+box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 10px 30px rgba(0,0,0,.4);transition:border-color .16s ease}
+.pitcher-prop-card:hover,.pitcher-prop-card.on{border-color:var(--border-violet)}
 .pitcher-prop-head{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;background:transparent;color:inherit;
 font:inherit;text-align:left;cursor:pointer;transition:background .15s ease}
 .pitcher-prop-head:hover{background:rgba(124,77,255,.06)}
@@ -108,9 +116,11 @@ background:rgba(6,10,18,.45);min-width:88px}
 .matchup-env-strip b{color:var(--ink);font-family:var(--display)}
 .edge-command{margin-bottom:18px}
 .edge-hero{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
-.edge-hero-stat{position:relative;background:linear-gradient(180deg,var(--ca-board-top,#181B26),var(--ca-board-bottom,#12141D));
-border:2px solid var(--ca-panel-border,var(--border-violet));border-radius:14px;padding:14px 16px;box-shadow:var(--ca-card-shadow)}
-.edge-hero-stat .k{display:block;color:var(--muted);font-size:var(--mm-text-2xs);text-transform:uppercase;letter-spacing:.07em;font-weight:800}
+.edge-hero-stat{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--ca-board-top,#181B26),var(--ca-board-bottom,#12141D));
+border:1px solid var(--border-soft);border-radius:16px;padding:15px 17px;
+box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 14px 38px rgba(0,0,0,.45)}
+.edge-hero-stat::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--v-grad);opacity:.8}
+.edge-hero-stat .k{display:block;color:var(--muted);font-size:var(--mm-text-2xs);text-transform:uppercase;letter-spacing:.13em;font-weight:800}
 .edge-hero-stat b{display:block;font:800 var(--mm-text-3xl) var(--display);margin-top:4px}
 .edge-hero-stat i{display:block;color:var(--muted);font-size:var(--mm-text-2xs);font-style:normal;margin-top:4px}
 @media(max-width:880px){.edge-hero{grid-template-columns:repeat(2,1fr)}}
