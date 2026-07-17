@@ -132,13 +132,17 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
                 continue
             snapshot_at = (pickem_snapshots or {}).get(label.lower())
             fresh = snapshot_is_fresh(snapshot_at, slate_date)
-            tone = "pos" if fresh else "neg"
-            state = "" if fresh else " — STALE, not recorded as leans"
+            tone = "pos" if fresh else "warnc"
+            state = "" if fresh else " · stale — display only"
             badges.append(
-                f'<span class="chip {tone}">{e(label)}: {e(snapshot_label(snapshot_at))}{state}</span>'
+                f'<span class="pill {tone}" style="margin:2px 6px 2px 0;white-space:nowrap">'
+                f'{e(label)} · {e(snapshot_label(snapshot_at))}{state}</span>'
             )
         if badges:
-            freshness = f'<p class=mut>Pick\'em line snapshots: {" ".join(badges)}</p>'
+            freshness = (
+                '<p class=mut style="margin:2px 0 12px;line-height:2">'
+                f'Pick\'em line snapshots: {"".join(badges)}</p>'
+            )
 
     book_n, fantasy_n = prop_channel_counts(pitchers, pickem_sources)
     deck = pitcher_prop_deck(pitchers, pickem_sources)
