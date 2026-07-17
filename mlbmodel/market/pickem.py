@@ -24,30 +24,60 @@ def load_pickem_lines(
     fallback_path: Path | None = None,
 ) -> list[dict]:
     """Load pick'em lines: live fetch when asked, then cache, then bundled snapshot."""
+    lines, _ = load_pickem_lines_with_meta(
+        loader, cache_path, fetch=fetch, fallback_path=fallback_path
+    )
+    return lines
+
+
+def load_pickem_lines_with_meta(
+    loader,
+    cache_path: Path,
+    *,
+    fetch: bool = False,
+    fallback_path: Path | None = None,
+) -> tuple[list[dict], str | None]:
+    """Like load_pickem_lines, but also returns the snapshot timestamp (None = undated/stale)."""
+    from mlbmodel.market.lines_cache import read_lines_cache
+
     cache_path = Path(cache_path)
     if fetch:
         try:
             lines = loader.fetch_lines(cache_path)
             if lines:
                 log.info("pick'em %s: fetched %s live lines", cache_path.name, len(lines))
-                return lines
+                _, snapshot_at = read_lines_cache(cache_path)
+                return lines, snapshot_at
         except Exception as exc:
             log.warning("pick'em %s live fetch failed: %s", cache_path.name, exc)
-    lines = loader.load_lines(cache_path)
+    lines, snapshot_at = read_lines_cache(cache_path)
     if lines:
-        return lines
+        return lines, snapshot_at
     if fallback_path is None:
         fallback_path = settings.ROOT / "deployment_data" / cache_path.name
     fallback_path = Path(fallback_path)
     if fallback_path != cache_path:
-        lines = loader.load_lines(fallback_path)
+        lines, snapshot_at = read_lines_cache(fallback_path)
         if lines:
             log.info(
                 "pick'em %s: using fallback snapshot (%s lines)",
                 cache_path.name,
                 len(lines),
             )
-    return lines
+            return lines, snapshot_at
+    return [], None
+
+
+def fresh_pickem_books(snapshots: dict[str, str | None], slate_date: str | None) -> set[str]:
+    """Books whose line snapshot was taken on/after the slate date — only these
+    may record leans. Undated (legacy committed) snapshots are never fresh."""
+    from mlbmodel.market.lines_cache import snapshot_is_fresh
+
+    return {
+        book.lower()
+        for book, snapshot_at in snapshots.items()
+        if snapshot_is_fresh(snapshot_at, slate_date)
+    }
 
 
 def _load_cache(path: Path | None) -> list[dict]:

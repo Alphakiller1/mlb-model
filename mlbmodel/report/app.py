@@ -35,12 +35,14 @@ from mlbmodel.report.matchup import (
 from mlbmodel.report.decision import collect_market_plays as _collect_market_plays, markets_html as _markets
 from mlbmodel.analytics.edge_intel import clv_from_snapshots, collect_slate_opportunities
 from mlbmodel.report.edge_ui import edge_command_html
+from mlbmodel.leans.closing import build_price_index, update_closing_odds
 from mlbmodel.leans.decision_calibration import thresholds_from_leans
 from mlbmodel.leans.record import collect_leans, record_leans
 from mlbmodel.market.pickem import (
     build_pickem_rows,
     build_pickem_rows_from_boards,
-    load_pickem_lines,
+    fresh_pickem_books,
+    load_pickem_lines_with_meta,
     pickem_market_reports,
 )
 from mlbmodel.report.game_keys import (
@@ -85,21 +87,23 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     prop_prices = load_prop_board(
         fetch=fetch, cache_path=cache_dir / "prop_odds_latest.json"
     )
-    pp_board = prizepicks.board_by_player(
-        load_pickem_lines(
-            prizepicks, cache_dir / "prizepicks_lines.json", fetch=fetch
-        )
+    pp_lines, pp_snapshot = load_pickem_lines_with_meta(
+        prizepicks, cache_dir / "prizepicks_lines.json", fetch=fetch
     )
-    ud_board = prizepicks.board_by_player(
-        load_pickem_lines(
-            underdog, cache_dir / "underdog_lines.json", fetch=fetch
-        )
+    ud_lines, ud_snapshot = load_pickem_lines_with_meta(
+        underdog, cache_dir / "underdog_lines.json", fetch=fetch
     )
-    sl_board = prizepicks.board_by_player(
-        load_pickem_lines(
-            sleeper, cache_dir / "sleeper_lines.json", fetch=fetch
-        )
+    sl_lines, sl_snapshot = load_pickem_lines_with_meta(
+        sleeper, cache_dir / "sleeper_lines.json", fetch=fetch
     )
+    pp_board = prizepicks.board_by_player(pp_lines)
+    ud_board = prizepicks.board_by_player(ud_lines)
+    sl_board = prizepicks.board_by_player(sl_lines)
+    pickem_snapshots = {
+        "prizepicks": pp_snapshot,
+        "underdog": ud_snapshot,
+        "sleeper": sl_snapshot,
+    }
     gate = _promotion(reader)
     pitchers = build_pitcher_board(repo)
     promotion_status = (
@@ -268,6 +272,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
 
     if sd:
         try:
+            fresh_books = fresh_pickem_books(pickem_snapshots, str(sd)[:10])
             lean_rows = collect_leans(
                 slate_date=str(sd)[:10],
                 market_plays=market_plays,
@@ -276,6 +281,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 matchup_markets_by_pk=matchup_markets_by_pk,
                 pitchers=pitchers,
                 pkmap=pkmap,
+                fresh_pickem_books=fresh_books,
             )
             written = record_leans(lean_rows)
             if written:
@@ -296,12 +302,29 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         except Exception as exc:
             log.error("model lean record failed: %s", exc)
 
+        # Refresh closing odds on today's still-open leans with the freshest
+        # matched prices — the last pre-game build leaves the de-facto close.
+        try:
+            price_index = build_price_index(
+                market_plays=market_plays,
+                matchup_markets_by_pk=matchup_markets_by_pk,
+                prop_reports=flat_props,
+            )
+            update_closing_odds(
+                slate_date=str(sd)[:10], price_index=price_index, reader=reader
+            )
+        except Exception as exc:
+            log.warning("closing-odds refresh failed: %s", exc)
+
     views = {
         "today": _today(slate, sd, sharp_by_pk, sync, edge_command),
         "matchups": matchups,
         "trends": _trends(slate_reports, slate=slate),
         "markets": _markets(slate, sharp_by_pk, model_by_pk, decision_thresholds),
-        "props": _props(pitchers, prop_prices, pp_board, ud_board, sl_board),
+        "props": _props(
+            pitchers, prop_prices, pp_board, ud_board, sl_board,
+            pickem_snapshots=pickem_snapshots, slate_date=str(sd or "")[:10] or None,
+        ),
         "results": _results(reader),
         "research": _research(reader, gate, f5_board, clv_summary),
     }
@@ -321,6 +344,19 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         if notice_text else ""
     )
     chase_nav = chase_theme.nav_html(nav_items, "today", "MLB Model", status=(sd or "Live"))
+    footer = (
+        '<footer class=site-footer style="max-width:1200px;margin:40px auto 0;padding:20px 16px 34px;'
+        'border-top:1px solid rgba(255,255,255,.12);font-size:13px;opacity:.75;line-height:1.6">'
+        '<p><strong>Chase Analytics — MLB Model</strong> is paper-trading and research software. '
+        'It does not provide betting advice, no displayed state is a wager instruction, and nothing '
+        'here promises profit. Methodology, confidence tiers, and known limitations: '
+        '<a href="https://github.com/Alphakiller1/mlb-model/blob/main/METHODOLOGY.md">METHODOLOGY.md</a>. '
+        'If you or someone you know has a gambling problem, call 1-800-GAMBLER.</p>'
+        '<p>Source: <a href="https://github.com/Alphakiller1/mlb-model">github.com/Alphakiller1/mlb-model</a>'
+        ' · Sister product: <a href="https://alphakiller1.github.io/wnba-edge-model/">WNBA Edge Model</a>'
+        ' · Consumer dashboard: <a href="https://chase-analytics.com/">chase-analytics.com</a></p>'
+        '</footer>'
+    )
     return (
         f'<!DOCTYPE html><html lang=en class=view-opening><head><meta charset=utf-8>'
         f'<meta name=viewport content="width=device-width,initial-scale=1">'
@@ -329,6 +365,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         f'<body class="platform-dashboard opening-dashboard">'
         f'{chase_nav}'
         f'<main id=main class=ca-page-shell>{notice}{sections}</main>'
+        f'{footer}'
         f'<script>{shell_js()}</script></body></html>'
     )
 

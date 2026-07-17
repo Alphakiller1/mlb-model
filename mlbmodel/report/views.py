@@ -4,7 +4,13 @@ from __future__ import annotations
 import html
 
 from mlbmodel.baseball.model import model_probabilities
-from mlbmodel.leans.calibration import calibration_buckets, summarize_record
+from mlbmodel.leans.calibration import (
+    calibration_buckets,
+    clv_summary_from_leans,
+    projection_error_summary,
+    summarize_record,
+    ungraded_reason_counts,
+)
 from mlbmodel.analytics.edge_intel import (
     clv_from_snapshots,
     market_type_record,
@@ -105,7 +111,10 @@ def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
    <div class=table-scroll><table class=sortable><tr><th>Game</th><th>Time</th><th>Win%(H)</th><th>Tot</th><th>Margin</th><th>Lean</th><th>SPs</th><th>K%</th><th>Sharp</th></tr>{rows or '<tr><td class=mut colspan=9>No slate loaded.</td></tr>'}</table></div></div></div>"""
 
 
-def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None):
+def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
+          pickem_snapshots=None, slate_date=None):
+    from mlbmodel.market.lines_cache import snapshot_is_fresh, snapshot_label
+
     pp_board = pp_board or {}
     ud_board = ud_board or {}
     sl_board = sl_board or {}
@@ -115,6 +124,22 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None):
         ("Sleeper", sl_board),
     ]
 
+    freshness = ""
+    if pickem_snapshots:
+        badges = []
+        for label, board in pickem_sources:
+            if not board:
+                continue
+            snapshot_at = (pickem_snapshots or {}).get(label.lower())
+            fresh = snapshot_is_fresh(snapshot_at, slate_date)
+            tone = "pos" if fresh else "neg"
+            state = "" if fresh else " — STALE, not recorded as leans"
+            badges.append(
+                f'<span class="chip {tone}">{e(label)}: {e(snapshot_label(snapshot_at))}{state}</span>'
+            )
+        if badges:
+            freshness = f'<p class=mut>Pick\'em line snapshots: {" ".join(badges)}</p>'
+
     book_n, fantasy_n = prop_channel_counts(pitchers, pickem_sources)
     deck = pitcher_prop_deck(pitchers, pickem_sources)
     return f"""<h2>Pitcher Props</h2>
@@ -123,13 +148,15 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None):
    <div class=card><div class=k>Book lines</div><div class=v>{book_n}</div></div>
    <div class=card><div class=k>Fantasy lines</div><div class=v>{fantasy_n}</div></div>
  </div>
+ {freshness}
  {deck}"""
 
 
 def results(reader):
     result = reader.get(
         "model_leans?select=lean_id,slate_date,game_pk,source,market,selection,line,"
-        "model_prob,model_value,edge,lean,won,push,settled,entry_odds,recorded_at"
+        "model_prob,model_value,edge,lean,won,push,settled,entry_odds,recorded_at,"
+        "void,ungraded_reason,closing_odds,clv_pts,realized_value"
         "&order=recorded_at.desc&limit=2000"
     )
     if result.error:
@@ -143,18 +170,27 @@ def results(reader):
         "&select=market_type,entry_prob,implied_probability,won&limit=5000"
     )
     clv_summary = clv_from_snapshots(clv_result.rows if not clv_result.error else [])
+    lean_clv = clv_summary_from_leans(rows)
+    proj_errors = projection_error_summary(rows)
+    reasons = ungraded_reason_counts(rows)
+    pending_n = sum(1 for r in rows if not r.get("settled"))
+    void_n = sum(1 for r in rows if r.get("void"))
     teams = team_prediction_record(rows)
     market_perf = market_type_record(rows)
     summary = summarize_record(rows)
     cal = calibration_buckets(rows)
     hit = summary.get("hit_rate")
     hit_txt = f"{hit:.1f}%" if hit is not None else "—"
+    brier = summary.get("brier")
+    brier_txt = f"{brier:.3f}" if brier is not None else "—"
 
     cal_rows = "".join(
         f'<tr><td>{e(c["bucket"])}</td><td>{c["n"]}</td><td>{c["predicted"]:.1f}%</td>'
-        f'<td>{c["actual"]:.1f}%</td><td>{c["gap"]:+.1f}pt</td></tr>'
+        f'<td>{c["actual"]:.1f}% <span class=mut>({c["actual_lo"]:.0f}–{c["actual_hi"]:.0f})</span></td>'
+        f'<td>{c["gap"]:+.1f}pt</td>'
+        f'<td>{"—" if not c["reliable"] else ("✓" if c["within_ci"] else "✗")}</td></tr>'
         for c in cal
-    ) or '<tr><td class=mut colspan=5>No settled leans for calibration yet.</td></tr>'
+    ) or '<tr><td class=mut colspan=6>No settled leans for calibration yet.</td></tr>'
 
     src_rows = "".join(
         f'<tr><td>{e(src)}</td><td>{v["w"]}</td><td>{v["l"]}</td><td>{v["p"]}</td>'
@@ -166,8 +202,20 @@ def results(reader):
     for r in rows[:40]:
         edge_cell = f'{float(r["edge"]):+.1f}pt' if r.get("edge") is not None else "—"
         entry_cell = str(int(r["entry_odds"])) if r.get("entry_odds") is not None else "—"
+        clv_cell = f'{float(r["clv_pts"]):+.1f}' if r.get("clv_pts") is not None else "—"
         line_suffix = f' {_display(r.get("line"), digits=1)}' if r.get("line") is not None else ""
-        result_cell = "W" if r.get("won") else ("P" if r.get("push") else ("L" if r.get("settled") else "—"))
+        if r.get("void"):
+            result_cell = f'<span class=mut title="{e(str(r.get("ungraded_reason") or "void"))}">VOID</span>'
+        elif r.get("won"):
+            result_cell = "W"
+        elif r.get("push"):
+            result_cell = "P"
+        elif r.get("settled") and r.get("won") is False:
+            result_cell = "L"
+        elif r.get("settled"):
+            result_cell = '<span class=mut>graded</span>'
+        else:
+            result_cell = "—"
         rows_html.append(
             f'<tr><td>{e(str(r.get("slate_date") or ""))}</td>'
             f'<td>{e(str(r.get("source") or ""))}</td>'
@@ -175,9 +223,35 @@ def results(reader):
             f'<td class=num>{entry_cell}</td>'
             f'<td>{lean_dir_html(r.get("lean"))}</td>'
             f'<td class=num>{edge_cell}</td>'
+            f'<td class=num>{clv_cell}</td>'
             f'<td>{result_cell}</td></tr>'
         )
-    recent = "".join(rows_html) or '<tr><td class=mut colspan=7>No leans recorded yet.</td></tr>'
+    recent = "".join(rows_html) or '<tr><td class=mut colspan=8>No leans recorded yet.</td></tr>'
+
+    reason_rows = "".join(
+        f'<tr><td>{e(reason)}</td><td class=num>{count}</td></tr>'
+        for reason, count in reasons.items()
+    ) or '<tr><td class=mut colspan=2>No ungradeable leans.</td></tr>'
+
+    proj_rows = "".join(
+        f'<tr><td>{e(p["market"])}</td><td class=num>{p["n"]}</td>'
+        f'<td class=num>{p["mean_error"]:+.2f}</td><td class=num>{p["mae"]:.2f}</td>'
+        f'<td class=num>{p["std"]:.2f}</td></tr>'
+        for p in proj_errors
+    ) or '<tr><td class=mut colspan=5>No settled projections yet.</td></tr>'
+
+    lean_clv_cards = ""
+    if lean_clv:
+        by_src = ", ".join(
+            f'{e(src)} {v["clv_pts"]:+.1f}pt (n={v["n"]})'
+            for src, v in lean_clv["by_source"].items()
+        )
+        lean_clv_cards = f"""
+ <div class=ca-board>{section_head("Model-lean CLV", icon="results")}<div class=body>
+   <p class=mut>Closing minus entry implied probability on this model's own recorded leans
+   (positive = beat the close). Mean {lean_clv["clv_pts"]:+.2f}pt over {lean_clv["n"]} leans;
+   beat the close {lean_clv["beat_close_rate"]}% of the time. {by_src}</p>
+ </div></div>"""
 
     clv_panel = clv_panel_html(clv_summary)
     team_panel = team_accuracy_html(teams)
@@ -187,9 +261,12 @@ def results(reader):
  <div class=cards>
    <div class=card><div class=k>Record</div><div class=v>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</div></div>
    <div class=card><div class=k>Hit rate</div><div class=v>{hit_txt}</div></div>
-   <div class=card><div class=k>Historical CLV</div><div class=v>{(f'{clv_summary["clv_pts"]:+.1f}pt' if clv_summary else "—")}</div></div>
-   <div class=card><div class=k>Leans logged</div><div class=v>{len(rows)}</div></div>
+   <div class=card><div class=k>Brier</div><div class=v>{brier_txt}</div></div>
+   <div class=card><div class=k>Lean CLV</div><div class=v>{(f'{lean_clv["clv_pts"]:+.1f}pt' if lean_clv else "—")}</div></div>
+   <div class=card><div class=k>Snapshot CLV</div><div class=v>{(f'{clv_summary["clv_pts"]:+.1f}pt' if clv_summary else "—")}</div></div>
+   <div class=card><div class=k>Graded / pending / void</div><div class="v v-sm">{summary["total"]} / {pending_n} / {void_n}</div></div>
  </div>
+ {lean_clv_cards}
  {clv_panel}
  <div class=cols>
    {team_panel}
@@ -197,15 +274,29 @@ def results(reader):
  </div>
  <div class=cols>
  <div class=ca-board>{section_head("Calibration", icon="results")}<div class=body>
-   <div class=table-scroll><table class=sortable><tr><th>Bucket</th><th>n</th><th>Predicted</th><th>Actual</th><th>Gap</th></tr>{cal_rows}</table></div>
+   <p class=mut>Predicted = mean model probability in bucket; Actual carries a Wilson 95% interval.
+   ✓ = calibrated within CI, — = under-sampled.</p>
+   <div class=table-scroll><table class=sortable><tr><th>Bucket</th><th>n</th><th>Predicted</th><th>Actual (95% CI)</th><th>Gap</th><th>OK</th></tr>{cal_rows}</table></div>
  </div></div>
  <div class=ca-board>{section_head("By source", icon="results")}<div class=body>
    <div class=table-scroll><table><tr><th>Source</th><th>W</th><th>L</th><th>P</th><th>Hit%</th></tr>{src_rows}</table></div>
  </div></div>
  </div>
+ <div class=cols>
+ <div class=ca-board>{section_head("Projection error", icon="results")}<div class=body>
+   <p class=mut>Settled projection leans: model mean vs realized stat (error = projected − actual).
+   These distributions calibrate the prop model's sigmas.</p>
+   <div class=table-scroll><table><tr><th>Market</th><th>n</th><th>Mean err</th><th>MAE</th><th>Std</th></tr>{proj_rows}</table></div>
+ </div></div>
+ <div class=ca-board>{section_head("Grading health", icon="results")}<div class=body>
+   <p class=mut>Every ungradeable lean carries a reason code; postponed or unresolvable leans void
+   after 4 days instead of pending forever.</p>
+   <div class=table-scroll><table><tr><th>Ungraded reason</th><th>n</th></tr>{reason_rows}</table></div>
+ </div></div>
+ </div>
  <div class=ca-board>{section_head("Recent leans", icon="results")}<div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter leans…" data-filter-for="results-recent-table" aria-label="Filter results"></div>
-   <div class=table-scroll><table id=results-recent-table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Entry</th><th>Lean</th><th>Edge</th><th>Result</th></tr>{recent}</table></div>
+   <div class=table-scroll><table id=results-recent-table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Entry</th><th>Lean</th><th>Edge</th><th>CLV</th><th>Result</th></tr>{recent}</table></div>
  </div></div>"""
 
 

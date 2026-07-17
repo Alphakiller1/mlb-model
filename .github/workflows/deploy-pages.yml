@@ -52,6 +52,13 @@ jobs:
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           MLBMODEL_CACHE_DIR: _deploy_data
+          # Warehouse creds so market.collect PUBLISHES sharp signals/observations on
+          # every scheduled build. Without these, point-in-time observation accrual only
+          # happened when refresh.sh was run manually — and the promotion gate's OOS
+          # sample stopped growing.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
           # Caches live prop lines + game-line odds into _deploy_data so the static build can
           # show over/under prop leans AND the sharp-vs-soft Markets board. Non-fatal: a missing
@@ -192,6 +199,13 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: _site
+      - name: Notify Discord on build failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          python scripts/notify_discord.py --title "pages build FAILED" --status failure \
+            --body "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true
 
   deploy:
     if: vars.PAGES_ENABLED == 'true'
