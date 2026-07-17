@@ -1147,3 +1147,10 @@
   background: linear-gradient(135deg, rgba(124, 77, 255, 0.10), rgba(45, 212, 191, 0.03));
   color: var(--text-2);
 }
+
+/* Board titles: primary ink (violet stays on accents/data, not headings) */
+#main .ca-section-head .title { color: var(--text); }
+
+/* Numeric cells right-aligned for scan */
+#main .table-scroll td.num { text-align: right; }
+#main .table-scroll th.num { text-align: right; }

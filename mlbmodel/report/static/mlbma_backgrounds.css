@@ -18,8 +18,13 @@
     rgba(8, 9, 15, 0.44) 68%,
     rgba(5, 5, 12, 0.68) 100%
   );
-  --ca-bg-violet-top: radial-gradient(ellipse 80% 52% at 76% 0%, rgba(124, 77, 255, 0.12), transparent 62%);
-  --ca-bg-violet-bottom: radial-gradient(ellipse 85% 55% at 8% 106%, rgba(91, 43, 224, 0.08), transparent 60%);
+  /* Aurora ambience — present enough to read as atmosphere, never as content. */
+  --ca-bg-violet-top: radial-gradient(ellipse 92% 58% at 74% -10%, rgba(124, 77, 255, 0.20), transparent 60%);
+  --ca-bg-violet-bottom: radial-gradient(ellipse 92% 60% at 4% 112%, rgba(91, 43, 224, 0.13), transparent 58%);
+  --ca-bg-teal-hint: radial-gradient(ellipse 46% 30% at 12% 6%, rgba(45, 212, 191, 0.05), transparent 65%);
+  /* Faint 26px engineering grid (design contract: grid over deep navy gradient). */
+  --ca-bg-grid-x: linear-gradient(rgba(255, 255, 255, 0.021) 1px, transparent 1px);
+  --ca-bg-grid-y: linear-gradient(90deg, rgba(255, 255, 255, 0.021) 1px, transparent 1px);
 }
 
 html:has(body.opening-dashboard),
@@ -44,10 +49,13 @@ body.ca-bg-outfield {
   background-image:
     var(--ca-bg-scrim),
     var(--ca-bg-violet-top),
-    var(--ca-bg-violet-bottom) !important;
-  background-size: 100% 100%, auto, auto !important;
-  background-position: center top, center top, center top !important;
-  background-repeat: no-repeat !important;
+    var(--ca-bg-violet-bottom),
+    var(--ca-bg-teal-hint),
+    var(--ca-bg-grid-x),
+    var(--ca-bg-grid-y) !important;
+  background-size: 100% 100%, auto, auto, auto, 26px 26px, 26px 26px !important;
+  background-position: center top !important;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat !important;
   background-attachment: scroll !important;
 }
 

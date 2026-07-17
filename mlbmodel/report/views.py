@@ -100,13 +100,8 @@ def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
         "Live fallback" if sync.get("status") == "fallback" else "Untracked"
     )
     return f"""<h2>{e(slate_view_label(sd))}</h2>
+ <p class=viewhero-sub><b>{n}</b> games<span class=vh-dot></span>slate <b>{e(sd or "—")}</b><span class=vh-dot></span><b>{nsharp}</b> sharp signals<span class=vh-dot></span>MLBMA sync <b>{e(sync_label)}</b></p>
  {edge_command}
- <div class=cards>
-   <div class=card><div class=k>Games</div><div class=v>{n}</div></div>
-   <div class=card><div class=k>Slate</div><div class="v v-sm">{e(sd or "—")}</div></div>
-   <div class=card><div class=k>Sharp signals</div><div class=v>{nsharp}</div></div>
-   <div class=card><div class=k>MLBMA sync</div><div class="v v-sm">{e(sync_label)}</div></div>
- </div>
  <div class=ca-board>{section_head("Slate", icon="slate")}<div class=body>
    <div class=table-scroll><table class=sortable><tr><th>Game</th><th>Time</th><th>Win%(H)</th><th>Tot</th><th>Margin</th><th>Lean</th><th>SPs</th><th>K%</th><th>Sharp</th></tr>{rows or '<tr><td class=mut colspan=9>No slate loaded.</td></tr>'}</table></div></div></div>"""
 
