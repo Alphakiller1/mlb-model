@@ -345,16 +345,23 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     )
     chase_nav = chase_theme.nav_html(nav_items, "today", "MLB Model", status=(sd or "Live"))
     footer = (
-        '<footer class=site-footer style="max-width:1200px;margin:40px auto 0;padding:20px 16px 34px;'
-        'border-top:1px solid rgba(255,255,255,.12);font-size:13px;opacity:.75;line-height:1.6">'
-        '<p><strong>Chase Analytics — MLB Model</strong> is paper-trading and research software. '
-        'It does not provide betting advice, no displayed state is a wager instruction, and nothing '
-        'here promises profit. Methodology, confidence tiers, and known limitations: '
+        '<footer class=site-footer>'
+        '<div class=site-footer__brand>'
+        '<svg viewBox="0 0 36 36" width="22" height="22" aria-hidden="true">'
+        '<path d="M18 5 C21 13 24 20 33 31 L3 31 C12 20 15 13 18 5 Z" fill="#7C4DFF"/></svg>'
+        '<span class=site-footer__mark>CHASE&nbsp;<em>ANALYTICS</em></span>'
+        '<span class=site-footer__tag>MLB Model · decision-support engine</span>'
+        '</div>'
+        '<p><b>Paper-trading and research software.</b> It does not provide betting advice, no '
+        'displayed state is a wager instruction, and nothing here promises profit. Methodology, '
+        'confidence tiers, and known limitations: '
         '<a href="https://github.com/Alphakiller1/mlb-model/blob/main/METHODOLOGY.md">METHODOLOGY.md</a>. '
         'If you or someone you know has a gambling problem, call 1-800-GAMBLER.</p>'
-        '<p>Source: <a href="https://github.com/Alphakiller1/mlb-model">github.com/Alphakiller1/mlb-model</a>'
-        ' · Sister product: <a href="https://alphakiller1.github.io/wnba-edge-model/">WNBA Edge Model</a>'
-        ' · Consumer dashboard: <a href="https://chase-analytics.com/">chase-analytics.com</a></p>'
+        '<div class=site-footer__links>'
+        '<a href="https://github.com/Alphakiller1/mlb-model">Source</a>'
+        '<a href="https://alphakiller1.github.io/wnba-edge-model/">WNBA Edge Model</a>'
+        '<a href="https://chase-analytics.com/">chase-analytics.com</a>'
+        '</div>'
         '</footer>'
     )
     return (

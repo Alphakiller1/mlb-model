@@ -92,27 +92,39 @@ def edge_command_html(
     )
     clv_n = f'n={clv_summary["n"]}' if clv_summary else "Kalshi history"
 
+    shown = opportunities[:limit]
+    max_edge = max(
+        (abs(float(row["edge_pts"])) for row in shown if row.get("edge_pts") is not None),
+        default=1.0,
+    ) or 1.0
     rows = ""
-    for row in opportunities[:limit]:
+    for row in shown:
         game = row.get("game") or ""
-        game_cell = (
-            f'<button class=gamepick onclick="openGame(\'{e(game)}\')">{e(game)}</button>'
-            if game and "@" in game
-            else f'<span class=mut>{e(str(row.get("context") or "—"))}</span>'
-        )
+        category = e(_CAT_LABEL.get(str(row.get("category")), "Edge"))
+        if game and "@" in game:
+            game_cell = (
+                f'<button class=gamepick onclick="openGame(\'{e(game)}\')">'
+                f'<b>{e(game)}</b><span class=edge-cat>{category}</span></button>'
+            )
+        else:
+            context = e(str(row.get("context") or "—"))
+            game_cell = f'<span class=edge-ctx>{context}<span class=edge-cat>{category}</span></span>'
         bet = e(str(row.get("selection") or ""))
         if row.get("line") is not None:
             bet += f' {_fmt_line(row["line"])}'
         edge_pts = row.get("edge_pts")
-        edge_cell = (
-            f'<b class={edge_grade((edge_pts or 0) / 100)}>{float(edge_pts):+.1f}pt</b>'
-            if edge_pts is not None else '<span class=mut>—</span>'
-        )
+        if edge_pts is not None:
+            width = max(5.0, abs(float(edge_pts)) / max_edge * 100)
+            edge_cell = (
+                f'<span class=edge-viz><span class=edge-viz-track><i style="width:{width:.1f}%"></i></span>'
+                f'<b class={edge_grade((edge_pts or 0) / 100)}>{float(edge_pts):+.1f}</b></span>'
+            )
+        else:
+            edge_cell = '<span class=mut>—</span>'
         price = row.get("price") or "—"
-        book = f' <span class=mut>{e(str(row["book"]))}</span>' if row.get("book") else ""
+        book = f' <span class=edge-book>{e(str(row["book"]))}</span>' if row.get("book") else ""
         rows += (
             f'<tr><td>{game_cell}</td>'
-            f'<td><span class="pill mut">{e(_CAT_LABEL.get(str(row.get("category")), "Edge"))}</span></td>'
             f'<td><b>{e(str(row.get("market_label") or row.get("market") or ""))}</b></td>'
             f'<td>{bet}</td>'
             f'<td class=num>{e(str(price))}{book}</td>'
@@ -123,15 +135,15 @@ def edge_command_html(
 
     return f"""<div class=edge-command>
   <div class=edge-hero>
-    <div class=edge-hero-stat><span class=k>Best edge</span><b class={edge_grade((best_edge or 0)/100)}>{float(best_edge or 0):+.1f}pt</b>
+    <div class="edge-hero-stat edge-hero-stat--lead"><span class=k>Best edge</span><b class={edge_grade((best_edge or 0)/100)}>{float(best_edge or 0):+.1f}<u>pt</u></b>
       <i>{e(str(best.get("market_label") or ""))} · {e(str(best.get("selection") or ""))}</i></div>
-    <div class=edge-hero-stat><span class=k>Actionable</span><b>{n_bet}</b></div>
-    <div class=edge-hero-stat><span class=k>F5</span><b>{n_f5}</b></div>
+    <div class=edge-hero-stat><span class=k>Actionable</span><b>{n_bet}</b><i>model-graded markets</i></div>
+    <div class=edge-hero-stat><span class=k>First 5</span><b>{n_f5}</b><i>F5 leans on slate</i></div>
     <div class=edge-hero-stat><span class=k>CLV</span><b>{clv_cell}</b><i>{e(clv_n)}</i></div>
   </div>
   <div class=ca-board>{section_head("Where we have edge today", icon="markets")}<div class=body>
-    <div class=table-scroll><table class=sortable><tr><th>Game</th><th>Type</th><th>Market</th><th>Bet</th>
-    <th>Line / price</th><th>Model</th><th>Edge</th><th>State</th></tr>{rows}</table></div>
+    <div class=table-scroll><table class=sortable><tr><th>Game</th><th>Market</th><th>Bet</th>
+    <th class=num>Line / price</th><th class=num>Model</th><th class=num>Edge</th><th>State</th></tr>{rows}</table></div>
   </div></div>
 </div>"""
 
