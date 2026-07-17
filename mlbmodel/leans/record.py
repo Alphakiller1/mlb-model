@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime, timezone
 
 from mlbmodel import settings
@@ -45,6 +46,7 @@ def _row(
         "edge": edge,
         "lean": lean,
         "model_version": MODEL_VERSION,
+        "sport": "mlb",
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "settled": False,
     }
@@ -160,18 +162,32 @@ def _collect_matchup_markets(
                     lean=_lean_label(state, edge_pts),
                     entry_odds=(
                         float(market["mkt"])
-                        if isinstance(market.get("mkt"), int) else None
+                        # bool is an int subclass; JSON round-trips often float odds.
+                        if isinstance(market.get("mkt"), (int, float))
+                        and not isinstance(market.get("mkt"), bool) else None
                     ),
                 )
             )
     return rows
 
 
-def _collect_pickem(slate_date: str, pickem_rows: list[dict]) -> list[dict]:
+def _collect_pickem(
+    slate_date: str,
+    pickem_rows: list[dict],
+    fresh_books: set[str] | None = None,
+) -> list[dict]:
+    """Pick'em leans. When `fresh_books` is given, rows from books whose line
+    snapshot is stale for this slate are NOT recorded — grading a lean against
+    a line nobody could actually bet contaminates the track record."""
     rows: list[dict] = []
+    skipped_stale = 0
     for item in pickem_rows:
         lean = str(item.get("lean") or "").upper()
         if lean not in {"OVER", "UNDER"}:
+            continue
+        book = str(item.get("book") or "pickem").lower()
+        if fresh_books is not None and book not in fresh_books:
+            skipped_stale += 1
             continue
         edge_pts = item.get("edge_pts")
         if edge_pts is None and item.get("p_over") is not None:
@@ -185,7 +201,7 @@ def _collect_pickem(slate_date: str, pickem_rows: list[dict]) -> list[dict]:
             _row(
                 slate_date=slate_date,
                 game_pk=item.get("game_pk"),
-                source=str(item.get("book") or "pickem"),
+                source=book,
                 market=market,
                 selection=lean.lower(),
                 line=float(item["line"]) if item.get("line") is not None else None,
@@ -195,6 +211,12 @@ def _collect_pickem(slate_date: str, pickem_rows: list[dict]) -> list[dict]:
                 lean=lean_tag,
                 pitcher_name=str(item.get("pitcher") or "") or None,
             )
+        )
+    if skipped_stale:
+        log.warning(
+            "pick'em: skipped %s lean(s) from stale line snapshots (fresh books: %s)",
+            skipped_stale,
+            ", ".join(sorted(fresh_books or set())) or "none",
         )
     return rows
 
@@ -271,15 +293,20 @@ def collect_leans(
     matchup_markets_by_pk: dict[int, list[dict]] | None = None,
     pitchers: list[dict] | None = None,
     pkmap: dict[int, str] | None = None,
+    fresh_pickem_books: set[str] | None = None,
+    run_id: str | None = None,
 ) -> list[dict]:
     """Gather lean dicts from sharp fusion, matchup/F5, props, pick'em, and projections."""
     _ = pkmap  # reserved for future game-key enrichment
     rows: list[dict] = []
     rows.extend(_collect_sharp_plays(slate_date, market_plays))
     rows.extend(_collect_matchup_markets(slate_date, matchup_markets_by_pk or {}))
-    rows.extend(_collect_pickem(slate_date, pickem_rows))
+    rows.extend(_collect_pickem(slate_date, pickem_rows, fresh_books=fresh_pickem_books))
     rows.extend(_collect_prop_edges(slate_date, prop_reports))
     rows.extend(_collect_pitcher_projections(slate_date, pitchers or []))
+    build_run = run_id or uuid.uuid4().hex[:12]
+    for row in rows:
+        row["run_id"] = build_run
     return rows
 
 

@@ -3,6 +3,23 @@
 Unified MLB research and betting decision-support platform. It is paper-trading and
 research software, not an auto-betting system and not a promise of profit.
 
+**Live research dashboard:** https://alphakiller1.github.io/mlb-model/ — rebuilt on
+every merge to `main`, on the MLBMA pipeline dispatch, and twice daily.
+
+![Today slate](docs/screenshots/today-slate.png)
+
+Plain-language methodology and limitations: [METHODOLOGY.md](METHODOLOGY.md).
+Org-level standards shared with the other Chase Analytics models:
+[governance/MODEL-STANDARDS.md](governance/MODEL-STANDARDS.md).
+
+## Where this fits in Chase Analytics
+
+- **mlb-model (this repo)** — the MLB decision-support engine / model lab.
+- **[wnba-edge-model](https://github.com/Alphakiller1/wnba-edge-model)** — the WNBA
+  product, earlier-stage, built on the same standards.
+- **[chase-analytics.com](https://chase-analytics.com/)** — the consumer MLB research
+  dashboard (MLBMA pipeline).
+
 ## Current Authority
 
 The active runtime now lives in this repository:
@@ -88,6 +105,13 @@ entry price remain intentionally ineligible.
 
 Apply `migrations/0002_paper_portfolio.sql` to enable the Portfolio view. It tracks paper
 positions and correlated exposure only; sizing remains zero until the promotion gate passes.
+
+Apply `migrations/0005_grading_audit.sql` for grading-audit columns: explicit
+`ungraded_reason` codes, `void` status (postponed/unresolvable leans void after 4 days
+instead of pending forever), `closing_odds`/`clv_pts` (closing-line value per lean), a
+build `run_id`, and a `sport` column readying the warehouse for multi-sport leans.
+After applying it, `scripts/audit_leans.py` runs a one-time forensic pass over the
+existing ledger (stale-snapshot pick'em leans, previously ungradeable markets).
 
 ### Self-tracked leans (`model_leans`)
 

@@ -34,6 +34,10 @@ def _pitcher_stats_from_player(player: dict) -> dict | None:
         "outs": outs,
         "hits": pitching.get("hits"),
         "innings": innings,
+        # Decision + fantasy-score inputs (game-level 0/1 counts in the box).
+        "wins": pitching.get("wins"),
+        "hit_batsmen": pitching.get("hitBatsmen"),
+        "complete_games": pitching.get("completeGames"),
     }
 
 

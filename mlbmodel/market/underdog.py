@@ -92,7 +92,9 @@ def _parse(payload: dict) -> list[dict]:
 def parse_payload(payload: dict, cache_path: str | Path | None = None) -> list[dict]:
     lines = _parse(payload)
     if cache_path is not None:
-        Path(cache_path).write_text(json.dumps(lines), encoding="utf-8")
+        from mlbmodel.market.lines_cache import write_lines_cache
+
+        write_lines_cache(lines, cache_path)
     return lines
 
 
@@ -106,16 +108,10 @@ def fetch_lines(cache_path: str | Path | None = None) -> list[dict]:
 
 
 def load_lines(cache_path: str | Path | None) -> list[dict]:
-    if not cache_path:
-        return []
-    path = Path(cache_path)
-    if not path.exists():
-        return []
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, list) else []
-    except (json.JSONDecodeError, OSError):
-        return []
+    from mlbmodel.market.lines_cache import read_lines_cache
+
+    lines, _ = read_lines_cache(cache_path)
+    return lines
 
 
 def main() -> None:  # pragma: no cover

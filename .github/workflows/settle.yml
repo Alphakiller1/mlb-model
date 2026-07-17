@@ -23,7 +23,18 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
+          set -o pipefail
           python -m mlbmodel.sources.build_game_results
           python -m mlbmodel.market.settle
-          python scripts/check_pending_leans.py
+          python scripts/check_pending_leans.py | tee settle_report.txt
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          STATUS=$([ "$JOB_STATUS" = "success" ] && echo success || echo failure)
+          python scripts/notify_discord.py --title "nightly settle" \
+            --status "$STATUS" --body-stdin < settle_report.txt || true
