@@ -30,6 +30,9 @@ class SupabaseReader:
         try:
             with urllib.request.urlopen(request, timeout=15) as response:
                 return ReadResult(json.loads(response.read().decode()))
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode(errors="replace")[:300]
+            return ReadResult([], f"warehouse read failed: HTTP {exc.code}: {body}")
         except Exception as exc:
             return ReadResult([], f"warehouse read failed: {type(exc).__name__}")
 

@@ -73,11 +73,21 @@ def run() -> int:
 
 
 def run_all() -> tuple[int, int]:
-    """Settle sharp observations and model leans."""
+    """Settle sharp observations and model leans.
+
+    Lean settlement degrades to 0 when ``model_leans`` is missing (migration
+    not applied); sharp settlement still runs.
+    """
     sharp_settled = run()
     from mlbmodel.leans.grade import settle_leans
 
-    lean_settled = settle_leans(reader=SupabaseReader(), writer=SupabaseWriter())
+    try:
+        lean_settled = settle_leans(reader=SupabaseReader(), writer=SupabaseWriter())
+    except RuntimeError as exc:
+        # Belt-and-suspenders: settle_leans already soft-skips missing tables,
+        # but any other lean-path failure must not abort sharp settlement results.
+        log.warning("lean settlement failed (%s); continuing with sharp only", exc)
+        lean_settled = 0
     return sharp_settled, lean_settled
 
 

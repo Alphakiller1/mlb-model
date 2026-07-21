@@ -151,3 +151,25 @@ def test_run_all_invokes_both_paths():
     assert leans == 5
     sharp_run.assert_called_once()
     lean_settle.assert_called_once()
+
+
+def test_settle_leans_skips_missing_table():
+    reader = MockReader({
+        "model_leans?": ReadResult(
+            [],
+            'warehouse read failed: HTTP 404: {"code":"PGRST205",'
+            '"message":"Could not find the table \'public.model_leans\'"}',
+        ),
+    })
+    writer = MockWriter()
+    assert settle_leans(reader=reader, writer=writer) == 0
+    assert writer.updates == []
+
+
+def test_run_all_continues_when_leans_raise():
+    with patch("mlbmodel.market.settle.run", return_value=3), patch(
+        "mlbmodel.leans.grade.settle_leans", side_effect=RuntimeError("boom")
+    ):
+        sharp, leans = run_all()
+    assert sharp == 3
+    assert leans == 0

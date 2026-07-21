@@ -37,8 +37,13 @@ NAME_TO_ABBR = {
 }
 
 
-def abbr(name: str) -> str:
-    return NAME_TO_ABBR.get(name.strip(), name.strip().upper()[:3])
+def abbr(name: str) -> str | None:
+    """Map a full MLB team name to a warehouse abbreviation, or None if unknown.
+
+    Unknown names (All-Star sides, exhibition clubs) must not fall back to a
+    3-letter slice like NAT/AME — those break the games.home_team FK.
+    """
+    return NAME_TO_ABBR.get(name.strip())
 
 
 def game_pk(game_date: str, away: str, home: str, game_number: int = 1) -> int:
@@ -52,6 +57,7 @@ def fetch_finals(start: str, end: str) -> list[dict]:
     with urllib.request.urlopen(url, timeout=40) as r:
         data = json.loads(r.read().decode())
     games = []
+    skipped = 0
     for d in data.get("dates", []):
         for g in d.get("games", []):
             if g.get("status", {}).get("abstractGameState") != "Final":
@@ -60,6 +66,12 @@ def fetch_finals(start: str, end: str) -> list[dict]:
             h = g["teams"]["home"]
             if "score" not in a or "score" not in h:
                 continue
+            away = abbr(a["team"]["name"])
+            home = abbr(h["team"]["name"])
+            if away is None or home is None:
+                # All-Star Game, exhibitions, etc. — skip; never invent abbrs.
+                skipped += 1
+                continue
             ls = g.get("linescore", {}).get("innings", [])
             f5h = sum((i.get("home", {}) or {}).get("runs", 0) or 0 for i in ls[:5])
             f5a = sum((i.get("away", {}) or {}).get("runs", 0) or 0 for i in ls[:5])
@@ -67,10 +79,12 @@ def fetch_finals(start: str, end: str) -> list[dict]:
                 "date": g.get("officialDate", d["date"]),
                 "game_number": int(g.get("gameNumber") or 1),
                 "mlb_game_pk": g.get("gamePk"),
-                "away": abbr(a["team"]["name"]), "home": abbr(h["team"]["name"]),
+                "away": away, "home": home,
                 "ar": int(a["score"]), "hr": int(h["score"]),
                 "f5a": int(f5a), "f5h": int(f5h),
             })
+    if skipped:
+        print(f"skipped {skipped} non-MLB-club final(s) (All-Star / unknown teams)")
     return games
 
 

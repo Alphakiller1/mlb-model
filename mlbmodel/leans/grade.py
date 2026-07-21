@@ -8,11 +8,14 @@ distributions accumulate.
 """
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, timezone
 from typing import NamedTuple
 
 from mlbmodel.sources.pitcher_box_scores import fetch_pitcher_stats_for_date, lookup_pitcher_stats
 from mlbmodel.storage.supabase import SupabaseReader, SupabaseWriter
+
+log = logging.getLogger(__name__)
 
 _PROP_KEYS = {
     "k": "k",
@@ -247,6 +250,16 @@ def settle_leans(
         "market,selection,line,pitcher_name,entry_odds,closing_odds,ungraded_reason&limit=5000"
     )
     if pending.error:
+        # Missing migration (PGRST205) or similar — degrade instead of aborting
+        # the whole settle pass (sharp observations can still grade).
+        err = pending.error.lower()
+        if (
+            "pgrst205" in err
+            or "could not find the table" in err
+            or "model_leans" in err and ("404" in pending.error or "http 404" in err)
+        ):
+            log.warning("model_leans unavailable (%s); skipping lean settlement", pending.error)
+            return 0
         raise RuntimeError(pending.error)
 
     outcomes = reader.get(
