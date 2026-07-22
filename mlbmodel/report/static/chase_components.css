@@ -331,3 +331,109 @@ table.ca-table tbody tr:hover td {
   .ca-page-header__sub { font-size: 14px; }
   table.ca-table tbody td, table.ca-table thead th { padding: 8px 10px; font-size: 12.5px; }
 }
+
+/* MLB Model app primitives --------------------------------------------------
+ * Shared presentation pieces for Today, Matchups, Props, Tracker, Results,
+ * and Research. These classes change hierarchy and rhythm only; model values
+ * continue to come from the Python report layer.
+ */
+.ca-shell-meta {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+}
+.ca-shell-meta__item {
+  min-height: 46px;
+  min-width: 132px;
+  flex: 1 1 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 9px 12px;
+  border: 1px solid rgba(54, 59, 77, 0.86);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(24, 27, 38, 0.92), rgba(14, 16, 24, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+.ca-shell-meta__item b {
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.ca-shell-meta__item span {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: var(--text);
+}
+.ca-shell-meta__item.is-live span,
+.ca-shell-meta__item.is-good span { color: var(--ca-green); }
+.ca-shell-meta__item.is-watch span { color: var(--gold); }
+
+.ca-status-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ca-status-label--brand {
+  color: var(--ca-purple-light);
+  background: rgba(124, 77, 255, 0.13);
+  border-color: rgba(154, 107, 255, 0.34);
+}
+.ca-status-label--good {
+  color: #7BDC5A;
+  background: rgba(60, 203, 127, 0.12);
+  border-color: rgba(60, 203, 127, 0.26);
+}
+.ca-status-label--watch {
+  color: var(--gold);
+  background: rgba(232, 194, 74, 0.12);
+  border-color: rgba(232, 194, 74, 0.24);
+}
+.ca-status-label--bad {
+  color: #FCA5A5;
+  background: rgba(242, 84, 91, 0.12);
+  border-color: rgba(242, 84, 91, 0.24);
+}
+
+.ca-board-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(54, 59, 77, 0.92);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(18, 20, 29, 0.92) 0%, rgba(10, 12, 19, 0.98) 100%);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.ca-board-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(154, 107, 255, 0.82), transparent);
+  pointer-events: none;
+}
+.ca-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-color: rgba(154, 107, 255, 0.42) rgba(255, 255, 255, 0.04);
+}
+@media (max-width: 390px) {
+  .ca-shell-meta__item { min-width: 0; flex-basis: calc(50% - 6px); }
+}

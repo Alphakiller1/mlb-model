@@ -34,6 +34,7 @@ from mlbmodel.market.oddsmath import prob_to_american
 from mlbmodel.market.quotes import OddsBoard, load_board
 from mlbmodel.market.value import assess_value
 from mlbmodel.quant.promotion_gate import promotion_verdict
+from mlbmodel.report import chase_theme
 from mlbmodel.storage.supabase import SupabaseReader
 
 
@@ -507,7 +508,7 @@ border:2px solid #454B61;box-shadow:0 5px 14px rgba(0,0,0,.45),0 0 0 2px rgba(15
 .chipc{background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:9px 10px;text-align:center}
 .chipc .k{color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
 .chipc .v{color:var(--ink);font-family:var(--display);font-weight:800;font-size:19px;margin-top:3px}
-.vbar{display:flex;align-items:center;gap:14px;padding:11px 16px;border-radius:8px;border:1px solid var(--border-2);font-size:13.5px;background:var(--card)}
+.vbar{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:10px;border:1px solid var(--border-2);font-size:13.5px;background:linear-gradient(180deg,rgba(24,27,38,.90),rgba(13,15,23,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.045)}
 .vbar b{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.03em}.vbar span{color:var(--ink2)}
 .vbar.pos{border-color:rgba(60,203,127,.3);background:rgba(60,203,127,.10)}.vbar.pos b{color:#7BDC5A}
 .vbar.warnc{border-color:rgba(232,194,74,.3);background:rgba(232,194,74,.10)}.vbar.warnc b{color:var(--gold)}
@@ -521,17 +522,17 @@ border:2px solid #454B61;box-shadow:0 5px 14px rgba(0,0,0,.45),0 0 0 2px rgba(15
 .rtabbar button:hover{color:var(--ink2)}.rtabbar button.on{color:var(--ink);border-bottom-color:var(--accent)}.pn{display:none}.pn.on{display:block}
 th[title],td[title]{cursor:help;text-decoration:underline dotted rgba(148,163,184,.4);text-underline-offset:3px}
 /* section */
-.sec{border:1px solid var(--border-2);border-radius:8px;background:var(--card);overflow:hidden;position:relative}
-.sec::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--v-grad);opacity:.6}
-.sec h2{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--v-light);margin:0;padding:13px 16px 0}
-.sec .body{padding:12px 16px 16px}
-.table-scroll{width:100%;overflow-x:auto}
+.sec{border:1px solid rgba(54,59,77,.92);border-radius:10px;background:linear-gradient(180deg,rgba(18,20,29,.94),rgba(10,12,19,.98));overflow:hidden;position:relative;box-shadow:0 22px 70px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.04)}
+.sec::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(154,107,255,.86),transparent);opacity:1}
+.sec h2{font-family:var(--display);font-weight:900;font-size:13px;letter-spacing:.075em;text-transform:uppercase;color:var(--v-light);margin:0;padding:14px 16px 0}
+.sec .body{padding:13px 16px 16px}
+.table-scroll{width:100%;overflow-x:auto;scrollbar-color:rgba(154,107,255,.42) rgba(255,255,255,.04)}
 /* tables */
 table{width:100%;border-collapse:collapse}
-th{color:var(--ink2);font-size:11px;letter-spacing:.05em;text-transform:uppercase;font-weight:800;text-align:right;padding:9px 12px;border-bottom:1px solid var(--border-2);white-space:nowrap}
+th{color:var(--ink2);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:900;text-align:right;padding:10px 12px;border-bottom:1px solid var(--border-2);white-space:nowrap;font-family:var(--display)}
 th:first-child{text-align:left}
-td{padding:9px 12px;text-align:right;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px}
-td:first-child{text-align:left;font-weight:600}tbody tr:last-child td{border-bottom:none}tbody tr:hover td{background:rgba(124,77,255,.08)}
+td{padding:10px 12px;text-align:right;border-bottom:1px solid rgba(255,255,255,.055);font-size:13.5px}
+td:first-child{text-align:left;font-weight:700}tbody tr:last-child td{border-bottom:none}tbody tr:hover td{background:rgba(124,77,255,.085)}
 .chip{font-family:var(--display);font-weight:800}
 .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.04em;border:1px solid transparent}
 .pill.pos{background:rgba(60,203,127,.13);color:#7BDC5A;border-color:rgba(60,203,127,.22)}
@@ -563,29 +564,32 @@ details{border-top:1px solid var(--border);padding:12px 16px}summary{cursor:poin
 summary::before{content:"▸ ";color:var(--accent)}details[open] summary::before{content:"▾ "}
 details ul{margin:8px 0 0;padding-left:18px}details li{font-size:12.5px;color:var(--muted);margin:4px 0}
 /* decision-first matchup */
-.matchup-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;padding:4px 0 14px;border-bottom:1px solid var(--border)}
+.matchup-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;padding:16px 18px;margin-bottom:12px;border:1px solid rgba(54,59,77,.82);border-radius:12px;background:linear-gradient(135deg,rgba(18,20,29,.90),rgba(8,9,15,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.045)}
 .matchup-team{display:flex;align-items:center;gap:10px}.matchup-team.home{justify-content:flex-end;text-align:right}
 .matchup-team b{display:block;font:800 26px var(--display)}.matchup-team span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
-.score-projection{text-align:center}.score-projection span,.score-projection i{display:block;color:var(--muted);font-size:10px;font-style:normal;text-transform:uppercase}
-.score-projection b{display:block;font:800 25px var(--display);margin:3px 0}
-.decision-strip{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--border-2);border-radius:8px;margin:10px 0;overflow:hidden}
-.decision-strip span{padding:10px 12px;border-right:1px solid var(--border);color:var(--muted);font-size:10px;text-transform:uppercase}
+.score-projection{text-align:center}.score-projection span,.score-projection i{display:block;color:var(--muted);font-size:10px;font-style:normal;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.score-projection b{display:block;font:900 28px var(--display);margin:4px 0;color:var(--ink)}
+.decision-strip{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid rgba(54,59,77,.92);border-radius:10px;margin:11px 0;overflow:hidden;background:rgba(18,20,29,.72)}
+.decision-strip span{padding:11px 12px;border-right:1px solid rgba(38,42,56,.9);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.045em}
 .decision-strip span:last-child{border-right:0}.decision-strip b{display:block;color:var(--ink);font:800 17px var(--display);text-transform:none;margin-bottom:2px}
-.availability{display:flex;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px}
-.availability span{flex:1;background:var(--card);padding:9px 11px;color:var(--ink2);font-size:11px}
+.availability{display:flex;gap:1px;background:rgba(38,42,56,.92);border:1px solid rgba(54,59,77,.92);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.availability span{flex:1;background:linear-gradient(180deg,rgba(24,27,38,.88),rgba(14,16,24,.95));padding:10px 11px;color:var(--ink2);font-size:11px}
 .availability b{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;margin-bottom:2px}.availability i{font-style:normal;font-weight:800}
-.decision-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:12px;margin:12px 0}.missing-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
+.decision-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:13px;margin:13px 0}.missing-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
 .missing-row>b{color:var(--muted);font-size:10px;text-transform:uppercase;margin-right:3px}
-.pitcher-grid{display:grid;grid-template-columns:1fr;gap:12px;margin:12px 0}
-.pitch-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:9px}
-.pitch-summary span{background:var(--raised);padding:8px;color:var(--muted);font-size:10px;text-transform:uppercase}
+.adv-card-list{display:none}.adv-card{border:1px solid rgba(54,59,77,.82);border-radius:9px;background:rgba(255,255,255,.028);padding:11px 12px}.adv-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px}.adv-card-head b{color:var(--ink);font:900 14px/1.1 var(--display)}.adv-card-head em{font-style:normal;color:var(--side);font:900 12px var(--display);white-space:nowrap}.adv-card-sides{display:grid;grid-template-columns:1fr 1fr;gap:8px}.adv-card-sides>span{display:flex;flex-direction:column;gap:4px;min-width:0;padding:9px;border-radius:8px;background:rgba(18,20,29,.78);border:1px solid rgba(255,255,255,.055)}.adv-card-sides i{color:var(--muted);font-style:normal;font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.adv-card-sides strong{color:var(--ink);font:900 16px var(--display)}.adv-card-sides small{color:var(--muted);font-size:10px}.adv-base{margin-top:8px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:800}
+.pitcher-grid{display:grid;grid-template-columns:1fr;gap:13px;margin:13px 0}
+.pitch-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(38,42,56,.92);border:1px solid rgba(54,59,77,.92);border-radius:8px;overflow:hidden;margin-bottom:10px}
+.pitch-summary span{background:linear-gradient(180deg,rgba(32,35,47,.96),rgba(18,20,29,.96));padding:9px;color:var(--muted);font-size:10px;text-transform:uppercase}
 .pitch-summary b,.pitch-summary em{display:block;color:var(--ink);font:800 17px var(--display);font-style:normal}
 .pitch-summary i{display:block;color:var(--muted);font-size:9px;font-style:normal;text-transform:none}
 .pitch-source{color:var(--muted);font-size:10px;margin-bottom:7px}.model-details{border:1px solid var(--border);border-radius:8px;margin-top:12px}
 .pitch-name-meta{display:block;font-size:10px;margin-top:2px}
 .model-details p{color:var(--muted);font-size:12px;line-height:1.5;max-width:1000px}
 @media(max-width:980px){.decision-strip{grid-template-columns:repeat(3,1fr)}.decision-grid,.pitcher-grid{grid-template-columns:1fr}}
-@media(max-width:680px){.matchup-head{grid-template-columns:1fr auto 1fr}.matchup-team b{font-size:20px}.matchup-team span{display:none}.score-projection b{font-size:18px}.decision-strip{grid-template-columns:repeat(2,1fr)}.availability{display:grid;grid-template-columns:1fr 1fr}.pitch-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.wrap{padding:18px 14px 64px}.matchup-head{grid-template-columns:1fr;gap:12px;padding:14px}.score-projection{order:-1;text-align:left;padding-bottom:10px;border-bottom:1px solid rgba(54,59,77,.72)}.score-projection b{font-size:26px}.matchup-team,.matchup-team.home{justify-content:flex-start;text-align:left}.matchup-team.home{flex-direction:row-reverse}.matchup-team b{font-size:22px}.matchup-team span{display:block}.decision-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.decision-strip span{border-right:0;border-bottom:1px solid rgba(38,42,56,.9)}.availability{display:grid;grid-template-columns:1fr 1fr}.pitch-summary{grid-template-columns:repeat(2,1fr)}.advantage-table{display:none}.adv-card-list{display:flex;flex-direction:column;gap:9px}th,td{padding:9px 10px;font-size:12px}.sec .body{padding:12px 14px 15px}}
+@media(max-width:520px){.adv-card-sides{grid-template-columns:1fr}}
+@media(max-width:430px){.decision-strip,.availability,.pitch-summary{grid-template-columns:1fr}.matchup-team b{font-size:20px}.score-projection b{font-size:24px}}
 """
 
 
@@ -1019,7 +1023,26 @@ def report_body(r):
             f'<td>{esc(str(a.get("edge", "")))}</td></tr>'
         )
 
+    def adv_card(a):
+        ac, al = _chip(a.get("a_pct"))
+        hc, hl = _chip(a.get("h_pct"))
+        unit, lb = a.get("unit", ""), a.get("lower_better")
+        ar = f'<small>#{a["a_rank"]}</small>' if a.get("a_rank") else ""
+        hr = f'<small>#{a["h_rank"]}</small>' if a.get("h_rank") else ""
+        av = f'{_f(a.get("a_val"))}{unit}{_adv_delta(a.get("a_d"), lb)}'
+        hv = f'{_f(a.get("h_val"))}{unit}{_adv_delta(a.get("h_d"), lb)}'
+        edge = esc(str(a.get("edge") or "even"))
+        return f"""<article class=adv-card title="{esc(_cat_def(a["cat"]))}">
+          <div class=adv-card-head><b>{esc(a["cat"])}</b><em>{edge}</em></div>
+          <div class=adv-card-sides>
+            <span><i>{esc(gd.away)}</i><strong>{av}</strong><span class="chip {ac}">{al}</span>{ar}</span>
+            <span><i>{esc(gd.home)}</i><strong>{hv}</strong><span class="chip {hc}">{hl}</span>{hr}</span>
+          </div>
+          <div class=adv-base>League base {_f(a.get("base"))}{unit}</div>
+        </article>"""
+
     advantage_rows = "".join(adv_row(a) for a in r.get("advantage", []))
+    advantage_cards = "".join(adv_card(a) for a in r.get("advantage", [])[:10])
     has_price = any(market.get("mkt") is not None for market in r["markets"])
     has_sharp = bool(r["sharp"])
     market_panel = (
@@ -1039,9 +1062,10 @@ def report_body(r):
         if has_sharp else ''
     )
     advantage_panel = (
-        f'<div class=sec><h2>Matchup advantage</h2><div class=body><div class=table-scroll>'
+        f'<div class=sec><h2>Matchup advantage</h2><div class=body><div class="table-scroll advantage-table">'
         f'<table><tr><th>Category</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th>'
         f'<th>League base</th><th>Edge</th></tr>{advantage_rows}</table></div>'
+        f'<div class=adv-card-list>{advantage_cards}</div>'
         f'<div class=note>Per team: value · Δ vs season baseline · percentile chip '
         f'(elite→poor) · rank. Edge = which side the metric favors.</div></div></div>'
         if advantage_rows else ''
@@ -1110,7 +1134,9 @@ def render_html(r):
     return (f'<!DOCTYPE html><html lang=en><head><meta charset=utf-8>'
             f'<meta name=viewport content="width=device-width,initial-scale=1">'
             f'<title>{e(r["away"])}@{e(r["home"])} — MLB Model</title>'
-            f'<style>{_CSS}</style></head><body><div class=wrap>{report_body(r)}</div>'
+            f'<style>{chase_theme.theme_css()}{_CSS}</style></head><body>'
+            f'{chase_theme.nav_html([], "matchups", "MLB Model")}'
+            f'<div class=wrap>{report_body(r)}</div>'
             f'<script>{script}</script></body></html>')
 
 
