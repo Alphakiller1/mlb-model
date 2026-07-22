@@ -15,7 +15,7 @@ Overall grade: `B+ / branch-ready, not production-polish-complete`.
 The work succeeds at the main goal: the MLB Model now reads like a Chase Analytics product with
 a real command-board workflow instead of a dense generic research table. The strongest areas are
 Today, Matchups, Pitcher Props, and the new Results tracker scaffold. The weakest areas are live
-market verification coverage, token discipline, and low-data desktop empty states.
+browser-verified live market coverage, remaining token debt, and player-prop settlement inputs.
 
 ## Evidence Captured
 
@@ -42,6 +42,15 @@ Primary matrix screenshots:
 - `matrix_research_1280.png`
 - `matrix_research_375.png`
 
+Post-update low-data captures:
+
+- `post_portfolio_1280.png`
+- `post_portfolio_375_tall.png`
+- `post_results_1280.png`
+- `post_results_375_tall.png`
+- `post_research_1280.png`
+- `post_research_375_tall.png`
+
 Important viewport note: plain Chrome CLI screenshots on Windows can crop a wider browser window
 when asked for 375px. Chrome DevTools Protocol was used for true 375px CSS viewport checks.
 
@@ -49,6 +58,9 @@ CDP verification:
 
 - Matchups at 375px: `innerWidth=375`, `scrollWidth=375`, active nav rect `191..362`.
 - Trends at 375px: `innerWidth=375`, `scrollWidth=375`, first trend card rect `29..346`.
+- Post-update Portfolio at 375px: `innerWidth=375`, `scrollWidth=360`, readiness cards `29..331`.
+- Post-update Results at 375px: `innerWidth=375`, `scrollWidth=360`, readiness cards `29..331`.
+- Post-update Research at 375px: `innerWidth=375`, `scrollWidth=360`, readiness cards `29..331`.
 
 Strict conclusion: no page-level horizontal overflow was observed at a true 375px CSS viewport.
 
@@ -71,7 +83,7 @@ intended mockup/product direction:
 | Projection grading/progress tracker must be visible | Results now has grading progress, settlement counts, calibration, and ledger scaffold | Pass, data-dependent |
 | Mobile should be cards-first | Matchups, Trends, Props, Results, Research are mobile card/scaffold driven | Pass |
 | Live betting confidence should remain honest | HOLD/ABSTAIN, NO ACTION, NO MARKET, and unavailable states are visible | Pass |
-| Every live decision state must be visually exercised | Fixture has no live market or prop price snapshot, so BET/LEAN cards are not visually exercised with live rows | Conditional |
+| Every live decision state must be visually exercised | Unit fixtures now render live Markets and Props rows; browser screenshots still depend on a live price slate | Conditional |
 
 ## Route Matrix
 
@@ -80,11 +92,11 @@ intended mockup/product direction:
 | Today | Pass | Pass | Biggest improvement. Rows now have hierarchy, team marks, pitcher context, projection chips, and a model-focus rail. Mobile stacks cleanly. |
 | Matchups | Pass | Pass | Strongest analytical surface. Desktop is dense but deliberate. Mobile CDP confirms no overflow. |
 | Trends | Pass | Pass | Desktop table is acceptable for analyst scanning. Mobile now uses trend cards and one-column stat blocks. |
-| Markets | Conditional pass | Conditional pass | Empty state is clean. Live sharp-vs-soft play cards were not visually exercised because fixture has no actionable sharp divergence. |
-| Props | Pass | Pass | Strong visual lift: headshots, team logos, projection chips, and no-market state are clear. Price snapshot absence remains data/config, not UI. |
-| Portfolio | Polish fail, not blocker | Pass | Honest unavailable state works, but desktop feels sparse when warehouse credentials are absent. Needs richer empty-state framing later. |
-| Results | Polish fail, not blocker | Pass | Tracker scaffold is good. Desktop has too much empty vertical space with no warehouse rows. |
-| Research | Polish fail, not blocker | Pass | Gate/sample/F5/calibration layout is coherent. Like Results, it needs richer low-data state on desktop. |
+| Markets | Conditional pass | Conditional pass | Empty state is clean. Unit fixtures now exercise live sharp/model cards; browser fixture still needs a real priced slate. |
+| Props | Pass | Pass | Strong visual lift: headshots, team logos, projection chips, no-market state, and a tested priced prop state are clear. |
+| Portfolio | Pass with polish | Pass | Unavailable and zero-position states now use readiness cards instead of a single sparse box. |
+| Results | Pass with polish | Pass | Tracker scaffold plus settlement-readiness cards make low-data desktop states intentional. |
+| Research | Pass with polish | Pass | Gate/sample/F5/calibration layout now includes research-readiness framing when samples are absent. |
 
 ## Standards Audit
 
@@ -101,8 +113,8 @@ The branch preserves and strengthens Chase Analytics identity:
 - board/panel framing across Today, Matchups, Props, Results, and Research.
 
 Strict note: this no longer reads like a generic AI dashboard on the primary Today/Matchups/Props
-surfaces. Results/Research can still feel like a dark dashboard when data is unavailable, but the
-promotion gate language keeps them from looking dead.
+surfaces. Results/Research/Portfolio now carry operational readiness cards when data is unavailable,
+which keeps low-sample states from looking dead.
 
 ### 2. Layout and hierarchy
 
@@ -118,9 +130,8 @@ Improvements:
 
 Remaining strict issues:
 
-- Results and Research desktop have large unused lower canvas when warehouse reads fail.
-- Portfolio desktop is honest but thin.
-- Markets cannot be fully judged until live sharp/price rows exist in the visual fixture.
+- Markets cannot be fully judged in browser screenshots until a live sharp/price slate exists.
+- Player-prop settlement still needs a dedicated player outcome source before auto-grading can be claimed.
 
 ### 3. Mobile behavior
 
@@ -153,22 +164,21 @@ no-action states.
 
 ### 5. Token and color discipline
 
-Verdict: Partial.
+Verdict: Improved partial.
 
 The visual language uses the vendored Chase token layer and shared CSS, but strict token compliance
 is not perfect.
 
 Known token debt:
 
-- `mlbmodel/report/app.py` still contains inline `style=` fragments for card font sizes, progress
-  widths, edgebar widths, and old Markets verdict styling.
-- `_VERDICT` still stores hard-coded colors in Python.
+- `mlbmodel/report/app.py` still contains dynamic inline `style=` fragments for progress and edgebar
+  widths.
 - `mlbmodel/report/matchup.py` and `chase_components.css` include some hard-coded hex values that
   are effectively Chase token copies, but not always referenced through CSS variables.
+- Markets verdicts now use semantic pill/data classes instead of hard-coded Python colors.
 
-Strict standard: this should be cleaned before declaring a final design system. It is acceptable for
-this branch because the colors match the Chase/SMT ecosystem, but it is not fully compliant with a
-"tokens only" rule.
+Strict standard: dynamic bar widths are acceptable as data visualization, but copied token values
+should still be centralized before declaring a final design system.
 
 ### 6. Typography and numeric clarity
 
@@ -202,20 +212,19 @@ Strict gaps:
 
 ### 8. Grading and settlement correctness
 
-Verdict: Improved, but not complete for every future projection shape.
+Verdict: Improved, but not complete for player props.
 
 Implemented:
 
-- `model_predictions` can now settle against final game outcomes.
+- `model_predictions` can now settle ML, totals, team totals, runline/spread, and F5 markets when
+  matching outcome fields exist.
 - settlement records actual winner/runs/margin and `settled_time`.
 - rows without a clear side remain ungraded; the loop does not guess.
 - updates require a unique `prediction_id` or `id`; game-only updates are intentionally blocked.
 
 Strict limitations:
 
-- the current `grade_model_prediction` grades team-side/winner style predictions only.
-- if future `model_predictions` rows represent totals, run lines, player props, or F5 markets, they
-  need explicit market-aware grading.
+- player props are still intentionally ungraded until the model has a player-outcome table or feed.
 - rows without a unique ID will stay safely ungraded until schema/IDs are corrected.
 - migration `0003_model_prediction_settlement.sql` must be applied before remote persistence works.
 
@@ -227,24 +236,25 @@ None found for pushing this branch.
 
 ### Should-fix before product/design freeze
 
-1. Market and prop live states need a real visual exercise.
-   - Evidence: fixture renders `NO SNAPSHOT`, `NO MARKET`, and no sharp-vs-soft plays.
-   - Risk: the new mobile Markets card and live prop market report are structurally present but not
-     pixel-proven with live price rows.
+1. Market and prop live states need a browser visual exercise on a real priced slate.
+   - Evidence: unit fixtures render live Markets and Props rows, but screenshot fixtures still render
+     mostly `NO SNAPSHOT` / `NO MARKET`.
+   - Risk: the live states are structurally tested but not pixel-proven against real feed density.
 
-2. Token debt should be paid down.
-   - Evidence: inline styles and hard-coded verdict colors remain in `app.py`; token-like hex values
-     remain in `matchup.py` and shared component CSS.
+2. Remaining token debt should be paid down.
+   - Evidence: verdict colors were moved to semantic classes, but token-like hex values remain in
+     `matchup.py` and shared component CSS.
    - Risk: future design changes will drift if colors are not centralized.
 
-3. Results/Research/Portfolio need richer low-data desktop states.
-   - Evidence: desktop screenshots show coherent panels but large empty lower canvas.
-   - Risk: public users may read these surfaces as unfinished when warehouse data is absent.
+3. Live priced-slate screenshots should be captured when the feed is active.
+   - Evidence: low-data desktop/mobile states were recaptured after this update, but live market
+     density still depends on a real priced slate.
+   - Risk: static test coverage is green, but final pixel QA should compare populated Markets rows.
 
-4. Projection grading must become market-aware.
-   - Evidence: current settlement handles predicted winner/team side. It does not yet grade totals,
-     run lines, F5, or player props.
-   - Risk: "model projections grade themselves" can be overclaimed unless row shapes are constrained.
+4. Player-prop grading needs a dedicated outcome source.
+   - Evidence: game markets are now market-aware; player props still have no player result schema.
+   - Risk: "all projections grade themselves" can be overclaimed unless prop rows are excluded or
+     player outcomes are added.
 
 5. Governance typography contract needs reconciliation.
    - Evidence: `DESIGN-CONTRACT.md` and `DESIGN-COMPLIANCE-CHECKLIST.md` describe different font
@@ -257,8 +267,8 @@ None found for pushing this branch.
 2. Mobile nav is clean at true 375px but consumes a large first-viewport block.
 3. Matchups desktop is analytically excellent but very dense; future pass could add stronger section
    anchors once data volume grows.
-4. Empty-state language is honest but could be more operational, for example "Apply migration 0003"
-   where relevant.
+4. Empty-state language is now more operational, but final copy should be reviewed once migrations
+   are applied in production.
 
 ## Final Route Verdicts
 
@@ -268,7 +278,7 @@ None found for pushing this branch.
 | Matchups | Pass |
 | Trends | Pass |
 | Markets | Conditional pass |
-| Props | Conditional pass |
+| Props | Pass |
 | Portfolio | Pass with polish |
 | Results | Pass with polish |
 | Research | Pass with polish |
@@ -277,6 +287,5 @@ None found for pushing this branch.
 
 Push the branch. It improves the MLB Model's visual foundation, preserves Chase Analytics identity,
 adds real product structure, and fixes a real grading gap. Do not call the visual system complete
-until live price states, market-aware settlement, token cleanup, and richer low-data desktop states
-are completed.
-
+until live price states are browser-captured, player-prop outcomes exist, remaining token copies are
+centralized, and the typography contract is reconciled.

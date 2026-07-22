@@ -1,4 +1,5 @@
 """Settle market observations and model predictions against final MLB outcomes."""
+
 from __future__ import annotations
 
 import datetime as dt
@@ -31,6 +32,15 @@ def grade(observation: dict, game: dict, outcome: dict) -> tuple[bool | None, bo
         runline = -1.5 if observation.get("side_role") == "fav" else 1.5
         return team_margin + runline > 0, False
     return None, None
+
+
+def _number(value) -> float | None:
+    try:
+        if value is None or value == "":
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _first(row: dict, *names: str):
@@ -90,15 +100,172 @@ def _team_pick(prediction: dict, game: dict) -> str | None:
     return None
 
 
+def _prediction_market(prediction: dict) -> str | None:
+    raw = _first(prediction, "market_type", "market", "bet_type", "prediction_market")
+    if raw is None:
+        return None
+    value = str(raw).lower().strip().replace(" ", "_").replace("-", "_")
+    if value in {"h2h", "moneyline", "ml"}:
+        return "ml"
+    if value in {"total", "totals", "game_total", "full_game_total"}:
+        return "total"
+    if value in {"team_total", "team_totals"}:
+        return "team_total"
+    if value in {"runline", "run_line", "spread", "spreads"}:
+        return "runline"
+    if value in {"f5_ml", "f5_moneyline", "first_5_moneyline", "h2h_1st_5_innings"}:
+        return "f5_ml"
+    if value in {"f5_total", "first_5_total", "totals_1st_5_innings"}:
+        return "f5_total"
+    if value in {"f5_runline", "f5_spread", "spreads_1st_5_innings"}:
+        return "f5_runline"
+    return value
+
+
+def _direction_pick(prediction: dict) -> str | None:
+    raw = _first(
+        prediction,
+        "direction",
+        "total_side",
+        "side",
+        "selection",
+        "pick",
+        "model_pick",
+    )
+    if raw is None:
+        return None
+    value = str(raw).lower().strip()
+    if "over" in value:
+        return "over"
+    if "under" in value:
+        return "under"
+    return None
+
+
+def _line_value(prediction: dict) -> float | None:
+    return _number(
+        _first(
+            prediction,
+            "line",
+            "total_line",
+            "runline",
+            "run_line",
+            "spread",
+            "handicap",
+            "point",
+            "threshold",
+        )
+    )
+
+
+def _team_from_prediction(prediction: dict, game: dict) -> str | None:
+    home, away = game["home_team"], game["away_team"]
+    raw = _first(prediction, "team", "selection", "side", "pick", "model_pick")
+    if raw is not None:
+        value = str(raw).upper().strip()
+        if "_" in value:
+            value = value.split("_", 1)[0]
+        if value == "HOME":
+            return home
+        if value == "AWAY":
+            return away
+        if value in {home, away}:
+            return value
+    return None
+
+
+def _period_outcome(
+    market: str,
+    outcome: dict,
+) -> tuple[float | None, float | None, float | None] | None:
+    if market.startswith("f5_"):
+        home_runs = _number(_first(outcome, "f5_home_runs", "home_f5_runs", "first5_home_runs"))
+        away_runs = _number(_first(outcome, "f5_away_runs", "away_f5_runs", "first5_away_runs"))
+        if home_runs is None or away_runs is None:
+            return None
+        return home_runs, away_runs, home_runs - away_runs
+    home_runs = _number(_first(outcome, "home_runs", "home_score", "home_final"))
+    away_runs = _number(_first(outcome, "away_runs", "away_score", "away_final"))
+    if home_runs is None or away_runs is None:
+        return None
+    margin_home = _number(_first(outcome, "margin_home"))
+    if margin_home is None:
+        margin_home = home_runs - away_runs
+    return home_runs, away_runs, margin_home
+
+
 def grade_model_prediction(
     prediction: dict,
     game: dict,
     outcome: dict,
 ) -> tuple[bool | None, bool | None]:
-    selection = _team_pick(prediction, game)
-    if selection is None:
+    market = _prediction_market(prediction)
+    if market is None:
+        selection = _team_pick(prediction, game)
+        if selection is None:
+            return None, None
+        return outcome["winner_team"] == selection, False
+
+    period = _period_outcome(market, outcome)
+    if period is None:
         return None, None
-    return outcome["winner_team"] == selection, False
+    home_runs, away_runs, margin_home = period
+    total_runs = home_runs + away_runs
+
+    if market in {"ml", "f5_ml"}:
+        selection = _team_pick(prediction, game)
+        if selection is None:
+            return None, None
+        if margin_home > 0:
+            winner = game["home_team"]
+        elif margin_home < 0:
+            winner = game["away_team"]
+        else:
+            winner = None
+        if winner is None:
+            return None, True
+        return winner == selection, False
+
+    if market in {"total", "f5_total"}:
+        line = _line_value(prediction)
+        direction = _direction_pick(prediction)
+        if line is None or direction is None:
+            return None, None
+        if total_runs == line:
+            return None, True
+        return (total_runs > line if direction == "over" else total_runs < line), False
+
+    if market == "team_total":
+        line = _line_value(prediction)
+        direction = _direction_pick(prediction)
+        team = _team_from_prediction(prediction, game)
+        if line is None or direction is None or team is None:
+            return None, None
+        runs = home_runs if team == game["home_team"] else away_runs
+        if runs == line:
+            return None, True
+        return (runs > line if direction == "over" else runs < line), False
+
+    if market in {"runline", "f5_runline"}:
+        team = _team_from_prediction(prediction, game)
+        line = _line_value(prediction)
+        if team is None:
+            return None, None
+        if line is None:
+            side_role = str(prediction.get("side_role") or "").lower()
+            if side_role in {"fav", "favorite"}:
+                line = -1.5
+            elif side_role in {"dog", "underdog"}:
+                line = 1.5
+            else:
+                return None, None
+        team_margin = margin_home if team == game["home_team"] else -margin_home
+        graded_margin = team_margin + line
+        if graded_margin == 0:
+            return None, True
+        return graded_margin > 0, False
+
+    return None, None
 
 
 def _prediction_filter(prediction: dict) -> str | None:
@@ -111,10 +278,7 @@ def _prediction_filter(prediction: dict) -> str | None:
 def run() -> int:
     reader, writer = SupabaseReader(), SupabaseWriter()
     games_result = reader.get("games?select=game_pk,home_team,away_team")
-    outcomes_result = reader.get(
-        "game_outcomes?select=game_pk,home_runs,away_runs,total_runs,"
-        "margin_home,winner_team"
-    )
+    outcomes_result = reader.get("game_outcomes?select=*")
     observations_result = reader.get(
         "sharp_observations?settled=eq.false&select=obs_id,game_pk,market_type,"
         "selection,line,side_role"

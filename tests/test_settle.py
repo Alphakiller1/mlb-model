@@ -44,6 +44,70 @@ def test_model_prediction_grades_probability_side():
     assert push is False
 
 
+def test_model_prediction_grades_total_market():
+    won, push = grade_model_prediction(
+        {"market_type": "total", "selection": "over", "line": 6.5},
+        GAME,
+        OUTCOME,
+    )
+
+    assert won is True
+    assert push is False
+
+
+def test_model_prediction_grades_team_total_market():
+    won, push = grade_model_prediction(
+        {"market_type": "team_total", "selection": "BOS_over", "line": 4.5},
+        GAME,
+        OUTCOME,
+    )
+
+    assert won is True
+    assert push is False
+
+
+def test_model_prediction_grades_runline_market():
+    won, push = grade_model_prediction(
+        {"market_type": "runline", "selection": "NYY", "line": 1.5},
+        GAME,
+        OUTCOME,
+    )
+
+    assert won is False
+    assert push is False
+
+
+def test_model_prediction_pushes_on_exact_total_line():
+    won, push = grade_model_prediction(
+        {"market": "total", "direction": "under", "line": 7},
+        GAME,
+        OUTCOME,
+    )
+
+    assert won is None
+    assert push is True
+
+
+def test_model_prediction_grades_f5_only_with_f5_outcome_fields():
+    won, push = grade_model_prediction(
+        {"market_type": "f5_total", "selection": "under", "line": 3.5},
+        GAME,
+        OUTCOME,
+    )
+
+    assert won is None
+    assert push is None
+
+    won, push = grade_model_prediction(
+        {"market_type": "f5_total", "selection": "under", "line": 3.5},
+        GAME,
+        {**OUTCOME, "f5_home_runs": 2, "f5_away_runs": 1},
+    )
+
+    assert won is True
+    assert push is False
+
+
 def test_model_prediction_does_not_guess_without_side():
     won, push = grade_model_prediction(
         {"verdict": "PASS"},
@@ -57,7 +121,4 @@ def test_model_prediction_does_not_guess_without_side():
 
 def test_prediction_filter_requires_unique_prediction_id():
     assert _prediction_filter({"game_pk": 123}) is None
-    assert (
-        _prediction_filter({"prediction_id": "abc", "game_pk": 123})
-        == "prediction_id=eq.abc"
-    )
+    assert _prediction_filter({"prediction_id": "abc", "game_pk": 123}) == "prediction_id=eq.abc"
