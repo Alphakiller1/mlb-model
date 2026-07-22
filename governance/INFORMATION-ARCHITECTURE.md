@@ -59,7 +59,8 @@ number + label. Market columns are in a fixed order everywhere.
 
 ## Migration sequence (status)
 1. ✅ Shell + 7 routes + nav. 2. ✅ Matchups = canonical report. 3. ✅ Today/Markets/Results/Research
-real data. 4. ◐ Props/Portfolio structured stubs (need projection-market + paper-ledger wiring).
+real data. 4. ◐ Props/Portfolio split: prop market/report wiring exists, player-prop outcomes need
+production feed population, and Portfolio still needs paper-ledger wiring.
 5. ◐ Persist selected game/date context across nav (currently featured-game is static per build).
 
 ## Wireframes / screenshots
@@ -67,7 +68,8 @@ real data. 4. ◐ Props/Portfolio structured stubs (need projection-market + pap
 verified via 390px headless capture (nav wraps, tables scroll, cards 2-up).
 
 ## Remaining structural issues (honest)
-- Props/Portfolio are stubs (no player-prop market feed / no paper-trading ledger yet).
+- Player-prop markets now have report + settlement contracts, but production still needs the
+  `player_prop_outcomes` feed populated; Portfolio still needs paper-trading ledger wiring.
 - Featured matchup is static per build (a real app needs client-side game selection / routing).
 - Today's "top model-market discrepancies" currently uses model leans (per-game odds not fetched
   for all 15 — would cost API credits); true discrepancy ranking needs the odds-per-game backfill.

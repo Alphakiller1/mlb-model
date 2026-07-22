@@ -1,58 +1,87 @@
-# Design Contract — Chase Analytics / MLB MODEL
+# Design Contract - Chase Analytics / MLB Model
 
-Version 1.0.0 · 2026-06-26. The **required** visual spec for every MLB MODEL surface. Tokens are
-extracted verbatim from the approved Chase Analytics ecosystem site (`chase-analytics-ecosystem/
-index.html :root`) — **not invented**. The unified product must feel like a more capable evolution
-of the Sharp Money Tracker + Chase Analytics, not a new redesign.
+Version 1.1.0 - 2026-07-22. This is the required visual contract for every MLB
+Model surface. The canonical implementation lives in:
 
-## Design tokens (canonical — copy, don't fork per page)
+- `mlbmodel/report/static/chase_tokens.css`
+- `mlbmodel/report/static/chase_components.css`
 
-```css
-:root{
-  /* surfaces */
-  --bg:#070b12; --band:#0c111c; --panel:#111827; --panel-2:#151d2c;
-  --line:rgba(148,163,184,.18); --line-strong:rgba(196,181,253,.34);
-  /* text */
-  --ink:#f3f6fb; --soft:#cbd5e1; --mut:#94a3b8;
-  /* brand accents */
-  --teal:#2dd4bf; --violet:#8b5cf6; --violet-2:#c4b5fd; --blue:#60a5fa;
-  /* status */
-  --green:#22c55e; --amber:#f59e0b; --red:#fb7185;
-  /* depth */
-  --shadow:0 18px 60px rgba(0,0,0,.34);
-  --radius:14px; --radius-sm:10px;
-}
-/* type */ font-family: Inter, "DM Sans", "Segoe UI", system-ui, sans-serif;
-/* mono (data/terminal) */ "JetBrains Mono", Consolas, monospace;
-/* page bg: faint 26px grid over a deep navy vertical gradient */
-/* panels: linear-gradient(160deg, rgba(17,24,39,.7), rgba(8,13,22,.82)) + --shadow */
-/* brand wordmark: text gradient 90deg teal -> violet-2 */
-/* primary button / active nav: gradient 135deg violet -> teal */
-```
+Those files are vendored from the Chase Analytics / MLBMA design layer. Product
+pages may compose them, but must not fork a second visual system.
 
-## Status → color mapping (uncertainty-honest, charter UX)
-- **BET / PLAY** → teal · **MONITOR / WATCH** → amber · **AVOID / PASS** → red ·
-  **NO-EDGE / ABSTAIN** → muted. Model prob (teal), market prob (blue), EV (violet-2) are
-  visually distinct. Never imply guaranteed profit.
+## Canonical Tokens
 
-## Compliance checklist (every surface)
-- [ ] Uses the canonical tokens (no hardcoded hex per page)
-- [ ] Inter for UI, JetBrains Mono for data/tables
-- [ ] Dense, scannable tables; consistent filters
-- [ ] Visible **market timestamp** + **model/data version** on every data view
-- [ ] Explicit BET / MONITOR / AVOID / NO-EDGE state with the color mapping
-- [ ] Model vs market probability vs EV visually separated
-- [ ] Prominent uncertainty + conflicting-evidence display
-- [ ] Loading / empty / error / **stale-data** states styled (not blank)
-- [ ] Accessible contrast (AA) + keyboard-navigable controls
-- [ ] Responsive desktop + mobile
+Use the token names already exported by `chase_tokens.css`.
 
-## Current compliance status (evidence)
-- **Legacy `command_center` (bet-evaluator)** — **rebranded to these tokens this session**
-  (Inter, teal→violet gradient wordmark, glassy panels, status colors). Serves at :8787. This is
-  the **parallel-run** UI; it is NOT the unified product home.
-- **Gap (must flag, per charter "identify missing access"):** MLB MODEL has **no existing frontend
-  framework/component system** yet — it is a Python package. The charter's "use the MLB Model's
-  existing frontend framework" cannot be satisfied until a unified-UI stack is chosen (decision
-  required: extend the stdlib-HTTP command_center, or a real framework). Until then, the design
-  contract is enforced via these tokens + the checklist, applied to the parallel-run UI.
+Surfaces:
+
+- `--bg`, `--bg-2`, `--bg-3`, `--bg-4`, `--raised`
+- `--card`, `--card-2`
+- `--border`, `--border-2`, `--border-soft`, `--border-violet`
+
+Text:
+
+- `--text`, `--text-2`, `--text-3`, `--text-4`
+- Legacy aliases in report code: `--ink`, `--ink2`, `--muted`
+
+Brand:
+
+- `--ca-purple`, `--ca-purple-dark`, `--ca-purple-light`
+- `--ca-brand`, `--ca-brand-dim`, `--ca-brand-border`
+- `--v-grad`, `--v-light`, `--v-mid`, `--v-deep`
+
+Status:
+
+- `--ca-green`, `--ca-teal`, `--ca-amber`, `--ca-red`
+- `--gold`, `--teal`, `--green`, `--red`, `--side`
+
+Metric grades:
+
+- `--metric-elite`, `--metric-strong`, `--metric-above`
+- `--metric-neutral`, `--metric-below`, `--metric-weak`, `--metric-very-weak`
+
+Typography:
+
+- UI/body: `--font-primary` / `--font-body` = DM Sans
+- Display/headings/numbers: `--font-display` / `--display` = Roboto Condensed
+- Numeric tables use tabular numerals through `.num, td, th, .chip, .mval`
+- Do not reintroduce Inter or JetBrains Mono unless the Chase token source changes
+
+## Visual Rules
+
+- Background: deep Chase navy with subtle grid and violet depth.
+- Panels: compact, bordered, dark surfaces with tokenized purple hairlines.
+- Primary/active states: violet family, never a generic blue dashboard accent.
+- Positive/warn/negative states: always paired with a label, never color-only.
+- Numbers: tabular, high-contrast, and visually separated from prose.
+- Missing data: visible no-action, unavailable, stale, or readiness state. Never blank.
+- Claims: no profit guarantee, no gambling-advice language, no fake confidence.
+- Mobile: 375px must have no page-level horizontal overflow.
+
+## Status Mapping
+
+- `BET` / `PLAY`: positive token, only when model + market rules allow it.
+- `MONITOR` / `WATCH`: warning token.
+- `AVOID` / `PASS`: negative token.
+- `NO-EDGE` / `ABSTAIN` / unavailable: muted token.
+
+## Compliance Checklist
+
+- [ ] Imports the canonical Chase token and component layer.
+- [ ] Uses semantic tokens/classes instead of per-page color inventions.
+- [ ] Uses DM Sans + Roboto Condensed from the token layer.
+- [ ] Uses tabular numeric rendering for model, market, EV, ranks, and prices.
+- [ ] Shows market timestamp and model/data version where data is used.
+- [ ] Shows explicit BET / MONITOR / AVOID / NO-EDGE / ABSTAIN state.
+- [ ] Separates model probability, market probability, and EV.
+- [ ] Shows uncertainty, blockers, and conflicting evidence.
+- [ ] Provides loading, empty, error, and stale-data states for async/data surfaces.
+- [ ] Preserves AA contrast and keyboard/tap accessibility.
+- [ ] Verifies desktop and true 375px mobile output before design sign-off.
+
+## Current Compliance Status
+
+The current MLB Model product shell is a self-contained HTML report generated by
+`mlbmodel/report/app.py` and `mlbmodel/report/matchup.py`. It imports the canonical Chase
+CSS and extends it locally for MLB-specific information architecture. The product shell is
+the canonical surface; older Command Center language is legacy context only.

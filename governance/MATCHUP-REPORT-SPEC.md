@@ -12,8 +12,10 @@ NYY@BOS, action ABSTAIN) — analytically real and design-compliant, but **not y
 of the 24 content items await underlying data/logic migration (gaps below).
 
 ## 1. Design-source inventory (evidence)
-- **Chase Analytics ecosystem** (`chase-analytics-ecosystem/index.html`) — the approved token set
-  (dark navy, teal #2dd4bf + violet #8b5cf6, Inter, glassy panels, 26px grid). **Authoritative.**
+- **Chase Analytics ecosystem** (`mlbmodel/report/static/chase_tokens.css` +
+  `mlbmodel/report/static/chase_components.css`) - the approved token set
+  (dark navy, violet/purple depth, DM Sans, Roboto Condensed display/numbers, premium tables).
+  **Authoritative.**
 - **Sharp Money Tracker** (`sharp-money-tracker/docs/`) — dashboard pattern reference.
 - **SCL workspace** (`Projects/SCL`) — planning/QA layer; design contract guidance. *No MLB Model
   code goes here.*
@@ -78,7 +80,8 @@ Also: weather not in the runs model; OSI is a team proxy; no validated OOS edge 
 6. Choose the unified-UI framework; port components; add Playwright visual-regression.
 
 ## 11. Visual & functional QA checklist
-- [ ] Tokens only (no per-page hex) — **pass** · [ ] Inter + JetBrains Mono — **pass**
+- [ ] Tokens only (no per-page hex) - **improved; remaining copied token values tracked**
+  · [ ] DM Sans + Roboto Condensed/tabular nums - **pass**
 - [ ] Versions + timestamps visible — **pass** · [ ] Explicit BET/MONITOR/AVOID/ABSTAIN — **pass**
 - [ ] Model vs market vs EV distinct — **pass** · [ ] Uncertainty/counterarguments shown — **pass**
 - [ ] Responsive ≤760px — **pass (CSS)** · [ ] No implied profit guarantee — **pass**

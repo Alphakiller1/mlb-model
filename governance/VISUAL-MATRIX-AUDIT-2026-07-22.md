@@ -15,7 +15,7 @@ Overall grade: `B+ / branch-ready, not production-polish-complete`.
 The work succeeds at the main goal: the MLB Model now reads like a Chase Analytics product with
 a real command-board workflow instead of a dense generic research table. The strongest areas are
 Today, Matchups, Pitcher Props, and the new Results tracker scaffold. The weakest areas are live
-browser-verified live market coverage, remaining token debt, and player-prop settlement inputs.
+browser-verified live market coverage and final production screenshots on a real priced slate.
 
 ## Evidence Captured
 
@@ -131,7 +131,7 @@ Improvements:
 Remaining strict issues:
 
 - Markets cannot be fully judged in browser screenshots until a live sharp/price slate exists.
-- Player-prop settlement still needs a dedicated player outcome source before auto-grading can be claimed.
+- Player-prop settlement is now schema-backed, but production still needs the outcome table populated.
 
 ### 3. Mobile behavior
 
@@ -164,7 +164,7 @@ no-action states.
 
 ### 5. Token and color discipline
 
-Verdict: Improved partial.
+Verdict: Pass with tracked production caveat.
 
 The visual language uses the vendored Chase token layer and shared CSS, but strict token compliance
 is not perfect.
@@ -172,26 +172,22 @@ is not perfect.
 Known token debt:
 
 - `mlbmodel/report/app.py` still contains dynamic inline `style=` fragments for progress and edgebar
-  widths.
-- `mlbmodel/report/matchup.py` and `chase_components.css` include some hard-coded hex values that
-  are effectively Chase token copies, but not always referenced through CSS variables.
+  widths. These are data visualization widths, not color/style forks.
+- Shared component and matchup status/grade colors now reference canonical token variables.
 - Markets verdicts now use semantic pill/data classes instead of hard-coded Python colors.
 
-Strict standard: dynamic bar widths are acceptable as data visualization, but copied token values
-should still be centralized before declaring a final design system.
+Strict standard: dynamic bar widths are acceptable as data visualization. Future color changes should
+flow through `chase_tokens.css`.
 
 ### 6. Typography and numeric clarity
 
-Verdict: Partial pass.
+Verdict: Pass.
 
 The current implementation follows the newer repo checklist direction: Chase/SMT styled display
 type, condensed numeric rhythm, and tabular numbers. Numeric data is scannable.
 
-Strict issue: governance docs conflict. `DESIGN-CONTRACT.md` still references Inter and JetBrains
-Mono, while the newer compliance checklist references Roboto Condensed and tabular numbers. The
-branch follows the newer visible Chase implementation rather than the older written contract.
-
-Action: update governance to one typography contract before future UI work.
+The governance docs now point to one contract: DM Sans for body/UI, Roboto Condensed for
+display/numeric rhythm, and tabular numerals for data.
 
 ### 7. Accessibility
 
@@ -212,21 +208,24 @@ Strict gaps:
 
 ### 8. Grading and settlement correctness
 
-Verdict: Improved, but not complete for player props.
+Verdict: Improved, including player-prop contract support.
 
 Implemented:
 
 - `model_predictions` can now settle ML, totals, team totals, runline/spread, and F5 markets when
   matching outcome fields exist.
+- pitcher/player props can now settle for K, BB, ER, and Outs when `player_prop_outcomes` has a
+  matched player/stat row.
 - settlement records actual winner/runs/margin and `settled_time`.
 - rows without a clear side remain ungraded; the loop does not guess.
 - updates require a unique `prediction_id` or `id`; game-only updates are intentionally blocked.
 
 Strict limitations:
 
-- player props are still intentionally ungraded until the model has a player-outcome table or feed.
+- player props remain intentionally ungraded when no matched player outcome exists.
 - rows without a unique ID will stay safely ungraded until schema/IDs are corrected.
-- migration `0003_model_prediction_settlement.sql` must be applied before remote persistence works.
+- migrations `0003_model_prediction_settlement.sql` and `0004_player_prop_outcomes.sql` must be
+  applied before remote persistence and prop grading work.
 
 ## Strict Finding List
 
@@ -241,25 +240,19 @@ None found for pushing this branch.
      mostly `NO SNAPSHOT` / `NO MARKET`.
    - Risk: the live states are structurally tested but not pixel-proven against real feed density.
 
-2. Remaining token debt should be paid down.
-   - Evidence: verdict colors were moved to semantic classes, but token-like hex values remain in
-     `matchup.py` and shared component CSS.
-   - Risk: future design changes will drift if colors are not centralized.
+2. Production needs the player-prop outcome feed populated.
+   - Evidence: the schema and grader exist, but no local Supabase credentials were available to
+     confirm live rows.
+   - Risk: prop predictions will correctly stay pending until outcome rows are ingested.
 
 3. Live priced-slate screenshots should be captured when the feed is active.
    - Evidence: low-data desktop/mobile states were recaptured after this update, but live market
      density still depends on a real priced slate.
    - Risk: static test coverage is green, but final pixel QA should compare populated Markets rows.
 
-4. Player-prop grading needs a dedicated outcome source.
-   - Evidence: game markets are now market-aware; player props still have no player result schema.
-   - Risk: "all projections grade themselves" can be overclaimed unless prop rows are excluded or
-     player outcomes are added.
-
-5. Governance typography contract needs reconciliation.
-   - Evidence: `DESIGN-CONTRACT.md` and `DESIGN-COMPLIANCE-CHECKLIST.md` describe different font
-     systems.
-   - Risk: future agents may "fix" the app toward the wrong document.
+4. Governance should continue to treat `chase_tokens.css` as the single source of truth.
+   - Evidence: `DESIGN-CONTRACT.md`, checklist, and matchup spec now agree.
+   - Risk: future agents may drift only if they bypass the contract.
 
 ### Polish
 
@@ -287,5 +280,5 @@ None found for pushing this branch.
 
 Push the branch. It improves the MLB Model's visual foundation, preserves Chase Analytics identity,
 adds real product structure, and fixes a real grading gap. Do not call the visual system complete
-until live price states are browser-captured, player-prop outcomes exist, remaining token copies are
-centralized, and the typography contract is reconciled.
+until live price states are browser-captured on a real slate and production has the prop outcome
+feed populated.

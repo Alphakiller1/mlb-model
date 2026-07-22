@@ -101,7 +101,16 @@ def _team_pick(prediction: dict, game: dict) -> str | None:
 
 
 def _prediction_market(prediction: dict) -> str | None:
-    raw = _first(prediction, "market_type", "market", "bet_type", "prediction_market")
+    raw = _first(
+        prediction,
+        "market_type",
+        "market",
+        "bet_type",
+        "prediction_market",
+        "prop_market",
+        "prop",
+        "stat_key",
+    )
     if raw is None:
         return None
     value = str(raw).lower().strip().replace(" ", "_").replace("-", "_")
@@ -174,6 +183,90 @@ def _team_from_prediction(prediction: dict, game: dict) -> str | None:
     return None
 
 
+def _norm_text(value) -> str:
+    return " ".join(str(value or "").lower().replace(".", "").split())
+
+
+def _player_id(prediction: dict):
+    return _first(prediction, "player_id", "pitcher_id", "mlb_player_id")
+
+
+def _player_name(prediction: dict) -> str | None:
+    raw = _first(
+        prediction,
+        "player",
+        "player_name",
+        "pitcher",
+        "description",
+        "athlete",
+    )
+    return str(raw).strip() if raw is not None and str(raw).strip() else None
+
+
+def _prop_stat_key(prediction: dict, market: str | None) -> str | None:
+    raw = _first(prediction, "stat_key", "prop", "prop_type", "market_key") or market
+    if raw is None:
+        return None
+    value = str(raw).lower().strip().replace(" ", "_").replace("-", "_")
+    if value in {"k", "ks", "so", "strikeout", "strikeouts", "pitcher_strikeouts"}:
+        return "K"
+    if value in {"bb", "bbs", "walk", "walks", "pitcher_walks"}:
+        return "BB"
+    if value in {"er", "earned_run", "earned_runs", "pitcher_earned_runs"}:
+        return "ER"
+    if value in {"out", "outs", "pitching_outs", "pitcher_outs"}:
+        return "Outs"
+    return None
+
+
+def _prop_actual_value(player_outcome: dict | None, stat_key: str | None) -> float | None:
+    if not player_outcome or not stat_key:
+        return None
+    stat = str(_first(player_outcome, "stat_key", "prop", "prop_type") or "").strip()
+    if stat and _prop_stat_key({"stat_key": stat}, stat) != stat_key:
+        return None
+    aliases = {
+        "K": ("value", "actual_value", "strikeouts", "k", "so"),
+        "BB": ("value", "actual_value", "walks", "bb"),
+        "ER": ("value", "actual_value", "earned_runs", "er"),
+        "Outs": ("value", "actual_value", "outs", "pitching_outs"),
+    }
+    return _number(_first(player_outcome, *aliases[stat_key]))
+
+
+def _matched_player_outcome(prediction: dict, rows: list[dict]) -> dict | None:
+    stat_key = _prop_stat_key(prediction, _prediction_market(prediction))
+    if not stat_key:
+        return None
+    pred_id = _player_id(prediction)
+    pred_name = _player_name(prediction)
+    if pred_id is not None:
+        for row in rows:
+            row_id = _first(row, "player_id", "pitcher_id", "mlb_player_id")
+            if row_id is not None and str(row_id) == str(pred_id):
+                if _prop_actual_value(row, stat_key) is not None:
+                    return row
+    name_key = _norm_text(pred_name)
+    if name_key:
+        for row in rows:
+            row_name = _first(row, "player", "player_name", "pitcher", "description")
+            if _norm_text(row_name) == name_key and _prop_actual_value(row, stat_key) is not None:
+                return row
+    return None
+
+
+def _player_outcome_matches(prediction: dict, player_outcome: dict | None) -> bool:
+    if not player_outcome:
+        return False
+    pred_id = _player_id(prediction)
+    row_id = _first(player_outcome, "player_id", "pitcher_id", "mlb_player_id")
+    if pred_id is not None:
+        return row_id is not None and str(row_id) == str(pred_id)
+    pred_name = _player_name(prediction)
+    row_name = _first(player_outcome, "player", "player_name", "pitcher", "description")
+    return bool(pred_name and row_name and _norm_text(pred_name) == _norm_text(row_name))
+
+
 def _period_outcome(
     market: str,
     outcome: dict,
@@ -194,17 +287,52 @@ def _period_outcome(
     return home_runs, away_runs, margin_home
 
 
+def _winner_from_outcome(game: dict, outcome: dict, margin_home: float | None = None) -> str | None:
+    raw = _first(outcome, "winner_team", "winner")
+    if raw is not None:
+        value = str(raw).upper().strip()
+        if value in {game["home_team"], game["away_team"]}:
+            return value
+    if margin_home is None:
+        period = _period_outcome("ml", outcome)
+        if period is None:
+            return None
+        _home_runs, _away_runs, margin_home = period
+    if margin_home > 0:
+        return game["home_team"]
+    if margin_home < 0:
+        return game["away_team"]
+    return None
+
+
 def grade_model_prediction(
     prediction: dict,
     game: dict,
     outcome: dict,
+    player_outcome: dict | None = None,
 ) -> tuple[bool | None, bool | None]:
     market = _prediction_market(prediction)
     if market is None:
         selection = _team_pick(prediction, game)
         if selection is None:
             return None, None
-        return outcome["winner_team"] == selection, False
+        winner = _winner_from_outcome(game, outcome)
+        if winner is None:
+            return None, None
+        return winner == selection, False
+
+    prop_stat = _prop_stat_key(prediction, market)
+    if prop_stat:
+        if not _player_outcome_matches(prediction, player_outcome):
+            return None, None
+        line = _line_value(prediction)
+        direction = _direction_pick(prediction)
+        actual = _prop_actual_value(player_outcome, prop_stat)
+        if line is None or direction is None or actual is None:
+            return None, None
+        if actual == line:
+            return None, True
+        return (actual > line if direction == "over" else actual < line), False
 
     period = _period_outcome(market, outcome)
     if period is None:
@@ -216,12 +344,7 @@ def grade_model_prediction(
         selection = _team_pick(prediction, game)
         if selection is None:
             return None, None
-        if margin_home > 0:
-            winner = game["home_team"]
-        elif margin_home < 0:
-            winner = game["away_team"]
-        else:
-            winner = None
+        winner = _winner_from_outcome(game, outcome, margin_home)
         if winner is None:
             return None, True
         return winner == selection, False
@@ -284,6 +407,7 @@ def run() -> int:
         "selection,line,side_role"
     )
     predictions_result = reader.get("model_predictions?settled=eq.false&select=*&limit=1000")
+    prop_outcomes_result = reader.get("player_prop_outcomes?select=*")
     if predictions_result.error:
         # Backward-compatible fallback for warehouses before migration 0003. Applying the
         # migration is still required before model-prediction updates can persist.
@@ -297,6 +421,14 @@ def run() -> int:
         raise RuntimeError("; ".join(errors))
     games = {row["game_pk"]: row for row in games_result.rows}
     outcomes = {row["game_pk"]: row for row in outcomes_result.rows}
+    prop_outcomes_by_game: dict[int, list[dict]] = {}
+    if not prop_outcomes_result.error:
+        for row in prop_outcomes_result.rows:
+            try:
+                row_game_pk = int(row.get("game_pk"))
+            except (TypeError, ValueError):
+                continue
+            prop_outcomes_by_game.setdefault(row_game_pk, []).append(row)
     settled = 0
     for observation in observations_result.rows:
         game_pk = observation["game_pk"]
@@ -320,27 +452,65 @@ def run() -> int:
             continue
         if game_pk not in games or game_pk not in outcomes:
             continue
-        won, push = grade_model_prediction(prediction, games[game_pk], outcomes[game_pk])
+        player_outcome = _matched_player_outcome(
+            prediction,
+            prop_outcomes_by_game.get(game_pk, []),
+        )
+        won, push = grade_model_prediction(
+            prediction,
+            games[game_pk],
+            outcomes[game_pk],
+            player_outcome,
+        )
         if won is None and not push:
             continue
         filters = _prediction_filter(prediction)
         if not filters:
             continue
         outcome = outcomes[game_pk]
+        actual_home_runs = _number(_first(outcome, "home_runs", "home_score", "home_final"))
+        actual_away_runs = _number(_first(outcome, "away_runs", "away_score", "away_final"))
+        actual_margin_home = _number(_first(outcome, "margin_home"))
+        if actual_home_runs is not None and actual_away_runs is not None:
+            if actual_margin_home is None:
+                actual_margin_home = actual_home_runs - actual_away_runs
+            actual_total_runs = _number(_first(outcome, "total_runs"))
+            if actual_total_runs is None:
+                actual_total_runs = actual_home_runs + actual_away_runs
+        else:
+            actual_total_runs = _number(_first(outcome, "total_runs"))
+        actual_winner = _winner_from_outcome(games[game_pk], outcome, actual_margin_home)
+        updates = {
+            "settled": True,
+            "won": won,
+            "push": bool(push),
+            "settled_time": dt.datetime.now(dt.UTC).isoformat(),
+            "actual_winner": actual_winner,
+            "actual_home_runs": actual_home_runs,
+            "actual_away_runs": actual_away_runs,
+            "actual_total_runs": actual_total_runs,
+            "actual_margin_home": actual_margin_home,
+        }
+        prop_stat = _prop_stat_key(prediction, _prediction_market(prediction))
+        actual_prop = _prop_actual_value(player_outcome, prop_stat)
+        if prop_stat and player_outcome and actual_prop is not None:
+            updates.update(
+                {
+                    "actual_player_name": _first(
+                        player_outcome,
+                        "player",
+                        "player_name",
+                        "pitcher",
+                        "description",
+                    ),
+                    "actual_prop_stat": prop_stat,
+                    "actual_prop_value": actual_prop,
+                }
+            )
         writer.update(
             "model_predictions",
             filters,
-            {
-                "settled": True,
-                "won": won,
-                "push": bool(push),
-                "settled_time": dt.datetime.now(dt.UTC).isoformat(),
-                "actual_winner": outcome["winner_team"],
-                "actual_home_runs": outcome["home_runs"],
-                "actual_away_runs": outcome["away_runs"],
-                "actual_total_runs": outcome["total_runs"],
-                "actual_margin_home": outcome["margin_home"],
-            },
+            updates,
         )
         settled += 1
     return settled

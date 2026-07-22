@@ -28,6 +28,17 @@
   --text-2: #A4A8B6;
   --text-3: #6E7383;
   --text-4: #4C5161;
+  --text-bright: #FFFFFF;
+  --text-nav: #F9FAFB;
+  --text-nav-active: #E9E6FF;
+  --wordmark-muted: #B8B8C2;
+  --heading-sheen-1: #E9EAF0;
+  --heading-sheen-2: #9DA0AE;
+  --heading-sheen-3: #D7D9E2;
+  --table-surface: #10131F;
+  --table-head: #0C0E18;
+  --table-border: #37405A;
+  --table-text-muted: #AEB4C6;
 
   /* Brand purple family */
   --ca-purple: #9A6BFF;
@@ -53,6 +64,8 @@
   --green: #3CCB7F;
   --red: #F2545B;
   --side: #C4B0FF;
+  --positive-soft: #7BDC5A;
+  --negative-soft: #FCA5A5;
 
   /* 7-step metric grade gradient (league-relative percentile) */
   --metric-very-weak: #F2545B;
@@ -62,6 +75,23 @@
   --metric-above: #86D76F;
   --metric-strong: #4ADE80;
   --metric-elite: #22C55E;
+  --metric-good: #7BDC5A;
+  --metric-mid: #FBBF24;
+  --metric-orange: #FB923C;
+  --metric-poor: #F87171;
+
+  /* RGB triplets for alpha tints. */
+  --rgb-white: 255, 255, 255;
+  --rgb-black: 0, 0, 0;
+  --rgb-purple: 124, 77, 255;
+  --rgb-purple-soft: 154, 107, 255;
+  --rgb-purple-deep: 91, 43, 224;
+  --rgb-green: 60, 203, 127;
+  --rgb-teal: 45, 212, 191;
+  --rgb-gold: 232, 194, 74;
+  --rgb-red: 242, 84, 91;
+  --rgb-muted: 107, 114, 128;
+  --rgb-border: 54, 59, 77;
 
   /* Card / board surface treatment */
   --ca-card-radius: 16px;
@@ -121,9 +151,9 @@ h1, h2, h3, .ca-page-title, .ca-section-title {
 .mut { color: var(--text-2); }
 
 /* Percentile grade chips — the Chase 5(+2)-tier scale, exact token colors */
-.c-elite { color: #4ADE80; }
-.c-good  { color: #7BDC5A; }
-.c-mid   { color: #FBBF24; }
-.c-weak  { color: #FB923C; }
-.c-poor  { color: #F87171; }
+.c-elite { color: var(--metric-strong); }
+.c-good  { color: var(--metric-good); }
+.c-mid   { color: var(--metric-mid); }
+.c-weak  { color: var(--metric-orange); }
+.c-poor  { color: var(--metric-poor); }
 .c-na    { color: var(--text-2); }

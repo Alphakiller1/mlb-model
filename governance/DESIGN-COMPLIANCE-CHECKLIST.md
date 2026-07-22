@@ -10,7 +10,7 @@ Matchup Report + Command Center. Status: ✅ met · ◐ partial · ❌ not met �
 
 | # | Requirement (source: prior prompts) | Status | Note |
 |---|---|---|---|
-| 1 | Match Chase Analytics / Sharp Money Tracker design (violet, Roboto Condensed, tabular nums, percentile chips, premium tables) | ✅ | tokens adopted from real SMT CSS |
+| 1 | Match Chase Analytics / Sharp Money Tracker design (violet, DM Sans, Roboto Condensed display/numbers, tabular nums, percentile chips, premium tables) | ✅ | tokens adopted from the vendored Chase CSS |
 | 2 | Numbers-first; presentation order raw→visual→effect→market→explanation | ◐ | mostly; section subtitles still explanatory (this pass) |
 | 3 | Stat standard: raw·baseline·Δ·percentile·rank·sample | ✅ | matrix rows |
 | 4 | Scannable: winner, win%, score, total, fair+market lines, top discrepancy, risks, freshness, **action** | ◐ | action not surfaced at top (this pass adds verdict bar) |
@@ -46,6 +46,6 @@ risk essay → risk table; factor prose → contribution bars.
 Mkt · Fair · Impl · Model · Edge · EV/u · Max · State · pct · Δ · OSI · FIP · wOBA · OBR · F5.
 
 ## Honest remaining gaps
-Defense/rest-travel (no data); recent-form trend not yet wired; automated visual-regression needs a
-browser harness; Command Center (legacy) still renders bet_evaluator's worded markdown (out of scope
-for this pass — it's the legacy surface, not the canonical report).
+Defense/rest-travel (no data); recent-form trend not yet wired; populated live-market browser
+screenshots need a real priced slate; Command Center remains legacy context, not the canonical
+product shell.

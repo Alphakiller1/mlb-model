@@ -33,6 +33,17 @@ def test_model_prediction_grades_explicit_winner():
     assert push is False
 
 
+def test_model_prediction_derives_winner_when_outcome_has_scores_only():
+    won, push = grade_model_prediction(
+        {"predicted_winner": "BOS"},
+        GAME,
+        {"home_score": 5, "away_score": 2},
+    )
+
+    assert won is True
+    assert push is False
+
+
 def test_model_prediction_grades_probability_side():
     won, push = grade_model_prediction(
         {"home_win_probability": 0.42},
@@ -106,6 +117,58 @@ def test_model_prediction_grades_f5_only_with_f5_outcome_fields():
 
     assert won is True
     assert push is False
+
+
+def test_model_prediction_grades_player_prop_with_matched_outcome():
+    won, push = grade_model_prediction(
+        {
+            "market_type": "pitcher_strikeouts",
+            "player": "Away Starter",
+            "selection": "over",
+            "line": 5.5,
+        },
+        GAME,
+        OUTCOME,
+        {"player_name": "Away Starter", "stat_key": "K", "value": 7},
+    )
+
+    assert won is True
+    assert push is False
+
+
+def test_model_prediction_player_prop_pushes_exact_line():
+    won, push = grade_model_prediction(
+        {
+            "market_type": "player_prop",
+            "prop": "Outs",
+            "player_id": 42,
+            "direction": "under",
+            "line": 17,
+        },
+        GAME,
+        OUTCOME,
+        {"player_id": 42, "stat_key": "Outs", "value": 17},
+    )
+
+    assert won is None
+    assert push is True
+
+
+def test_model_prediction_player_prop_requires_matched_outcome():
+    won, push = grade_model_prediction(
+        {
+            "market_type": "pitcher_walks",
+            "player": "Away Starter",
+            "selection": "under",
+            "line": 2.5,
+        },
+        GAME,
+        OUTCOME,
+        {"player_name": "Other Starter", "stat_key": "BB", "value": 1},
+    )
+
+    assert won is None
+    assert push is None
 
 
 def test_model_prediction_does_not_guess_without_side():
