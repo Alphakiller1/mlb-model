@@ -98,13 +98,14 @@ def _today(slate, sd, sharp_by_pk, sync=None):
         return f"{away_runs:.1f}-{home_runs:.1f}"
 
     rows = ""
-    for g in slate:
+    for idx, g in enumerate(slate, start=1):
         away = str(g.get("away") or "TBD")
         home = str(g.get("home") or "TBD")
         game = f"{away}@{home}"
         if g.get("err"):
             rows += (
                 '<div class="slate-row slate-row--empty">'
+                f'<span class=slate-rank>{idx:02d}</span>'
                 f"<div class=slate-matchup><div class=slate-teams><b>{e(away)}</b>"
                 f"<span class=mut>@</span><b>{e(home)}</b></div>"
                 "<span class=slate-sp>No model inputs loaded for this matchup.</span></div>"
@@ -120,6 +121,7 @@ def _today(slate, sd, sharp_by_pk, sync=None):
             else "<span class=slate-metric><b>0</b><i>sharp</i></span>"
         )
         rows += f"""<button type=button class=slate-row onclick="openGame('{game}')">
+          <span class=slate-rank>{idx:02d}</span>
           <span class=slate-matchup>
             <span class=slate-teams>
               <span class=slate-team>{_logo(away, "tlogo sm")}<b>{e(away)}</b></span>
@@ -186,6 +188,71 @@ def _today(slate, sd, sharp_by_pk, sync=None):
      <div class=sec><h2>Lean queue</h2><div class=body><div class=lean-list>{lean_items}</div></div></div>
    </div>
  </div>"""
+
+
+def _shell_hero(slate, sd, sync_label, gate_label):
+    ok = [g for g in slate if not g.get("err")]
+    spotlight = max(ok, key=lambda g: abs(float(g.get("margin") or 0)), default=None)
+    if spotlight:
+        away = str(spotlight.get("away") or "TBD")
+        home = str(spotlight.get("home") or "TBD")
+        game = f"{away}@{home}"
+        lean = str(spotlight.get("lean") or home)
+        try:
+            total = float(spotlight.get("total") or 0)
+            margin = float(spotlight.get("margin") or 0)
+            win_side = max(float(spotlight.get("ph") or 0), 1 - float(spotlight.get("ph") or 0))
+            home_runs = (total + margin) / 2
+            away_runs = total - home_runs
+            score = f"{away_runs:.1f}-{home_runs:.1f}"
+            win_text = f"{win_side * 100:.0f}%"
+            margin_text = f"{margin:+.1f} R"
+            total_text = f"{total:.1f}"
+        except (TypeError, ValueError):
+            score = "TBD"
+            win_text = "--"
+            margin_text = "--"
+            total_text = "--"
+        spotlight_html = f"""<button type=button class=hero-matchup onclick="openGame('{game}')">
+          <span class=hero-matchup__label>Spotlight matchup</span>
+          <span class=hero-teamline>
+            <span>{_logo(away, "tlogo lg")}<b>{e(away)}</b></span>
+            <i>@</i>
+            <span>{_logo(home, "tlogo lg")}<b>{e(home)}</b></span>
+          </span>
+          <span class=hero-matchup__pitchers>{e(str(spotlight.get("asp") or "TBD"))} vs {e(str(spotlight.get("hsp") or "TBD"))}</span>
+          <span class=hero-metric-strip>
+            <i><b>{e(score)}</b><em>Projected score</em></i>
+            <i><b>{e(win_text)}</b><em>{e(lean)} side</em></i>
+            <i><b>{e(margin_text)}</b><em>Run gap</em></i>
+            <i><b>{e(total_text)}</b><em>Total</em></i>
+          </span>
+        </button>"""
+    else:
+        spotlight_html = (
+            "<div class=hero-matchup><span class=hero-matchup__label>Spotlight matchup</span>"
+            "<span class=hero-teamline><b>No slate loaded</b></span>"
+            "<span class=hero-matchup__pitchers>Load a slate to populate model context.</span></div>"
+        )
+    return f"""<section class=command-hero>
+      <div class=command-hero__copy>
+        <span class=hero-kicker>Chase Analytics MLB Model</span>
+        <h1>Decision Lab</h1>
+        <p>Matchup projections, pitcher-prop research, market comparison, and grading progress in one content-ready board.</p>
+        <div class=hero-telemetry>
+          <span><b>Slate</b><i>{e(sd or "No slate")}</i></span>
+          <span><b>Games</b><i>{len(ok)}</i></span>
+          <span><b>Sync</b><i>{e(sync_label)}</i></span>
+          <span><b>Gate</b><i>{e(gate_label)}</i></span>
+        </div>
+      </div>
+      {spotlight_html}
+      <div class=hero-stack>
+        <span><b>Matchups</b><i>Fair prices, drivers, risk gates</i></span>
+        <span><b>Props</b><i>K, BB, ER, outs projection matrix</i></span>
+        <span><b>Results</b><i>Settlement and model progress tracker</i></span>
+      </div>
+    </section>"""
 
 
 _MKT_LABEL = {
@@ -1213,6 +1280,32 @@ color:var(--muted);font:700 13px var(--sans);padding:9px 10px;margin:4px 0;curso
 .navb.on{color:var(--ink);background:linear-gradient(135deg,rgba(124,77,255,.22),rgba(154,107,255,.06));border-color:rgba(154,107,255,.42);box-shadow:inset 3px 0 0 var(--ca-purple)}
 .navb.on .navmark{color:var(--text-bright);background:var(--v-grad);border-color:transparent}
 #main{flex:1;min-width:0;overflow:auto;padding:24px 28px 72px}
+.command-hero{position:relative;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.9fr) minmax(210px,.45fr);gap:14px;align-items:stretch;margin:0 0 22px;padding:18px;border:1px solid rgba(var(--rgb-purple-soft),.42);border-radius:14px;background:
+linear-gradient(90deg,rgba(var(--rgb-white),.035) 1px,transparent 1px),
+linear-gradient(180deg,rgba(var(--rgb-white),.025) 1px,transparent 1px),
+linear-gradient(135deg,rgba(var(--rgb-purple),.27),rgba(18,20,29,.96) 42%,rgba(var(--rgb-teal),.09));background-size:30px 30px,30px 30px,auto;box-shadow:0 28px 90px rgba(var(--rgb-black),.48),inset 0 1px 0 rgba(var(--rgb-white),.08);overflow:hidden}
+.command-hero::before{content:"";position:absolute;left:18px;right:18px;top:0;height:3px;background:linear-gradient(90deg,var(--ca-purple),var(--teal),transparent)}
+.command-hero__copy,.hero-matchup,.hero-stack{position:relative;z-index:1}
+.hero-kicker{display:inline-flex;align-items:center;min-height:26px;margin-bottom:10px;padding:4px 10px;border:1px solid rgba(var(--rgb-purple-soft),.36);border-radius:999px;background:rgba(var(--rgb-purple),.13);color:var(--ca-purple-light);font:900 10px var(--display);letter-spacing:.12em;text-transform:uppercase}
+.command-hero h1{margin:0;font:900 58px/.86 var(--display);letter-spacing:0;text-transform:uppercase;background:linear-gradient(180deg,var(--text-bright),var(--heading-sheen-1) 50%,var(--ca-purple-light));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.command-hero p{max-width:620px;margin:12px 0 0;color:var(--ink2);font-size:14px;line-height:1.45}
+.hero-telemetry{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:18px}
+.hero-telemetry span,.hero-stack span,.hero-metric-strip i{min-width:0;border:1px solid rgba(var(--rgb-border),.82);border-radius:10px;background:rgba(8,9,15,.58);box-shadow:inset 0 1px 0 rgba(var(--rgb-white),.04)}
+.hero-telemetry span{display:flex;flex-direction:column;gap:4px;min-height:58px;padding:10px}
+.hero-telemetry b,.hero-stack b,.hero-metric-strip em{font:900 9.5px var(--display);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.hero-telemetry i{font:900 17px/1 var(--display);font-style:normal;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-matchup{display:flex;flex-direction:column;gap:10px;width:100%;min-height:100%;padding:16px;text-align:left;color:inherit;border:1px solid rgba(var(--rgb-purple-soft),.38);border-radius:12px;background:linear-gradient(160deg,rgba(18,20,29,.78),rgba(8,9,15,.94));cursor:pointer;box-shadow:inset 0 1px 0 rgba(var(--rgb-white),.06)}
+.hero-matchup:hover,.hero-matchup:focus-visible{outline:0;border-color:rgba(var(--rgb-teal),.5);box-shadow:0 0 0 3px rgba(var(--rgb-teal),.10),inset 0 1px 0 rgba(var(--rgb-white),.08)}
+.hero-matchup__label{font:900 10px var(--display);letter-spacing:.11em;text-transform:uppercase;color:var(--teal)}
+.hero-teamline{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hero-teamline span{display:inline-flex;align-items:center;gap:8px}.hero-teamline b{font:900 32px/.95 var(--display);color:var(--text-bright)}.hero-teamline i{font-style:normal;color:var(--muted);font-weight:900}
+.hero-matchup__pitchers{color:var(--ink2);font-size:12px;line-height:1.35}
+.hero-metric-strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:auto}
+.hero-metric-strip i{display:flex;flex-direction:column;gap:5px;min-height:56px;padding:9px;font-style:normal}
+.hero-metric-strip b{font:900 18px/1 var(--display);color:var(--text-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-stack{display:flex;flex-direction:column;gap:8px}
+.hero-stack span{display:flex;flex-direction:column;justify-content:center;gap:5px;min-height:72px;padding:12px}
+.hero-stack b{color:var(--ca-purple-light)}.hero-stack i{font-style:normal;color:var(--ink2);font-size:12px;line-height:1.3}
 .view{display:none}.view.on{display:block}
 #main>.view>h2:first-child{font-family:var(--display);font-weight:900;font-size:30px;line-height:1;margin:0 0 4px;background:linear-gradient(180deg,var(--text-bright) 0%,var(--heading-sheen-1) 42%,var(--text-2) 64%,var(--text-bright) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .ctx{color:var(--ink2);font-size:13px;margin-bottom:16px;max-width:860px;line-height:1.5;overflow-wrap:anywhere}
@@ -1235,13 +1328,18 @@ color:var(--muted);font:700 13px var(--sans);padding:9px 10px;margin:4px 0;curso
 .today-grid{display:grid;grid-template-columns:minmax(0,1.48fr) minmax(300px,.82fr);gap:14px;align-items:start}
 .today-rail{display:flex;flex-direction:column;gap:14px}
 .slate-list,.lean-list{display:flex;flex-direction:column;gap:8px}
-.slate-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center;width:100%;min-height:106px;padding:12px 14px;text-align:left;color:inherit;background:linear-gradient(180deg,rgba(28,31,44,.82),rgba(13,15,23,.92));border:1px solid rgba(54,59,77,.86);border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.045);cursor:pointer}
-.slate-row:hover,.slate-row:focus-visible{outline:0;border-color:rgba(154,107,255,.55);background:linear-gradient(180deg,rgba(35,38,55,.92),rgba(16,18,28,.96));box-shadow:0 0 0 3px rgba(124,77,255,.12),inset 3px 0 0 var(--ca-purple)}
+.slate-row{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr) 88px;gap:10px 14px;align-items:center;width:100%;min-height:112px;padding:13px 14px;text-align:left;color:inherit;background:
+linear-gradient(90deg,rgba(var(--rgb-purple),.13),transparent 18%),
+linear-gradient(180deg,rgba(28,31,44,.86),rgba(13,15,23,.94));border:1px solid rgba(54,59,77,.88);border-radius:12px;box-shadow:inset 0 1px 0 rgba(var(--rgb-white),.05),0 10px 34px rgba(var(--rgb-black),.18);cursor:pointer;overflow:hidden}
+.slate-row:hover,.slate-row:focus-visible{outline:0;border-color:rgba(154,107,255,.62);background:
+linear-gradient(90deg,rgba(var(--rgb-purple),.22),transparent 24%),
+linear-gradient(180deg,rgba(35,38,55,.94),rgba(16,18,28,.98));box-shadow:0 0 0 3px rgba(124,77,255,.12),inset 3px 0 0 var(--ca-purple),0 16px 42px rgba(var(--rgb-black),.28)}
 .slate-row--empty{cursor:default;border-style:dashed;color:var(--muted)}
+.slate-rank{grid-row:1/3;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;border:1px solid rgba(var(--rgb-purple-soft),.30);background:rgba(var(--rgb-purple),.12);color:var(--ca-purple-light);font:900 13px var(--display);letter-spacing:.04em}
 .slate-matchup{min-width:0;display:block}.slate-teams{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:900;font-size:17px;line-height:1.1;color:var(--ink);min-width:0}
 .slate-team{display:inline-flex;align-items:center;gap:5px;min-width:0}.slate-team b{white-space:nowrap}.slate-sp{display:block;margin-top:6px;color:var(--muted);font-size:11px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .slate-time{font:900 13px var(--display);color:var(--ink2);text-align:center;letter-spacing:.02em}
-.slate-metrics{display:grid;grid-column:1/-1;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;min-width:0}
+.slate-metrics{display:grid;grid-column:2/4;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;min-width:0}
 .slate-metric{display:block;min-height:46px;padding:7px 8px;border:1px solid rgba(54,59,77,.72);border-radius:8px;background:rgba(255,255,255,.034);min-width:0}
 .slate-metric b{display:block;color:var(--ink);font:900 15px var(--display);line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .slate-metric i{display:block;margin-top:5px;color:var(--muted);font-style:normal;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1252,9 +1350,9 @@ color:var(--muted);font:700 13px var(--sans);padding:9px 10px;margin:4px 0;curso
 .lead-strip{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}.lead-strip i{font-style:normal;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.075);color:var(--ink2);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
 .lean-item{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:48px;padding:9px 10px;text-align:left;color:inherit;background:rgba(255,255,255,.028);border:1px solid rgba(54,59,77,.70);border-radius:9px;cursor:pointer}
 .lean-item:hover,.lean-item:focus-visible{outline:0;border-color:rgba(154,107,255,.35);background:rgba(124,77,255,.08)}.lean-item span{min-width:0}.lean-item b{display:block;color:var(--ink);font:900 15px var(--display)}.lean-item i{display:block;color:var(--muted);font-style:normal;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lean-item em{font-style:normal;font:900 13px var(--display);color:var(--side);white-space:nowrap}
-@media(min-width:1500px){.slate-row{grid-template-columns:minmax(260px,1fr) 68px minmax(390px,1.08fr);min-height:78px}.slate-metrics{grid-column:auto}}
+@media(min-width:1500px){.slate-row{grid-template-columns:38px minmax(260px,1fr) 68px minmax(390px,1.08fr);min-height:82px}.slate-rank{grid-row:auto}.slate-metrics{grid-column:auto}}
 @media(max-width:1140px){.today-grid{grid-template-columns:1fr}}
-@media(max-width:920px){.slate-row{grid-template-columns:1fr}.slate-time{text-align:left}.slate-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:920px){.slate-row{grid-template-columns:34px minmax(0,1fr)}.slate-rank{grid-row:1/3;width:32px;height:32px}.slate-time{grid-column:2;text-align:left}.slate-metrics{grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr))}}
 .gcell{display:inline-flex;align-items:center;gap:5px}
 .gamepick{border:0;background:none;color:inherit;font:inherit;padding:0;cursor:pointer;text-align:left}
 .gamepick:hover b{color:var(--teal)}
@@ -1317,8 +1415,10 @@ background:rgba(124,77,255,.08);color:var(--ink2);font-size:12px;margin-bottom:1
 .market-card-pick{margin-bottom:0}.market-card-pick b{font:900 17px/1.1 var(--display);color:var(--ink)}
 .market-card-meta{color:var(--muted);font-size:11px}
 .market-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:3px}
-@media(max-width:760px){#appshell{flex-direction:column}#nav{width:100%;height:auto;flex:0 0 auto;position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:hidden}
-.rail-brand{grid-column:1/-1;width:100%;margin-bottom:4px}.navb{width:100%;min-width:0;margin:0}.navb span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ca-shell-meta__item{flex:1 1 100%;min-width:0}.cards{grid-template-columns:1fr}.pagehead{align-items:stretch;flex-direction:column}.pagehead select{width:100%;min-width:0}#appshell,#main,.view{max-width:100%;overflow-x:hidden}#main{width:100%;padding:18px 14px 64px}.sec,.card,.empty{max-width:100%}.trend-desktop-board,.market-desktop-board{display:none}.trend-mobile-board,.market-mobile-board{display:flex;flex-direction:column;gap:10px}}
+@media(max-width:1180px){.command-hero{grid-template-columns:1fr 1fr}.hero-stack{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.command-hero h1{font-size:48px}}
+@media(max-width:760px){.command-hero{grid-template-columns:1fr;margin-bottom:18px;padding:14px;border-radius:12px}.command-hero h1{font-size:38px}.hero-telemetry,.hero-metric-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-stack{display:none}.hero-teamline b{font-size:28px}}
+@media(max-width:760px){#appshell{flex-direction:column}#nav{width:100%;height:auto;flex:0 0 auto;position:static;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;overflow:hidden;padding:10px 12px;border-right:0;border-bottom:1px solid rgba(var(--rgb-border),.82);box-shadow:0 16px 42px rgba(var(--rgb-black),.20)}
+.rail-brand{display:none}.navb{width:100%;min-width:0;min-height:50px;flex-direction:column;justify-content:center;gap:5px;margin:0;padding:7px 5px;font-size:10.5px}.navb .navmark{width:24px;height:22px;border-radius:7px;font-size:8px}.navb span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ca-shell-meta__item{flex:1 1 100%;min-width:0}.cards{grid-template-columns:1fr}.pagehead{align-items:stretch;flex-direction:column}.pagehead select{width:100%;min-width:0}#appshell,#main,.view{max-width:100%;overflow-x:hidden}#main{width:100%;padding:14px 14px 64px}.sec,.card,.empty{max-width:100%}.trend-desktop-board,.market-desktop-board{display:none}.trend-mobile-board,.market-mobile-board{display:flex;flex-direction:column;gap:10px}}
 @media(max-width:480px){.ca-shell-meta__item{flex:1 1 100%;min-width:0}.cards{grid-template-columns:1fr}.pagehead{align-items:stretch;flex-direction:column}.pagehead select{width:100%;min-width:0}.trend-card-foot,.market-card-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.today-grid{gap:12px}.slate-row{padding:11px;gap:10px;min-height:0}.slate-teams{flex-wrap:wrap;font-size:16px}.slate-sp{white-space:normal}.slate-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.lead-lean{min-height:132px}.lead-lean>b{font-size:26px}}
 @media(max-width:760px){.prop-market-report .table-scroll{max-width:100%;overflow-x:auto}.prop-desktop-table{display:none}.prop-mobile-list{display:flex;flex-direction:column;gap:10px}.prop-card .pitcher-cell{min-width:0}.prop-card .pitcher-cell .phead{width:44px;height:44px;flex-basis:44px}.prop-card-head{align-items:flex-start;flex-direction:column}.prop-card-foot{align-items:flex-start;flex-direction:column}.prop-card-foot i{text-align:left}}
@@ -1485,14 +1585,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         else ("Live fallback" if sync.get("status") == "fallback" else "Untracked")
     )
     gate_label = str(gate.get("verdict") or "HOLD/ABSTAIN")
-    meta = (
-        "<div class=ca-shell-meta>"
-        f'<div class="ca-shell-meta__item is-live"><b>Slate</b><span>{e(sd or "No slate")}</span></div>'
-        f"<div class=ca-shell-meta__item><b>Games</b><span>{len(games)}</span></div>"
-        f"<div class=ca-shell-meta__item><b>MLBMA Sync</b><span>{e(sync_label)}</span></div>"
-        f'<div class="ca-shell-meta__item is-watch"><b>Gate</b><span>{e(gate_label)}</span></div>'
-        "</div>"
-    )
+    hero = _shell_hero(slate, sd, sync_label, gate_label)
     js = (
         "function show(k,persist=true){const target=document.getElementById('v-'+k);if(!target)return;"
         "document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));"
@@ -1524,7 +1617,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         f"<title>MLB Model — Chase Analytics</title>"
         f"<style>{chase_theme.theme_css()}{_CSS}{_SHELL_CSS}</style></head><body>"
         f"{chase_nav}"
-        f"<div id=appshell><nav id=nav>{nav}</nav><main id=main>{notice}{meta}{sections}</main></div>"
+        f"<div id=appshell><nav id=nav>{nav}</nav><main id=main>{notice}{hero}{sections}</main></div>"
         f"<script>{js}</script></body></html>"
     )
 
