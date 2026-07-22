@@ -32,6 +32,16 @@ def test_build_app_renders_all_views():
     assert "model_ui.css" not in html  # inlined in shell
     assert ".edge-hero-stat::before" in html or "edge-hero-stat" in html
     assert "ca-neon-icon" in html
+    assert "chase-rail" in html
+    assert "chase-wordmark-image" in html
+    assert "terminal-today" in html
+    assert "terminal-slate-table" in html
+    assert "Biggest model leans" in html
+    assert "premium-matchup-terminal" in html
+    assert "premium-matchup-kpis" in html
+    assert "props-workstation" in html
+    assert "props-starter-browser" in html
+    assert "Progress / Validation" in html
 
 
 def test_build_app_matchup_switch_hybrid_terminals():

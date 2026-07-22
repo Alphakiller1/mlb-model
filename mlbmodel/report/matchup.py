@@ -1197,6 +1197,85 @@ def matchup_summary_html(report: dict) -> str:
  </div></div></div>"""
 
 
+def premium_matchup_terminal_html(report: dict, detail_html: str) -> str:
+    """Compact first-screen decision terminal matching the Chase premium reference."""
+    esc = html.escape
+    gd, probability = report["gd"], report["probs"]
+    extras = report.get("extras") or {}
+    markets = report.get("markets") or []
+    priced = [market for market in markets if market.get("edge") is not None]
+    best = max(priced, key=lambda market: float(market.get("edge") or -999), default=None)
+    if best:
+        state = str(best.get("state") or "MONITOR")
+        best_strip = (
+            f'<span class="pill {best.get("tone", "warnc")}">{esc(state)}</span>'
+            f'<b>{esc(str(best.get("label") or "Market"))}</b>'
+            f'<span>edge <strong>{float(best.get("edge") or 0):+.1f}pt</strong></span>'
+            f'<span>EV <strong>{float(best.get("ev") or 0):+.3f}</strong></span>'
+            f'<span>max <strong>{int(best["max"]):+d}</strong></span>'
+        )
+    else:
+        best_strip = '<span class="pill mut">NO EDGE</span><b>No paired market snapshot</b>'
+    best_edge = float(best.get("edge") or 0) if best else 0.0
+
+    away_win = probability.p_away_win * 100
+    home_win = probability.p_home_win * 100
+    favored = gd.home if home_win >= away_win else gd.away
+    favored_win = max(away_win, home_win)
+    first_total = next(
+        (market for market in markets if market.get("market") == "total"), None
+    )
+    market_total = (
+        str(first_total.get("line")) if first_total and first_total.get("line") is not None
+        else "--"
+    )
+    home_fair = fair_price(probability.p_home_win)
+    f5_over = (extras.get("f5") or {}).get("over")
+
+    factor_rows = "".join(
+        f'<tr><td><b>{esc(str(factor.get("name") or "Model factor"))}</b></td>'
+        f'<td>{esc(str(factor.get("side") or "Both"))}</td>'
+        f'<td>{esc(str(factor.get("market") or "Model projection"))}</td></tr>'
+        for factor in (report.get("factors") or [])[:3]
+    ) or '<tr><td colspan=3 class=mut>No driver stack available.</td></tr>'
+    risk_rows = "".join(
+        f'<li><b>{esc(risk.label)}</b><span>{esc(risk.implication)}</span></li>'
+        for risk in (report.get("risks") or [])[:3]
+    ) or '<li><b>No additional risk flags.</b></li>'
+    market_rows = "".join(_graded_market_row(market, esc) for market in markets)
+    if not market_rows:
+        market_rows = '<tr><td colspan=8 class=mut>No priced markets for this matchup.</td></tr>'
+
+    return f"""<div class=premium-matchup-terminal>
+  <section class=premium-matchup-identity>
+    <div class=premium-matchup-title>{_logo(gd.away, "tlogo xl")}<b>{esc(gd.away)}</b><span>@</span><b>{esc(gd.home)}</b>{_logo(gd.home, "tlogo xl")}</div>
+    <div class=premium-matchup-meta><span>{esc(str(extras.get("start") or gd.start_time or "TBD"))}</span><span>{esc(str(extras.get("lineup") or "Lineups pending"))}</span><span>Confidence {esc(str(probability.confidence))}</span></div>
+    <div class=premium-starters>
+      <div>{_headshot(extras.get("a_id"))}<span><b>{esc(gd.away_sp)}</b><i>{esc(gd.away_hand)}HP &middot; FIP {_fmt_optional(gd.away_fip, digits=2)}</i></span></div>
+      <em>vs</em>
+      <div>{_headshot(extras.get("h_id"))}<span><b>{esc(gd.home_sp)}</b><i>{esc(gd.home_hand)}HP &middot; FIP {_fmt_optional(gd.home_fip, digits=2)}</i></span></div>
+    </div>
+  </section>
+  <div class=premium-monitor-strip>{best_strip}</div>
+  <div class=premium-matchup-kpis>
+    <div><span>Win %</span><b>{favored_win:.0f}% <i>{esc(favored)}</i></b></div>
+    <div><span>Proj score</span><b>{esc(gd.away)} {probability.exp_away_runs:.1f} &ndash; {probability.exp_home_runs:.1f}</b></div>
+    <div><span>Proj total</span><b>{probability.exp_total:.1f}</b></div>
+    <div><span>Mkt total</span><b>{esc(market_total)}</b></div>
+    <div><span>Fair ML</span><b>{home_fair:+d}</b></div>
+    <div><span>F5 over</span><b>{f'{float(f5_over):.0f}%' if f5_over is not None else '--'}</b></div>
+    <div><span>Best edge</span><b class={"pos" if best_edge > 0 else "mut"}>{best_edge:+.1f}pt</b></div>
+  </div>
+  <div class=premium-evidence-grid>
+    <section class=terminal-panel><header><strong>Why {esc(favored)}</strong><span>Clearest edges</span></header><table class=terminal-table><thead><tr><th>Factor</th><th>Edge</th><th>Affects</th></tr></thead><tbody>{factor_rows}</tbody></table></section>
+    <section class=terminal-panel><header><strong>Top risks</strong><span>Incomplete inputs</span></header><ul class=premium-risk-list>{risk_rows}</ul></section>
+  </div>
+  <nav class=terminal-tabs aria-label="Matchup evidence"><button class=active>Markets</button><button>Charts</button><button>Matchup</button><button>Drivers</button><button>Sharp</button></nav>
+  <section class=terminal-panel><div class=terminal-table-scroll><table class="terminal-table premium-market-table"><thead><tr><th>Market</th><th>Mkt</th><th>Fair</th><th>Impl</th><th>Model</th><th>Edge</th><th>EV</th><th>State</th></tr></thead><tbody>{market_rows}</tbody></table></div></section>
+  <details class=premium-deep-evidence><summary>Detailed matchup evidence and methodology</summary>{detail_html}</details>
+</div>"""
+
+
 def report_body(r):
     """Render a matchup as a betting decision surface, not a written report."""
     gd, esc = r["gd"], html.escape

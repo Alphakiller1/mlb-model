@@ -30,6 +30,7 @@ from mlbmodel.report.matchup import (
     _promotion,
     build_report,
     matchup_summary_html,
+    premium_matchup_terminal_html,
     report_body,
 )
 from mlbmodel.report.decision import collect_market_plays as _collect_market_plays, markets_html as _markets
@@ -184,7 +185,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             )
             if "pk" in game:
                 model_by_pk[game["pk"]] = r.get("markets", [])
-            full_terminal = report_body(r)
+            full_terminal = premium_matchup_terminal_html(r, report_body(r))
             if game_key == featured_key:
                 report = f'<div class=matchup-body>{full_terminal}</div>'
             else:
@@ -208,10 +209,14 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         )
     options = "".join(option_rows)
     matchups = (
-        f'<div class=pagehead><div><h2>Matchups</h2>'
-        f'<p class=pagehead-sub>{e(sd or "Slate pending")}</p></div>'
-        f'<select id=gameSelect aria-label="Matchup" onchange="switchGame(this.value)">{options}</select></div>'
-        f'{"".join(matchup_reports)}'
+        f'<div class="terminal-view terminal-matchups">'
+        f'<header class=terminal-pagehead><div><h2>Matchups</h2>'
+        f'<p>Complete game analysis. Select a matchup to inspect model, market, drivers, and risk.</p></div>'
+        f'<span>MLB MODEL &middot; v1.8.5 &middot; {e(sd or "Slate pending")}</span></header>'
+        f'<div class=matchup-selectorbar><label><span>Featured matchup</span>'
+        f'<select id=gameSelect aria-label="Matchup" onchange="switchGame(this.value)">{options}</select></label>'
+        f'<span><i class=signal-dot></i>Live model</span></div>'
+        f'{"".join(matchup_reports)}</div>'
     )
 
     pkmap = {g["pk"]: g["key"] for g in slate if "pk" in g and g.get("key")}

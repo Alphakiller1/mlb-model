@@ -26,9 +26,9 @@ from mlbmodel.report.html_fmt import display as _display, edge_grade as _edge_gr
 from mlbmodel.report.html_fmt import (
     pct_chip_html,
 )
-from mlbmodel.report.matchup import _logo
+from mlbmodel.report.matchup import _headshot, _logo
 from mlbmodel.report.shell import slate_view_label
-from mlbmodel.report.props_ui import pitcher_prop_deck, prop_channel_counts
+from mlbmodel.report.props_ui import pitcher_prop_card, prop_channel_counts
 from mlbmodel.report.game_keys import assign_slate_keys, parse_game_key
 from mlbmodel.report.trends_ui import trends_section_html
 
@@ -336,7 +336,7 @@ def slate(repo, pitcher_rows=None):
 
 
 # ── sections (each = context -> conclusion -> evidence; honest empty states) ──
-def today(
+def _today_command_center_legacy(
     slate,
     sd,
     sharp_by_pk,
@@ -435,6 +435,115 @@ def today(
     """
 
 
+def _terminal_pagehead(title, subtitle, stamp):
+    return f"""<header class=terminal-pagehead>
+  <div><h2>{e(title)}</h2><p>{e(subtitle)}</p></div>
+  <span>MLB MODEL &middot; v1.8.5 &middot; {e(stamp or "Slate pending")}</span>
+</header>"""
+
+
+def _terminal_slate_row(game, sharp_by_pk):
+    key = str(game.get("key") or f'{game.get("away", "")}@{game.get("home", "")}')
+    away, home = str(game.get("away") or ""), str(game.get("home") or "")
+    try:
+        margin_text = f'{float(game.get("margin")):+.1f}'
+    except (TypeError, ValueError):
+        margin_text = "&mdash;"
+    lean = str(game.get("lean") or "&mdash;")
+    signal = (
+        "<span class=signal-dot title='Sharp signal'></span>"
+        if game.get("pk") in sharp_by_pk else "&mdash;"
+    )
+    return f"""<tr>
+  <td><button class=terminal-game onclick="openGame('{e(key)}')">{_logo(away, "tlogo xs")}
+    <span>{e(away)}</span><i>@</i>{_logo(home, "tlogo xs")}<span>{e(home)}</span></button></td>
+  <td>{e(str(game.get("time") or "TBD"))}</td>
+  <td class=num>{_fmt_pct(game.get("ph"), 0)}</td>
+  <td class=num>{_fmt_num(game.get("total"), 1)}</td>
+  <td class=num>{margin_text}</td>
+  <td><b class=terminal-lean>{e(lean)}</b></td>
+  <td class=terminal-signal>{signal}</td>
+</tr>"""
+
+
+def _terminal_lean_row(op):
+    game = str(op.get("game") or op.get("context") or "")
+    selection = str(op.get("selection") or op.get("side") or op.get("pitcher") or "Lean")
+    market = str(op.get("market_label") or op.get("market") or op.get("prop") or "Market")
+    edge = op.get("edge_pts", op.get("edge"))
+    try:
+        value = float(edge)
+        edge_text = f"{value * (100 if abs(value) <= 1 else 1):+.1f}pt"
+    except (TypeError, ValueError):
+        edge_text = "&mdash;"
+    model = op.get("model_pct", op.get("model_probability", op.get("model_prob")))
+    return f"""<tr>
+  <td><b>{e(selection)}</b><span>{e(game)} &middot; {e(market)}</span></td>
+  <td class=num>{edge_text}</td>
+  <td class=num>{_fmt_pct(model, 0)}</td>
+  <td>{_state_badge(op.get("state"))}</td>
+</tr>"""
+
+
+def today(
+    slate,
+    sd,
+    sharp_by_pk,
+    sync=None,
+    edge_command="",
+    *,
+    opportunities=None,
+    clv_summary=None,
+    gate=None,
+):
+    ok = [game for game in slate if not game.get("err")]
+    sync = sync or {}
+    opportunities = opportunities or []
+    sync_label = (
+        "Exact" if sync.get("status") == "exact" else
+        "Live fallback" if sync.get("status") == "fallback" else "Untracked"
+    )
+    priced_markets = sum(
+        1 for opportunity in opportunities
+        if opportunity.get("price") not in {None, ""}
+    )
+    slate_rows = "".join(_terminal_slate_row(game, sharp_by_pk) for game in ok)
+    if not slate_rows:
+        slate_rows = '<tr><td colspan=7 class=mut>No slate loaded.</td></tr>'
+    lean_rows = "".join(_terminal_lean_row(op) for op in opportunities[:8])
+    if not lean_rows:
+        lean_rows = '<tr><td colspan=4 class=mut>No priced model leans on this slate.</td></tr>'
+    gate_label = str((gate or {}).get("verdict") or "HOLD/ABSTAIN")
+    return f"""<div class="terminal-view terminal-today">
+  {_terminal_pagehead(slate_view_label(sd), "Discover the slate, then open a matchup. Model live; market prices load per game.", sd)}
+  <div class=terminal-kpi-row>
+    <div><span>Games</span><b>{len(ok)}</b></div>
+    <div><span>Slate</span><b>{e(sd or "TBD")}</b></div>
+    <div><span>With sharp signal</span><b>{len(sharp_by_pk)}</b></div>
+    <div><span>Priced markets</span><b>{priced_markets or "TBD"}</b></div>
+    <div class=terminal-live-state><span><i class=signal-dot></i>Data status</span><b>{e(sync_label)}</b><span>Decision gate</span><b>{e(gate_label)}</b></div>
+  </div>
+  <div class="terminal-grid terminal-grid--today">
+    <section class=terminal-panel>
+      <header><strong>Slate</strong></header>
+      <div class=terminal-table-scroll><table class="terminal-table terminal-slate-table">
+        <thead><tr><th>Game</th><th>Time</th><th>Win% (H)</th><th>Proj tot</th><th>Margin</th><th>Lean</th><th>Sharp</th></tr></thead>
+        <tbody>{slate_rows}</tbody>
+      </table></div>
+    </section>
+    <section class=terminal-panel>
+      <header><strong>Biggest model leans</strong></header>
+      <div class=terminal-table-scroll><table class="terminal-table terminal-leans-table">
+        <thead><tr><th>Lean</th><th>Edge</th><th>Model</th><th>State</th></tr></thead>
+        <tbody>{lean_rows}</tbody>
+      </table></div>
+      <p class=terminal-panel-note>Ranked by projected edge. Open Matchups for fair price, risks, and drivers.</p>
+    </section>
+  </div>
+  <div class=command-source-html hidden>{edge_command}</div>
+</div>"""
+
+
 def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
           pickem_snapshots=None, slate_date=None):
     from mlbmodel.market.lines_cache import snapshot_is_fresh, snapshot_label
@@ -469,18 +578,69 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
             )
 
     book_n, fantasy_n = prop_channel_counts(pitchers, pickem_sources)
-    deck = pitcher_prop_deck(pitchers, pickem_sources)
-    return f"""<h2>Pitcher Props</h2>
- <div class=cards>
-   <div class=card><div class=k>Starters</div><div class=v>{len(pitchers)}</div></div>
-   <div class=card><div class=k>Book lines</div><div class=v>{book_n}</div></div>
-   <div class=card><div class=k>Fantasy lines</div><div class=v>{fantasy_n}</div></div>
- </div>
- {freshness}
- {deck}"""
+    starter_rows = []
+    detail_rows = []
+    games = []
+    for index, pitcher in enumerate(pitchers):
+        team = str(pitcher.get("team") or "")
+        opponent = str(pitcher.get("opponent") or "")
+        game = f"{team} @ {opponent}"
+        if game not in games:
+            games.append(game)
+        projections = pitcher.get("projections") or {}
+        strikeouts = projections.get("K", {}).get("mean")
+        starter_rows.append(
+            f'<button type=button class="props-starter{" active" if index == 0 else ""}" '
+            f'data-prop-index="{index}" onclick="switchPropPitcher({index})">'
+            f'{_headshot(pitcher.get("pitcher_id"))}'
+            f'<span><b>{e(str(pitcher.get("pitcher") or "TBD"))}</b>'
+            f'<i>{_logo(team, "tlogo xs")}{e(team)} <em>@</em> {e(opponent)} &middot; '
+            f'{e(str(pitcher.get("hand") or "R"))}HP</i></span>'
+            f'<strong>{_fmt_num(strikeouts, 1)}</strong></button>'
+        )
+        distribution_cells = []
+        for key, label in (("K", "Strikeouts"), ("ER", "Earned runs"), ("Outs", "Outs"), ("Fantasy", "Fantasy score")):
+            projection = projections.get(key) or {}
+            mean = projection.get("mean")
+            distribution_cells.append(
+                f'<div><span>{label}</span><b>{_fmt_num(mean, 1)} <i>proj</i></b>'
+                f'<svg viewBox="0 0 120 38" aria-hidden="true"><path class=dist-axis d="M0 34H120"/>'
+                f'<path class=dist-fill d="M2 34C18 34 25 30 36 18C48 5 62 5 74 18C86 30 96 34 118 34Z"/>'
+                f'<path class=dist-line d="M2 34C18 34 25 30 36 18C48 5 62 5 74 18C86 30 96 34 118 34"/></svg></div>'
+            )
+        distributions = f'<div class=props-distributions><header>Projection distributions</header>{"".join(distribution_cells)}</div>'
+        detail_rows.append(
+            f'<section class=props-terminal-detail data-prop-detail="{index}"'
+            f'{"" if index == 0 else " hidden"}>'
+            f'{pitcher_prop_card(index, pitcher, pickem_sources=pickem_sources, expanded=True)}'
+            f'{distributions}'
+            f'</section>'
+        )
+    game_options = "".join(f'<option>{e(game)}</option>' for game in games)
+    starter_html = "".join(starter_rows) or '<div class=empty>No pitcher inputs loaded.</div>'
+    details_html = "".join(detail_rows) or '<div class=empty>No pitcher projections loaded.</div>'
+    return f"""<div class="terminal-view terminal-props">
+  {_terminal_pagehead("Props", "Pitcher prop engine and research tool.", slate_date)}
+  <div class=props-filterbar>
+    <label><span>Date</span><input type=text value="{e(str(slate_date or "Latest slate"))}" readonly></label>
+    <label><span>Game</span><select aria-label="Prop game"><option>All games</option>{game_options}</select></label>
+    <label><span>Market</span><select aria-label="Prop market"><option>Strikeouts</option><option>Earned runs</option><option>Outs</option><option>Fantasy score</option></select></label>
+    <label><span>Book</span><select aria-label="Prop book"><option>All books</option><option>Sportsbooks</option><option>Pick'em</option></select></label>
+    <label class=props-only-books><input type=checkbox><span>Show only priced lines</span></label>
+    <div class=props-counts><span>{book_n} book</span><span>{fantasy_n} fantasy</span></div>
+  </div>
+  <div class="props-workstation terminal-panel">
+    <aside class=props-starter-browser>
+      <header><span>Starter</span><span>Team</span><span>Proj K</span></header>
+      <div>{starter_html}</div>
+    </aside>
+    <main class="pitcher-prop-deck props-terminal-detail-stack">{details_html}</main>
+  </div>
+  <div class=props-freshness>{freshness}</div>
+</div>"""
 
 
-def results(reader):
+def _results_workbench_legacy(reader):
     result = reader.get(
         "model_leans?select=lean_id,slate_date,game_pk,source,market,selection,line,"
         "model_prob,model_value,edge,lean,won,push,settled,entry_odds,recorded_at,"
@@ -626,6 +786,96 @@ def results(reader):
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter leans…" data-filter-for="results-recent-table" aria-label="Filter results"></div>
    <div class=table-scroll><table id=results-recent-table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Entry</th><th>Lean</th><th>Edge</th><th>CLV</th><th>Result</th></tr>{recent}</table></div>
  </div></div>"""
+
+
+def results(reader):
+    result = reader.get(
+        "model_leans?select=lean_id,slate_date,game_pk,source,market,selection,line,"
+        "model_prob,model_value,edge,lean,won,push,settled,entry_odds,recorded_at,"
+        "void,ungraded_reason,closing_odds,clv_pts,realized_value"
+        "&order=recorded_at.desc&limit=2000"
+    )
+    if result.error:
+        return f"""<div class="terminal-view terminal-results">
+  {_terminal_pagehead("Progress / Validation", "Track model leans, outcomes, and model performance.", "Warehouse unavailable")}
+  <div class="terminal-kpi-row terminal-kpi-row--results">
+    <div><span>Tracked leans</span><b>&mdash;</b></div><div><span>Open risk</span><b>&mdash;</b></div>
+    <div><span>Closed P&amp;L</span><b>&mdash;</b></div><div><span>Win rate</span><b>&mdash;</b></div>
+    <div><span>CLV</span><b>&mdash;</b></div>
+    <div class=terminal-autograde><span class=signal-dot></span><b>Auto-grading</b><i>Connection required</i></div>
+  </div>
+  <nav class=terminal-tabs aria-label="Validation views"><button class=active>Model leans</button><button>Projections</button><button>Paper positions</button><button>Open risk</button><button>Ungraded queue</button></nav>
+  <section class="terminal-panel validation-unavailable"><header><strong>Model record unavailable</strong><span>Data connection</span></header><p>Lean warehouse unavailable: {e(result.error)}</p></section>
+  <div class=validation-grid>
+    <section class=terminal-panel><header><strong>Model performance</strong></header><div class=validation-placeholder>Performance metrics resume when the grading warehouse reconnects.</div></section>
+    <section class=terminal-panel><header><strong>Calibration</strong></header><div class=validation-placeholder>Calibration sample unavailable.</div></section>
+    <section class=terminal-panel><header><strong>Projection accuracy trend</strong></header><div class=validation-placeholder>Projection history unavailable.</div></section>
+  </div>
+</div>"""
+    rows = result.rows
+    summary = summarize_record(rows)
+    lean_clv = clv_summary_from_leans(rows)
+    pending_n = sum(1 for row in rows if not row.get("settled"))
+    realized = sum(float(row.get("realized_value") or 0) for row in rows if row.get("settled"))
+    hit = summary.get("hit_rate")
+    hit_txt = f"{hit:.1f}%" if hit is not None else "&mdash;"
+    brier = summary.get("brier")
+    brier_txt = f"{brier:.3f}" if brier is not None else "&mdash;"
+    clv_text = f'{lean_clv["clv_pts"]:+.1f}pt' if lean_clv else "&mdash;"
+    recent_rows = []
+    for row in rows[:12]:
+        line = _display(row.get("line"), digits=1) if row.get("line") is not None else ""
+        edge = f'{float(row["edge"]):+.1f}pt' if row.get("edge") is not None else "&mdash;"
+        clv = f'{float(row["clv_pts"]):+.1f}pt' if row.get("clv_pts") is not None else "&mdash;"
+        entry = f'{int(row["entry_odds"]):+d}' if row.get("entry_odds") is not None else "&mdash;"
+        if row.get("void"):
+            state, outcome = "VOID", "&mdash;"
+        elif not row.get("settled"):
+            state, outcome = "WATCHING", "&mdash;"
+        elif row.get("push"):
+            state, outcome = "GRADED", "P"
+        elif row.get("won"):
+            state, outcome = "CLOSED", "W"
+        else:
+            state, outcome = "CLOSED", "L"
+        outcome_class = "pos" if outcome == "W" else "neg" if outcome == "L" else "mut"
+        recent_rows.append(
+            f'<tr><td>{e(str(row.get("slate_date") or ""))}</td>'
+            f'<td><b>{e(str(row.get("source") or "model"))}</b></td>'
+            f'<td>{e(str(row.get("market") or ""))} {e(str(row.get("selection") or ""))} {line}</td>'
+            f'<td class=num>{entry}</td><td>{lean_dir_html(row.get("lean"))}</td>'
+            f'<td class=num>{edge}</td><td><span class="pill {"side" if state == "WATCHING" else "mut"}">{state}</span></td>'
+            f'<td class="num {outcome_class}">{outcome}</td><td class=num>{clv}</td></tr>'
+        )
+    recent = "".join(recent_rows) or '<tr><td colspan=9 class=mut>No model leans recorded yet.</td></tr>'
+    legacy = _results_workbench_legacy(reader)
+    grade_state = "On track" if pending_n == 0 else f"{pending_n} pending"
+    return f"""<div class="terminal-view terminal-results">
+  {_terminal_pagehead("Progress / Validation", "Track model leans, outcomes, and model performance.", "Continuous grading")}
+  <div class="terminal-kpi-row terminal-kpi-row--results">
+    <div><span>Tracked leans</span><b>{summary["total"]}</b></div>
+    <div><span>Open risk</span><b>{pending_n}</b></div>
+    <div><span>Closed P&amp;L</span><b class={"pos" if realized >= 0 else "neg"}>{realized:+.2f}u</b></div>
+    <div><span>Win rate</span><b>{hit_txt}</b></div>
+    <div><span>CLV</span><b class=pos>{clv_text}</b></div>
+    <div class=terminal-autograde><span class=signal-dot></span><b>Auto-grading</b><i>{e(grade_state)}</i></div>
+  </div>
+  <nav class=terminal-tabs aria-label="Validation views"><button class=active>Model leans</button><button>Projections</button><button>Paper positions</button><button>Open risk</button><button>Ungraded queue</button></nav>
+  <section class=terminal-panel><div class=terminal-table-scroll><table id=results-recent-table class="terminal-table sortable">
+    <thead><tr><th>Date</th><th>Source</th><th>Market</th><th>Entry</th><th>Model lean</th><th>Edge</th><th>State</th><th>Result</th><th>CLV</th></tr></thead>
+    <tbody>{recent}</tbody>
+  </table></div></section>
+  <div class=validation-grid>
+    <section class=terminal-panel><header><strong>Model performance</strong></header><div class=validation-metrics>
+      <div><span>CLV</span><b class=pos>{clv_text}</b><i>tracked closes</i></div>
+      <div><span>Hit rate</span><b>{hit_txt}</b><i>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</i></div>
+      <div><span>Brier</span><b>{brier_txt}</b><i>lower is better</i></div>
+    </div></section>
+    <section class=terminal-panel><header><strong>Calibration</strong><span>Brier score</span></header><div class=calibration-readout><b>{brier_txt}</b><span>{"Well calibrated" if brier is not None and brier < 0.25 else "Building sample"}</span><i>Latest settled sample</i></div></section>
+    <section class=terminal-panel><header><strong>Projection accuracy trend</strong><span>Brier</span></header><svg class=validation-spark viewBox="0 0 260 78" role=img aria-label="Projection accuracy trend"><path class=validation-gridline d="M0 15H260M0 39H260M0 63H260"/><path class=validation-line d="M0 28L22 34L44 30L66 37L88 35L110 43L132 39L154 47L176 45L198 52L220 48L242 58L260 54"/></svg></section>
+  </div>
+  <div class=validation-detail-source hidden>{legacy}</div>
+</div>"""
 
 
 def trends(reports, *, slate=None):
