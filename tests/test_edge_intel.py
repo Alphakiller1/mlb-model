@@ -43,6 +43,28 @@ def test_collect_slate_opportunities_ranks_game_and_f5():
     assert f5["price"] == "-105"
 
 
+def test_pickem_opportunity_uses_lean_probability_not_projection_mean():
+    ops = collect_slate_opportunities(
+        pkmap={},
+        market_plays=[],
+        model_by_pk={},
+        prop_reports=[],
+        pickem_rows=[{
+            "pitcher": "Starter One",
+            "book": "PrizePicks",
+            "prop": "Walks",
+            "line": 4.5,
+            "lean": "UNDER",
+            "p_over": 0.14,
+            "edge_pts": 36.0,
+            "projection": 3.2,
+        }],
+    )
+
+    assert len(ops) == 1
+    assert ops[0]["model_pct"] == 86.0
+
+
 def test_clv_from_snapshots():
     summary = clv_from_snapshots([
         {"market_type": "ml", "entry_prob": 0.45, "implied_probability": 0.50, "won": True},

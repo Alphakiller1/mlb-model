@@ -145,6 +145,7 @@ def collect_slate_opportunities(
         prop = str(item.get("prop") or "prop")
         line = item.get("line")
         state = lean if float(edge_pts) >= _PICKEM_LEAN_PTS else "WATCH"
+        lean_prob = float(p_over) if lean == "OVER" else 1 - float(p_over)
         add(
             score=float(edge_pts) + (5 if state in {"OVER", "UNDER"} else 0),
             category="pickem",
@@ -155,7 +156,7 @@ def collect_slate_opportunities(
             selection=lean.lower(),
             line=line,
             price=None,
-            model_pct=float(item.get("projection")) if item.get("projection") else None,
+            model_pct=lean_prob * 100,
             edge_pts=float(edge_pts),
             state=state,
             context=f'{item.get("pitcher")} · {item.get("book", "")}',

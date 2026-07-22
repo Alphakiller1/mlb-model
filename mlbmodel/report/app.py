@@ -317,7 +317,16 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             log.warning("closing-odds refresh failed: %s", exc)
 
     views = {
-        "today": _today(slate, sd, sharp_by_pk, sync, edge_command),
+        "today": _today(
+            slate,
+            sd,
+            sharp_by_pk,
+            sync,
+            edge_command,
+            opportunities=opportunities,
+            clv_summary=clv_summary,
+            gate=gate,
+        ),
         "matchups": matchups,
         "trends": _trends(slate_reports, slate=slate),
         "markets": _markets(slate, sharp_by_pk, model_by_pk, decision_thresholds),

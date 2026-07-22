@@ -24,10 +24,7 @@ from mlbmodel.report.edge_ui import (
 )
 from mlbmodel.report.html_fmt import display as _display, edge_grade as _edge_grade, section_head, lean_dir_html
 from mlbmodel.report.html_fmt import (
-    prob_chip_html,
     pct_chip_html,
-    val_chip_html,
-    val_grade_html,
 )
 from mlbmodel.report.matchup import _logo
 from mlbmodel.report.shell import slate_view_label
@@ -55,60 +52,252 @@ def _today_spotlight(ok):
     return max(ok, key=lambda g: abs(float(g.get("margin") or 0)), default=None)
 
 
-def _decision_lab_hero(ok, sd, sync_label, nsharp):
-    top = _today_spotlight(ok)
-    if top:
-        game = top.get("key") or f'{top["away"]}@{top["home"]}'
-        lean = str(top.get("lean") or top.get("home") or "Lean")
+def _fmt_num(value, digits=1, suffix=""):
+    if value is None:
+        return "&mdash;"
+    try:
+        return f"{float(value):.{digits}f}{suffix}"
+    except (TypeError, ValueError):
+        return e(str(value))
+
+
+def _fmt_pct(value, digits=0):
+    if value is None:
+        return "&mdash;"
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return e(str(value))
+    if abs(v) <= 1:
+        v *= 100
+    return f"{v:.{digits}f}%"
+
+
+def _fmt_price(value):
+    if isinstance(value, int):
+        return f"{value:+d}"
+    if value is None:
+        return "&mdash;"
+    try:
+        return f"{int(value):+d}"
+    except (TypeError, ValueError):
+        return e(str(value))
+
+
+def _fmt_line(value):
+    if value is None:
+        return ""
+    try:
+        return f" {float(value):g}"
+    except (TypeError, ValueError):
+        return f" {e(str(value))}"
+
+
+def _pct_width(value):
+    if value is None:
+        return 0
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return 0
+    if abs(v) <= 1:
+        v *= 100
+    return max(2, min(100, int(round(v))))
+
+
+def _state_tone(state):
+    key = str(state or "").strip().upper()
+    if key in {"STRONG", "BET", "PLAY", "OVER", "UNDER"}:
+        return "play"
+    if key in {"MONITOR", "WATCH", "LEAN", "EDGE", "REVIEW", "NEEDS PRICE", "MODEL"}:
+        return "monitor"
+    if key in {"AVOID", "PASS", "CONFLICT", "NO PLAY"}:
+        return "avoid"
+    return "noedge"
+
+
+def _state_badge(state):
+    label = str(state or "No edge").replace("_", " ").title()
+    if label.upper() in {"BET", "OVER", "UNDER"}:
+        label = label.upper()
+    return f'<span class=command-state data-tone="{_state_tone(state)}">{e(label)}</span>'
+
+
+def _team_pair_from_game(game):
+    if "@" not in str(game or ""):
+        return None, None
+    away, home = str(game).split("@", 1)
+    return away.strip().upper(), home.strip().upper()
+
+
+def _team_marks(away, home):
+    return (
+        f'<span class=command-team-mark>{_logo(away, "tlogo sm")}<b>{e(away)}</b></span>'
+        f'<span class=command-at>@</span>'
+        f'<span class=command-team-mark>{_logo(home, "tlogo sm")}<b>{e(home)}</b></span>'
+    )
+
+
+def _projected_score_parts(g):
+    try:
+        total = float(g.get("total") or 0)
+        margin = float(g.get("margin") or 0)
+    except (TypeError, ValueError):
+        return None, None
+    if total <= 0:
+        return None, None
+    home_runs = (total + margin) / 2
+    away_runs = total - home_runs
+    return away_runs, home_runs
+
+
+def _opportunity_row(op, idx=1, *, compact=False):
+    game = str(op.get("game") or "")
+    away, home = _team_pair_from_game(game)
+    context = str(op.get("context") or "")
+    category = str(op.get("category") or "model").replace("_", " ").title()
+    market = str(op.get("market_label") or op.get("market") or "Market")
+    selection = str(op.get("selection") or "").upper()
+    line = _fmt_line(op.get("line"))
+    price = _fmt_price(op.get("price"))
+    model_pct = op.get("model_pct")
+    edge = op.get("edge_pts")
+    market_pct = None
+    if model_pct is not None and edge is not None:
         try:
-            win_side = max(float(top.get("ph") or 0), 1 - float(top.get("ph") or 0))
-            win_text = f"{win_side * 100:.0f}%"
-            margin_text = f'{float(top.get("margin") or 0):+.1f} R'
-            total_text = f'{float(top.get("total") or 0):.1f}'
+            market_pct = float(model_pct) - float(edge)
         except (TypeError, ValueError):
-            win_text = "--"
-            margin_text = "--"
-            total_text = "--"
-        spotlight = f"""<button type=button class=decision-spotlight onclick="openGame('{game}')">
-        <span class=decision-spotlight__label>Spotlight matchup</span>
-        <span class=decision-teamline>
-          <span>{_logo(top["away"], "tlogo lg")}<b>{e(top["away"])}</b></span>
-          <i>@</i>
-          <span>{_logo(top["home"], "tlogo lg")}<b>{e(top["home"])}</b></span>
-        </span>
-        <span class=decision-spotlight__sub>{e(str(top.get("asp") or "TBD"))} vs {e(str(top.get("hsp") or "TBD"))}</span>
-        <span class=decision-metrics>
-          <i><b>{e(_projected_score(top))}</b><em>Projected score</em></i>
-          <i><b>{e(win_text)}</b><em>{e(lean)} side</em></i>
-          <i><b>{e(margin_text)}</b><em>Run gap</em></i>
-          <i><b>{e(total_text)}</b><em>Total</em></i>
-        </span>
-      </button>"""
-    else:
-        spotlight = (
-            "<div class=decision-spotlight><span class=decision-spotlight__label>"
-            "Spotlight matchup</span><span class=decision-teamline><b>No slate loaded</b></span>"
-            "<span class=decision-spotlight__sub>Load slate data to populate model context.</span></div>"
-        )
-    return f"""<section class=decision-lab>
-    <div class=decision-lab__copy>
-      <span class=decision-kicker>Chase Analytics MLB Model</span>
-      <div class=decision-title><span>Decision</span><span>Lab</span></div>
-      <p>Matchup projections, pitcher-prop research, market comparison, and grading progress in one content-ready board.</p>
-      <div class=decision-telemetry>
-        <span><b>Slate</b><i>{e(sd or "No slate")}</i></span>
-        <span><b>Games</b><i>{len(ok)}</i></span>
-        <span><b>Sharp</b><i>{nsharp}</i></span>
-        <span><b>Sync</b><i>{e(sync_label)}</i></span>
+            market_pct = None
+    ev = f'{(float(edge or 0) / 100):+.3f}u' if edge is not None else "&mdash;"
+    headline = game if game and away and home else (context or str(op.get("label") or "Model signal"))
+    sub = (
+        f"{category} &middot; {context or 'model vs market'}"
+        if game else f"{category} &middot; {str(op.get('book') or 'projection')}"
+    )
+    marks = _team_marks(away, home) if away and home else (
+        f'<span class=command-index>{idx:02d}</span>'
+    )
+    tag = "button" if away and home else "div"
+    action = f' type=button onclick="openGame(\'{e(game)}\')"' if tag == "button" else ""
+    density = " command-matrix-row--compact" if compact else ""
+    return f"""<{tag} class="command-matrix-row{density}"{action}>
+      <span class=command-row-head>
+        <span class=command-teamline>{marks}</span>
+        <span class=command-row-title><strong>{e(headline)}</strong><span>{sub}</span></span>
+      </span>
+      <span class=command-pick><span>Line</span><strong>{e(market)} {e(selection)}{line} &middot; {price}</strong></span>
+      <span class=command-metric><span>Model fair</span><strong>{_fmt_pct(model_pct)}</strong><i class=command-bar style="--w:{_pct_width(model_pct)}%"><b></b></i></span>
+      <span class=command-metric><span>Market fair</span><strong>{_fmt_pct(market_pct)}</strong><i class=command-bar style="--w:{_pct_width(market_pct)}%"><b></b></i></span>
+      <span class=command-metric><span>EV/unit</span><strong>{ev}</strong></span>
+      {_state_badge(op.get("state"))}
+    </{tag}>"""
+
+
+def _slate_projection_row(g, idx=1):
+    game = g.get("key") or f'{g["away"]}@{g["home"]}'
+    margin = g.get("margin")
+    total = g.get("total")
+    lean = str(g.get("lean") or "Model")
+    op = {
+        "game": game,
+        "category": "projection",
+        "context": f'{g.get("asp") or "TBD"} vs {g.get("hsp") or "TBD"}',
+        "market_label": "Projected score",
+        "selection": lean,
+        "line": None,
+        "price": None,
+        "model_pct": g.get("ph"),
+        "edge_pts": abs(float(margin or 0)) if margin is not None else None,
+        "state": "Monitor" if total else "No edge",
+    }
+    return _opportunity_row(op, idx)
+
+
+def _summary_stat(label, value, note=""):
+    note_html = f"<span>{e(note)}</span>" if note else ""
+    return f'<div class=command-stat><span>{e(label)}</span><strong>{value}</strong>{note_html}</div>'
+
+
+def _freshness_rail(sync, sync_label, nsharp, gate):
+    verdict = str((gate or {}).get("verdict") or "HOLD")
+    reasons = "; ".join((gate or {}).get("reasons") or []) or "promotion gate requires evidence"
+    exact = (sync or {}).get("status") == "exact"
+    return f"""<div class=command-card>
+      <div class=command-section-head><strong>Freshness rail</strong></div>
+      <div class=command-rail>
+        <div class=command-rail-item data-tone="{'play' if exact else 'monitor'}">
+          <span class=command-status-dot></span>
+          <div><strong>Slate matched</strong><span>{e(sync_label)} MLBMA schedule state</span></div>
+        </div>
+        <div class=command-rail-item data-tone="{'play' if nsharp else 'monitor'}">
+          <span class=command-status-dot></span>
+          <div><strong>Odds intelligence</strong><span>{nsharp} sharp or market-disagreement signals on slate</span></div>
+        </div>
+        <div class=command-rail-item data-tone="{'play' if verdict == 'PROMOTE' else 'monitor'}">
+          <span class=command-status-dot></span>
+          <div><strong>Promotion gate</strong><span>{e(verdict)} &middot; {e(reasons)}</span></div>
+        </div>
+        <div class=command-rail-item data-tone="monitor">
+          <span class=command-status-dot></span>
+          <div><strong>Projection grading</strong><span>Capture, close, final, and performance sample remain visible</span></div>
+        </div>
       </div>
-    </div>
-    {spotlight}
-    <div class=decision-stack>
-      <span><b>Matchups</b><i>Fair prices, drivers, risk gates</i></span>
-      <span><b>Props</b><i>K, BB, ER, outs projection matrix</i></span>
-      <span><b>Results</b><i>Settlement and model progress tracker</i></span>
-    </div>
-  </section>"""
+    </div>"""
+
+
+def _proof_drawer(ok, sd, sync_label, sharp_by_pk):
+    top = _today_spotlight(ok)
+    if not top:
+        return """<section class="command-screen command-proof">
+      <div class=command-empty>No matchup proof drawer until slate inputs load.</div>
+    </section>"""
+    game = top.get("key") or f'{top["away"]}@{top["home"]}'
+    away_runs, home_runs = _projected_score_parts(top)
+    score = (
+        f'{e(top["away"])} {_fmt_num(away_runs)} &middot; {e(top["home"])} {_fmt_num(home_runs)}'
+        if away_runs is not None and home_runs is not None else "Projected score pending"
+    )
+    sharp_count = len(sharp_by_pk.get(top.get("pk"), [])) if top.get("pk") is not None else 0
+    home_prob = _fmt_pct(top.get("ph"))
+    away_prob = _fmt_pct((1 - float(top.get("ph"))) if top.get("ph") is not None else None)
+    return f"""<section class="command-screen command-proof">
+      <div class=command-proof-card>
+        <div class=command-proof-head>
+          <div class=command-proof-title>
+            <span class=command-teamline>{_team_marks(top["away"], top["home"])}</span>
+            <div><strong>{e(game)}</strong><span>{e(str(top.get("asp") or "TBD"))} vs {e(str(top.get("hsp") or "TBD"))} &middot; {e(str(top.get("time") or "TBD"))}</span></div>
+          </div>
+          <span class=command-state data-tone=monitor>Projected &middot; ungraded</span>
+        </div>
+        <div class=command-split-grid>
+          <div class=command-scoreline><span>Projected score</span><strong>{score}</strong><span>Run gap {_fmt_num(top.get("margin"), 1, " R")} &middot; total {_fmt_num(top.get("total"), 1)}</span></div>
+          <div class=command-ticket-strip>
+            <div class=command-inline-set><span class=command-micro>Locked inputs</span><span class=command-badge>slate {e(sd or "pending")}</span><span class=command-badge>{e(sync_label)}</span></div>
+            <span>Receipt-style state for every generated projection: capture, close, final, graded.</span>
+          </div>
+        </div>
+      </div>
+      <div class=command-proof-grid>
+        <div class=command-card>
+          <div class=command-section-head><strong>Factor stack</strong><span>Run deltas from model-facing inputs</span></div>
+          <div class=command-factor-list>
+            <div class=command-factor-row><div><strong>Win model split</strong><span>{e(top["away"])} {away_prob} vs {e(top["home"])} {home_prob}</span></div><strong>{e(str(top.get("lean") or "Lean"))}</strong></div>
+            <div class=command-factor-row><div><strong>Starter contact profile</strong><span>{e(str(top.get("asp") or "TBD"))} vs {e(str(top.get("hsp") or "TBD"))}</span></div><strong>{_fmt_num(top.get("afip"))}/{_fmt_num(top.get("hfip"))}</strong></div>
+            <div class=command-factor-row><div><strong>Run environment</strong><span>Total projection and run gap stay separated</span></div><strong>{_fmt_num(top.get("total"), 1)}</strong></div>
+            <div class=command-factor-row><div><strong>Market pressure</strong><span>Sharp or disagreement signals attached to game</span></div><strong>{sharp_count}</strong></div>
+          </div>
+        </div>
+        <div class=command-card>
+          <div class=command-section-head><strong>Projection grading</strong></div>
+          <div class=command-timeline>
+            <div><span class=command-status-dot></span><p><strong>Prediction logged</strong><span>Projection, market price, and source versions captured</span></p></div>
+            <div><span class=command-status-dot></span><p><strong>Closing line pending</strong><span>CLV waits for a closing snapshot</span></p></div>
+            <div><span class=command-status-dot></span><p><strong>Final outcome pending</strong><span>Auto grade runs after MLB final is present</span></p></div>
+            <div><span class=command-status-dot></span><p><strong>Performance sample</strong><span>Brier, ROI, calibration, and abstain accuracy</span></p></div>
+          </div>
+        </div>
+      </div>
+    </section>"""
 
 
 def slate(repo, pitcher_rows=None):
@@ -147,7 +336,17 @@ def slate(repo, pitcher_rows=None):
 
 
 # ── sections (each = context -> conclusion -> evidence; honest empty states) ──
-def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
+def today(
+    slate,
+    sd,
+    sharp_by_pk,
+    sync=None,
+    edge_command="",
+    *,
+    opportunities=None,
+    clv_summary=None,
+    gate=None,
+):
     ok = [g for g in slate if not g.get("err")]
     n = len(ok)
     nsharp = sum(len(v) for v in sharp_by_pk.values())
@@ -155,52 +354,85 @@ def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
     sync_label = "Exact" if sync.get("status") == "exact" else (
         "Live fallback" if sync.get("status") == "fallback" else "Untracked"
     )
-    hero = _decision_lab_hero(ok, sd, sync_label, nsharp)
-    rows = ""
-    for idx, g in enumerate(slate, start=1):
-        if g.get("err"):
-            rows += (
-                '<div class="slate-card slate-card--empty">'
-                f'<span class=slate-card__rank>{idx:02d}</span>'
-                '<span class=slate-card__main>'
-                f'<span class=slate-card__teams><b>{e(g["away"])}</b><i>@</i><b>{e(g["home"])}</b></span>'
-                '<span class=slate-card__sub>No model inputs loaded for this matchup.</span>'
-                '</span><span class=slate-card__time>--</span></div>'
-            )
-            continue
-        sc = len(sharp_by_pk.get(g["pk"], []))
-        game = g.get("key") or f'{g["away"]}@{g["home"]}'
-        sharp_html = (
-            f'<span class="slate-card__metric slate-card__metric--sharp"><b>{sc}</b><i>Sharp</i></span>'
-            if sc
-            else '<span class=slate-card__metric><b>0</b><i>Sharp</i></span>'
+    opportunities = opportunities or []
+    priced_markets = sum(1 for op in opportunities if op.get("price") not in {None, ""})
+    conflicts = sum(1 for op in opportunities if _state_tone(op.get("state")) == "avoid")
+    clv_cell = (
+        f'{float(clv_summary["clv_pts"]):+.1f}pt'
+        if clv_summary and clv_summary.get("clv_pts") is not None else "pending"
+    )
+    if opportunities:
+        queue_rows = "".join(
+            _opportunity_row(op, idx) for idx, op in enumerate(opportunities[:3], start=1)
         )
-        rows += f"""<button type=button class=slate-card onclick="openGame('{game}')">
-        <span class=slate-card__rank>{idx:02d}</span>
-        <span class=slate-card__main>
-          <span class=slate-card__teams>
-            <span>{_logo(g["away"], "tlogo sm")}<b>{e(g["away"])}</b></span>
-            <i>@</i>
-            <span>{_logo(g["home"], "tlogo sm")}<b>{e(g["home"])}</b></span>
-          </span>
-          <span class=slate-card__sub>{e(str(g.get("asp") or "TBD"))} vs {e(str(g.get("hsp") or "TBD"))}</span>
-        </span>
-        <span class=slate-card__time>{e(g["time"])}</span>
-        <span class=slate-card__metrics>
-          <span class=slate-card__metric><b>{prob_chip_html(g["ph"])}</b><i>Home win</i></span>
-          <span class=slate-card__metric><b>{val_chip_html(g["total"], "game_total", digits=1)}</b><i>Proj total</i></span>
-          <span class=slate-card__metric><b>{val_grade_html(g["margin"], "margin", digits=1, suffix="")}</b><i>Margin</i></span>
-          <span class="slate-card__metric slate-card__metric--lean"><b>{e(g["lean"])}</b><i>Lean</i></span>
-          {sharp_html}
-        </span>
-      </button>"""
-    return f"""<h2>{e(slate_view_label(sd))}</h2>
+        matrix_rows = "".join(
+            _opportunity_row(op, idx, compact=True)
+            for idx, op in enumerate(opportunities[:3], start=1)
+        )
+    else:
+        queue_rows = "".join(
+            _slate_projection_row(g, idx) for idx, g in enumerate(ok[:3], start=1)
+        ) or '<div class=command-empty>No slate loaded.</div>'
+        matrix_rows = "".join(
+            _slate_projection_row(g, idx) for idx, g in enumerate(ok[:3], start=1)
+        ) or '<div class=command-empty>No prediction rows available.</div>'
+    summary = "".join([
+        _summary_stat("Games loaded", n, f"slate {sd or 'pending'}"),
+        _summary_stat("Priced markets", priced_markets, "live or cached books"),
+        _summary_stat("Model conflicts", conflicts, "pass/avoid states"),
+        _summary_stat("Projection grades due", len(opportunities), f"CLV {clv_cell}"),
+    ])
+    command_rail = _freshness_rail(sync, sync_label, nsharp, gate)
+    proof = _proof_drawer(ok, sd, sync_label, sharp_by_pk)
+    return f"""<div class=model-command>
+  <section class=command-screen aria-label="Slate command center">
+    <div class=command-topbar>
+      <div class=command-brand-lockup>
+        <span class=command-brand-mark aria-hidden=true><svg viewBox="0 0 36 36"><path d="M18 5 C21 13 24 20 33 31 L3 31 C12 20 15 13 18 5 Z"></path></svg></span>
+        <div class=command-brand-copy><strong>MLB Model</strong><span>Slate command center</span></div>
+      </div>
+      <div class=command-inline-set>
+        <span class=command-badge>MLBMA {e(sync_label)}</span>
+        <span class=command-badge>{nsharp} sharp signals</span>
+        <span class=command-badge>Gate {e(str((gate or {}).get("verdict") or "HOLD"))}</span>
+      </div>
+    </div>
+    <div class=command-title-block>
+      <span class=command-kicker>{e(slate_view_label(sd))}</span>
+      <h2>Actionable slate, not just a game list</h2>
+    </div>
+    <div class=command-summary-grid>{summary}</div>
+    <div class=command-content-grid>
+      <div class=command-card>
+        <div class=command-section-head>
+          <strong>Decision queue</strong>
+          <span>Ranked by model edge, price quality, and data trust</span>
+        </div>
+        <div class=command-queue>{queue_rows}</div>
+      </div>
+      {command_rail}
+    </div>
+  </section>
+  <section class="command-screen edge-command" aria-label="Prediction matrix">
+    <div class=command-section-head>
+      <div><span class=command-kicker>Prediction matrix</span>
+      <h2>Every row separates projection, market, edge, and state</h2></div>
+      <div class=command-inline-set><span class=command-badge>Model v1 expected-runs</span><span class=command-badge>Where we have edge today</span></div>
+    </div>
+    <div class=command-matrix-labels><span>Game</span><span>Line</span><span>Model fair</span><span>Market fair</span><span>EV/unit</span><span>State</span></div>
+    <div class=command-queue>{matrix_rows}</div>
+  </section>
+  {proof}
+</div>
+<div class=command-source-html hidden>{edge_command}</div>"""
+    """
  {hero}
  <p class=viewhero-sub><b>{n}</b> games<span class=vh-dot></span>slate <b>{e(sd or "—")}</b><span class=vh-dot></span><b>{nsharp}</b> sharp signals<span class=vh-dot></span>MLBMA sync <b>{e(sync_label)}</b></p>
  {edge_command}
  <div class=ca-board>{section_head("Slate", icon="slate")}<div class=body>
    <div class=slate-card-grid>{rows or '<div class=empty>No slate loaded.</div>'}</div>
- </div></div>"""
+ </div></div>
+    """
 
 
 def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
