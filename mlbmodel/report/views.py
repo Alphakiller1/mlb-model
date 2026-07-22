@@ -93,7 +93,7 @@ def _decision_lab_hero(ok, sd, sync_label, nsharp):
     return f"""<section class=decision-lab>
     <div class=decision-lab__copy>
       <span class=decision-kicker>Chase Analytics MLB Model</span>
-      <div class=decision-title>Decision Lab</div>
+      <div class=decision-title><span>Decision</span><span>Lab</span></div>
       <p>Matchup projections, pitcher-prop research, market comparison, and grading progress in one content-ready board.</p>
       <div class=decision-telemetry>
         <span><b>Slate</b><i>{e(sd or "No slate")}</i></span>

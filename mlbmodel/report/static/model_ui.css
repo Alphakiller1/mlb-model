@@ -108,12 +108,19 @@
   text-transform: uppercase;
 }
 .decision-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.22em;
+  flex-wrap: wrap;
   margin: 0;
   font: 900 clamp(42px, 6vw, 76px) / 0.88 var(--display);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--text-bright);
   text-shadow: 0 0 22px rgba(124, 77, 255, 0.34), 0 2px 16px rgba(0, 0, 0, 0.62);
+}
+.decision-title span {
+  display: inline-block;
 }
 .decision-lab p {
   max-width: 620px;
@@ -409,6 +416,9 @@
 }
 
 @media (max-width: 760px) {
+  #main {
+    padding: 16px 14px 64px;
+  }
   .decision-lab {
     grid-template-columns: 1fr;
     margin: 10px 0 18px;
@@ -416,7 +426,12 @@
     border-radius: 15px;
   }
   .decision-title {
-    font-size: clamp(38px, 14vw, 48px);
+    display: block;
+    font-size: clamp(38px, 12vw, 44px);
+    line-height: 0.98;
+  }
+  .decision-title span {
+    display: block;
   }
   .decision-lab p {
     font-size: var(--mm-text-sm);
