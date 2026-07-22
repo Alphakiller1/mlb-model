@@ -37,6 +37,80 @@ from mlbmodel.report.trends_ui import trends_section_html
 
 e = html.escape
 
+
+def _projected_score(g):
+    try:
+        total = float(g.get("total") or 0)
+        margin = float(g.get("margin") or 0)
+    except (TypeError, ValueError):
+        return "TBD"
+    if total <= 0:
+        return "TBD"
+    home_runs = (total + margin) / 2
+    away_runs = total - home_runs
+    return f"{away_runs:.1f}-{home_runs:.1f}"
+
+
+def _today_spotlight(ok):
+    return max(ok, key=lambda g: abs(float(g.get("margin") or 0)), default=None)
+
+
+def _decision_lab_hero(ok, sd, sync_label, nsharp):
+    top = _today_spotlight(ok)
+    if top:
+        game = top.get("key") or f'{top["away"]}@{top["home"]}'
+        lean = str(top.get("lean") or top.get("home") or "Lean")
+        try:
+            win_side = max(float(top.get("ph") or 0), 1 - float(top.get("ph") or 0))
+            win_text = f"{win_side * 100:.0f}%"
+            margin_text = f'{float(top.get("margin") or 0):+.1f} R'
+            total_text = f'{float(top.get("total") or 0):.1f}'
+        except (TypeError, ValueError):
+            win_text = "--"
+            margin_text = "--"
+            total_text = "--"
+        spotlight = f"""<button type=button class=decision-spotlight onclick="openGame('{game}')">
+        <span class=decision-spotlight__label>Spotlight matchup</span>
+        <span class=decision-teamline>
+          <span>{_logo(top["away"], "tlogo lg")}<b>{e(top["away"])}</b></span>
+          <i>@</i>
+          <span>{_logo(top["home"], "tlogo lg")}<b>{e(top["home"])}</b></span>
+        </span>
+        <span class=decision-spotlight__sub>{e(str(top.get("asp") or "TBD"))} vs {e(str(top.get("hsp") or "TBD"))}</span>
+        <span class=decision-metrics>
+          <i><b>{e(_projected_score(top))}</b><em>Projected score</em></i>
+          <i><b>{e(win_text)}</b><em>{e(lean)} side</em></i>
+          <i><b>{e(margin_text)}</b><em>Run gap</em></i>
+          <i><b>{e(total_text)}</b><em>Total</em></i>
+        </span>
+      </button>"""
+    else:
+        spotlight = (
+            "<div class=decision-spotlight><span class=decision-spotlight__label>"
+            "Spotlight matchup</span><span class=decision-teamline><b>No slate loaded</b></span>"
+            "<span class=decision-spotlight__sub>Load slate data to populate model context.</span></div>"
+        )
+    return f"""<section class=decision-lab>
+    <div class=decision-lab__copy>
+      <span class=decision-kicker>Chase Analytics MLB Model</span>
+      <div class=decision-title>Decision Lab</div>
+      <p>Matchup projections, pitcher-prop research, market comparison, and grading progress in one content-ready board.</p>
+      <div class=decision-telemetry>
+        <span><b>Slate</b><i>{e(sd or "No slate")}</i></span>
+        <span><b>Games</b><i>{len(ok)}</i></span>
+        <span><b>Sharp</b><i>{nsharp}</i></span>
+        <span><b>Sync</b><i>{e(sync_label)}</i></span>
+      </div>
+    </div>
+    {spotlight}
+    <div class=decision-stack>
+      <span><b>Matchups</b><i>Fair prices, drivers, risk gates</i></span>
+      <span><b>Props</b><i>K, BB, ER, outs projection matrix</i></span>
+      <span><b>Results</b><i>Settlement and model progress tracker</i></span>
+    </div>
+  </section>"""
+
+
 def slate(repo, pitcher_rows=None):
     m = repo.slate()
     if m is None or "Away" not in m.columns:
@@ -74,24 +148,6 @@ def slate(repo, pitcher_rows=None):
 
 # ── sections (each = context -> conclusion -> evidence; honest empty states) ──
 def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
-    rows = ""
-    for g in slate:
-        if g.get("err"):
-            rows += f'<tr><td>{e(g["away"])}@{e(g["home"])}</td><td colspan=6 class=mut>no model inputs</td></tr>'
-            continue
-        sc = len(sharp_by_pk.get(g["pk"], []))
-        game = g.get("key") or f'{g["away"]}@{g["home"]}'
-        rows += (f'<tr><td><button class=gamepick onclick="openGame(\'{game}\')">'
-                 f'<span class=gcell>{_logo(g["away"],"tlogo sm")}<b>{e(g["away"])}</b>'
-                 f'<span class=mut>@</span>{_logo(g["home"],"tlogo sm")}<b>{e(g["home"])}</b></span></button></td>'
-                 f'<td class=mut>{e(g["time"])}</td>'
-                 f'<td>{prob_chip_html(g["ph"])}</td>'
-                 f'<td>{val_chip_html(g["total"], "game_total", digits=1)}</td>'
-                 f'<td>{val_grade_html(g["margin"], "margin", digits=1, suffix="")}</td>'
-                 f'<td class=side>{e(g["lean"])}</td>'
-                 f'<td class=mut>{e(str(g.get("asp") or "—"))} / {e(str(g.get("hsp") or "—"))}</td>'
-                 f'<td class=mut>{_display(g.get("ak"), digits=0)} / {_display(g.get("hk"), digits=0)}</td>'
-                 f'<td>{("<span class=pill warnc>"+str(sc)+"</span>") if sc else "<span class=mut>—</span>"}</td></tr>')
     ok = [g for g in slate if not g.get("err")]
     n = len(ok)
     nsharp = sum(len(v) for v in sharp_by_pk.values())
@@ -99,11 +155,52 @@ def today(slate, sd, sharp_by_pk, sync=None, edge_command=""):
     sync_label = "Exact" if sync.get("status") == "exact" else (
         "Live fallback" if sync.get("status") == "fallback" else "Untracked"
     )
+    hero = _decision_lab_hero(ok, sd, sync_label, nsharp)
+    rows = ""
+    for idx, g in enumerate(slate, start=1):
+        if g.get("err"):
+            rows += (
+                '<div class="slate-card slate-card--empty">'
+                f'<span class=slate-card__rank>{idx:02d}</span>'
+                '<span class=slate-card__main>'
+                f'<span class=slate-card__teams><b>{e(g["away"])}</b><i>@</i><b>{e(g["home"])}</b></span>'
+                '<span class=slate-card__sub>No model inputs loaded for this matchup.</span>'
+                '</span><span class=slate-card__time>--</span></div>'
+            )
+            continue
+        sc = len(sharp_by_pk.get(g["pk"], []))
+        game = g.get("key") or f'{g["away"]}@{g["home"]}'
+        sharp_html = (
+            f'<span class="slate-card__metric slate-card__metric--sharp"><b>{sc}</b><i>Sharp</i></span>'
+            if sc
+            else '<span class=slate-card__metric><b>0</b><i>Sharp</i></span>'
+        )
+        rows += f"""<button type=button class=slate-card onclick="openGame('{game}')">
+        <span class=slate-card__rank>{idx:02d}</span>
+        <span class=slate-card__main>
+          <span class=slate-card__teams>
+            <span>{_logo(g["away"], "tlogo sm")}<b>{e(g["away"])}</b></span>
+            <i>@</i>
+            <span>{_logo(g["home"], "tlogo sm")}<b>{e(g["home"])}</b></span>
+          </span>
+          <span class=slate-card__sub>{e(str(g.get("asp") or "TBD"))} vs {e(str(g.get("hsp") or "TBD"))}</span>
+        </span>
+        <span class=slate-card__time>{e(g["time"])}</span>
+        <span class=slate-card__metrics>
+          <span class=slate-card__metric><b>{prob_chip_html(g["ph"])}</b><i>Home win</i></span>
+          <span class=slate-card__metric><b>{val_chip_html(g["total"], "game_total", digits=1)}</b><i>Proj total</i></span>
+          <span class=slate-card__metric><b>{val_grade_html(g["margin"], "margin", digits=1, suffix="")}</b><i>Margin</i></span>
+          <span class="slate-card__metric slate-card__metric--lean"><b>{e(g["lean"])}</b><i>Lean</i></span>
+          {sharp_html}
+        </span>
+      </button>"""
     return f"""<h2>{e(slate_view_label(sd))}</h2>
+ {hero}
  <p class=viewhero-sub><b>{n}</b> games<span class=vh-dot></span>slate <b>{e(sd or "—")}</b><span class=vh-dot></span><b>{nsharp}</b> sharp signals<span class=vh-dot></span>MLBMA sync <b>{e(sync_label)}</b></p>
  {edge_command}
  <div class=ca-board>{section_head("Slate", icon="slate")}<div class=body>
-   <div class=table-scroll><table class=sortable><tr><th>Game</th><th>Time</th><th>Win%(H)</th><th>Tot</th><th>Margin</th><th>Lean</th><th>SPs</th><th>K%</th><th>Sharp</th></tr>{rows or '<tr><td class=mut colspan=9>No slate loaded.</td></tr>'}</table></div></div></div>"""
+   <div class=slate-card-grid>{rows or '<div class=empty>No slate loaded.</div>'}</div>
+ </div></div>"""
 
 
 def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
