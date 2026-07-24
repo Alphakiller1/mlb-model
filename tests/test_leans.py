@@ -161,7 +161,7 @@ def test_collect_leans_records_watch_props():
             "prop": "K",
             "side": "over",
             "line": 5.5,
-            "edge": 0.1,
+            "edge": 0.005,
             "state": "NO EDGE",
             "model_mean": 5.8,
             "game_pk": 1,
