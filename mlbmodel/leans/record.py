@@ -19,6 +19,23 @@ PICKEM_LEAN_PTS = 8.0
 _PROJECTION_PROPS = ("K", "BB", "ER", "Outs", "H", "Fantasy", "F5_ER", "PP_Fantasy")
 
 
+def _pitcher_key(pitcher: dict) -> str:
+    name = str(pitcher.get("pitcher") or pitcher.get("pitcher_name") or "").strip()
+    if not name:
+        pid = pitcher.get("pitcher_id")
+        return f"id:{pid}" if pid is not None else "unknown"
+    return name.lower().replace(" ", "_")
+
+
+def _projection_lean_tag(trust: str | None) -> str:
+    trust = str(trust or "").lower()
+    if trust == "thin":
+        return "PROJECTION_THIN"
+    if trust == "trusted":
+        return "PROJECTION"
+    return "PROJECTION"
+
+
 def _row(
     *,
     slate_date: str,
@@ -89,6 +106,8 @@ def _entry_odds(play: dict) -> float | None:
 
 def _lean_label(state: str, edge_pts: float | None) -> str:
     state = str(state or "").upper()
+    if state == "PROJECTION":
+        return "PROJECTION"
     if state in {"BET", "MONITOR", "STRONG", "LEAN"}:
         return state
     if edge_pts is not None and edge_pts >= 2.0:
@@ -175,23 +194,26 @@ def _collect_pickem(
     pickem_rows: list[dict],
     fresh_books: set[str] | None = None,
 ) -> list[dict]:
-    """Pick'em leans. When `fresh_books` is given, rows from books whose line
-    snapshot is stale for this slate are NOT recorded — grading a lean against
-    a line nobody could actually bet contaminates the track record."""
+    """Record every pick'em prop lean. Stale snapshots stay logged as STALE_LINE."""
     rows: list[dict] = []
-    skipped_stale = 0
+    stale = 0
     for item in pickem_rows:
         lean = str(item.get("lean") or "").upper()
         if lean not in {"OVER", "UNDER"}:
             continue
         book = str(item.get("book") or "pickem").lower()
-        if fresh_books is not None and book not in fresh_books:
-            skipped_stale += 1
-            continue
+        is_fresh = fresh_books is None or book in fresh_books
+        if not is_fresh:
+            stale += 1
         edge_pts = item.get("edge_pts")
         if edge_pts is None and item.get("p_over") is not None:
             edge_pts = abs(float(item["p_over"]) - 0.5) * 100
-        lean_tag = lean if (edge_pts or 0) >= PICKEM_LEAN_PTS else "WATCH"
+        if not is_fresh:
+            lean_tag = "STALE_LINE"
+        elif (edge_pts or 0) >= PICKEM_LEAN_PTS:
+            lean_tag = lean
+        else:
+            lean_tag = "WATCH"
         prop = str(item.get("prop") or "prop")
         market = prop.lower().replace(" ", "_")
         if market == "fantasy":
@@ -211,31 +233,31 @@ def _collect_pickem(
                 pitcher_name=str(item.get("pitcher") or "") or None,
             )
         )
-    if skipped_stale:
+    if stale:
         log.warning(
-            "pick'em: skipped %s lean(s) from stale line snapshots (fresh books: %s)",
-            skipped_stale,
-            ", ".join(sorted(fresh_books or set())) or "none",
+            "pick'em: %s lean(s) used stale line snapshots (recorded as STALE_LINE)",
+            stale,
         )
     return rows
 
 
-def _collect_prop_edges(slate_date: str, prop_reports: list[dict]) -> list[dict]:
+def _collect_prop_leans(slate_date: str, prop_reports: list[dict]) -> list[dict]:
+    """Record every sportsbook prop row the engine evaluated."""
     rows: list[dict] = []
     for item in prop_reports:
-        edge_pts = edge_points(item.get("edge"))
-        state = str(item.get("state") or "")
-        actionable = state in {"BET", "MONITOR"}
-        has_edge = edge_pts is not None and edge_pts >= MIN_EDGE_PTS
-        if not actionable and not has_edge:
+        prop = str(item.get("prop") or "").strip()
+        if not prop:
             continue
+        edge_pts = edge_points(item.get("edge"))
+        state = str(item.get("state") or item.get("market_state") or "")
+        side = str(item.get("side") or "model").lower()
         rows.append(
             _row(
                 slate_date=slate_date,
                 game_pk=item.get("game_pk"),
                 source="prop",
-                market=str(item.get("prop") or "prop").lower(),
-                selection=str(item.get("side") or ""),
+                market=prop.lower(),
+                selection=side,
                 line=float(item["line"]) if item.get("line") is not None else None,
                 model_value=item.get("model_mean"),
                 model_prob=item.get("model_probability"),
@@ -252,17 +274,18 @@ def _collect_prop_edges(slate_date: str, prop_reports: list[dict]) -> list[dict]
 
 
 def _collect_pitcher_projections(slate_date: str, pitchers: list[dict]) -> list[dict]:
-    """Log trusted model projection means for each pitcher stat."""
+    """Log every simulated projection mean for each slate starter."""
     rows: list[dict] = []
-    for pitcher in pitchers:
-        if pitcher.get("projection_trust") != "trusted":
-            continue
+    for pitcher in pitchers or []:
         projections = pitcher.get("projections") or {}
-        for prop in _PROJECTION_PROPS:
-            dist = projections.get(prop)
+        if not projections:
+            continue
+        lean_tag = _projection_lean_tag(pitcher.get("projection_trust"))
+        pitcher_key = _pitcher_key(pitcher)
+        for prop, dist in projections.items():
             if not dist or dist.get("mean") is None:
                 continue
-            market = prop.lower()
+            market = str(prop).lower()
             if market == "pp_fantasy":
                 market = "fantasy_score"
             rows.append(
@@ -271,12 +294,12 @@ def _collect_pitcher_projections(slate_date: str, pitchers: list[dict]) -> list[
                     game_pk=pitcher.get("game_pk"),
                     source="projection",
                     market=market,
-                    selection="model",
+                    selection=f"model:{pitcher_key}",
                     line=None,
                     model_value=float(dist["mean"]),
                     model_prob=None,
                     edge=None,
-                    lean="PROJECTION",
+                    lean=lean_tag,
                     pitcher_name=str(pitcher.get("pitcher") or "") or None,
                 )
             )
@@ -301,7 +324,7 @@ def collect_leans(
     rows.extend(_collect_sharp_plays(slate_date, market_plays))
     rows.extend(_collect_matchup_markets(slate_date, matchup_markets_by_pk or {}))
     rows.extend(_collect_pickem(slate_date, pickem_rows, fresh_books=fresh_pickem_books))
-    rows.extend(_collect_prop_edges(slate_date, prop_reports))
+    rows.extend(_collect_prop_leans(slate_date, prop_reports))
     rows.extend(_collect_pitcher_projections(slate_date, pitchers or []))
     build_run = run_id or uuid.uuid4().hex[:12]
     for row in rows:

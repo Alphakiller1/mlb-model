@@ -130,8 +130,47 @@ def test_collect_leans_pitcher_projections():
     assert len(rows) == 3
     assert all(r["source"] == "projection" for r in rows)
     assert all(r["lean"] == "PROJECTION" for r in rows)
+    assert all(r["selection"].startswith("model:") for r in rows)
     fantasy = next(r for r in rows if r["market"] == "fantasy_score")
     assert fantasy["model_value"] == 36.5
+
+
+def test_collect_leans_records_thin_projections():
+    rows = collect_leans(
+        slate_date="2026-07-06",
+        market_plays=[],
+        pickem_rows=[],
+        prop_reports=[],
+        pitchers=[{
+            "pitcher": "Rookie Pitcher",
+            "game_pk": 2,
+            "projection_trust": "thin",
+            "projections": {"K": {"mean": 4.0, "sd": 1.0}},
+        }],
+    )
+    assert len(rows) == 1
+    assert rows[0]["lean"] == "PROJECTION_THIN"
+
+
+def test_collect_leans_records_watch_props():
+    rows = collect_leans(
+        slate_date="2026-07-06",
+        market_plays=[],
+        pickem_rows=[],
+        prop_reports=[{
+            "prop": "K",
+            "side": "over",
+            "line": 5.5,
+            "edge": 0.1,
+            "state": "NO EDGE",
+            "model_mean": 5.8,
+            "game_pk": 1,
+            "pitcher": "Gerrit Cole",
+        }],
+    )
+    assert len(rows) == 1
+    assert rows[0]["source"] == "prop"
+    assert rows[0]["lean"] == "WATCH"
 
 
 def test_collect_leans_skips_matchup_without_edge():

@@ -822,14 +822,11 @@ def results(reader):
     brier = summary.get("brier")
     brier_txt = f"{brier:.3f}" if brier is not None else "&mdash;"
     clv_text = f'{lean_clv["clv_pts"]:+.1f}pt' if lean_clv else "&mdash;"
-    actionable_tags = {"BET", "MONITOR", "STRONG", "LEAN", "OVER", "UNDER", "EDGE"}
-    bet_rows = [
-        row for row in rows
-        if str(row.get("lean") or "").upper() in actionable_tags
-        and str(row.get("source") or "").lower() != "projection"
-    ]
+    prop_sources = {"prop", "projection", "prizepicks", "underdog", "sleeper", "pickem"}
+    prop_rows = [row for row in rows if str(row.get("source") or "").lower() in prop_sources]
+    market_rows = [row for row in rows if str(row.get("source") or "").lower() not in prop_sources]
     recent_rows = []
-    for row in bet_rows[:12]:
+    for row in (prop_rows + market_rows)[:24]:
         line = _display(row.get("line"), digits=1) if row.get("line") is not None else ""
         edge = f'{float(row["edge"]):+.1f}pt' if row.get("edge") is not None else "&mdash;"
         clv = f'{float(row["clv_pts"]):+.1f}pt' if row.get("clv_pts") is not None else "&mdash;"
@@ -860,7 +857,8 @@ def results(reader):
   {_terminal_pagehead("Progress / Validation", "Track model leans, outcomes, and model performance.", "Continuous grading")}
   <div class="terminal-kpi-row terminal-kpi-row--results">
     <div><span>Leans logged</span><b>{len(rows)}</b></div>
-    <div><span>Actionable bets</span><b>{len(bet_rows)}</b></div>
+    <div><span>Props + projections</span><b>{len(prop_rows)}</b></div>
+    <div><span>Market leans</span><b>{len(market_rows)}</b></div>
     <div><span>Open risk</span><b>{pending_n}</b></div>
     <div><span>Graded record</span><b>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</b></div>
     <div><span>CLV</span><b class=pos>{clv_text}</b></div>

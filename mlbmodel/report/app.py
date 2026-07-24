@@ -258,6 +258,24 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 **report,
                 "model_mean": (pitcher.get("projections") or {}).get(report.get("prop"), {}).get("mean"),
             })
+        for prop, dist in projections.items():
+            if not dist or dist.get("mean") is None:
+                continue
+            prop_key = str(prop).lower()
+            if any(str(r.get("prop") or "").lower() == prop_key for r in (pitcher.get("market_report") or [])):
+                continue
+            flat_props.append({
+                "pitcher": pitcher.get("pitcher"),
+                "game_pk": pitcher.get("game_pk"),
+                "prop": prop,
+                "side": "model",
+                "line": None,
+                "model_mean": dist.get("mean"),
+                "model_probability": None,
+                "edge": None,
+                "state": "PROJECTION",
+                "market_state": "NO MARKET",
+            })
 
     clv_result = reader.get(
         "prediction_market_snapshots?settled=eq.true&won=not.is.null"

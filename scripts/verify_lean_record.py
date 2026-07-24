@@ -67,21 +67,31 @@ def main() -> int:
     rows = result.rows
     actionable_tags = {"BET", "MONITOR", "STRONG", "LEAN", "OVER", "UNDER", "EDGE"}
     actionable = [row for row in rows if str(row.get("lean") or "").upper() in actionable_tags]
+    prop_sources = {"prop", "projection", "prizepicks", "underdog", "sleeper", "pickem"}
+    prop_rows = [row for row in rows if str(row.get("source") or "").lower() in prop_sources]
     min_actionable = int(os.getenv("LEAN_VERIFY_MIN_ACTIONABLE", "5"))
+    min_props = int(os.getenv("LEAN_VERIFY_MIN_PROPS", "30"))
 
     if not rows:
         print(f"ERROR: no model_leans rows for slate {slate}")
         return 1
+    if len(prop_rows) < min_props:
+        print(
+            f"ERROR: only {len(prop_rows)} prop/projection leans for {slate} "
+            f"(need >= {min_props})"
+        )
+        return 1
     if len(actionable) < min_actionable:
         print(
-            f"ERROR: only {len(actionable)} actionable leans for {slate} "
-            f"(need >= {min_actionable}); tracking is not healthy"
+            f"ERROR: only {len(actionable)} actionable market leans for {slate} "
+            f"(need >= {min_actionable})"
         )
         return 1
 
     print(
         f"OK: {len(rows)} leans on {slate} "
-        f"({len(actionable)} actionable, {sum(1 for r in rows if r.get('settled'))} settled)"
+        f"({len(prop_rows)} props/projections, {len(actionable)} actionable market, "
+        f"{sum(1 for r in rows if r.get('settled'))} settled)"
     )
     return 0
 

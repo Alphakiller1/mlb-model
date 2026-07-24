@@ -182,6 +182,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           LEAN_VERIFY_MIN_ACTIONABLE: "5"
+          LEAN_VERIFY_MIN_PROPS: "30"
         run: python scripts/verify_lean_record.py
       - name: Post-build smoke
         run: |
