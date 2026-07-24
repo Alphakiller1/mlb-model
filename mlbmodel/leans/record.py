@@ -49,11 +49,10 @@ def _row(
         "sport": "mlb",
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "settled": False,
+        # PostgREST batch upserts require identical keys on every object.
+        "entry_odds": entry_odds,
+        "pitcher_name": pitcher_name or None,
     }
-    if entry_odds is not None:
-        row["entry_odds"] = entry_odds
-    if pitcher_name:
-        row["pitcher_name"] = pitcher_name
     return row
 
 

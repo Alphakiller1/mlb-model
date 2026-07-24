@@ -58,6 +58,8 @@ def test_collect_leans_dedupes_market_and_prop():
     assert fantasy["pitcher_name"] == "Gerrit Cole"
     assert fantasy["market"] == "fantasy_score"
     assert fantasy["lean"] == "OVER"
+    keys = set(rows[0].keys())
+    assert all(set(r.keys()) == keys for r in rows), "lean batch keys must match for PostgREST upsert"
 
 
 def test_collect_leans_matchup_and_f5_markets():
