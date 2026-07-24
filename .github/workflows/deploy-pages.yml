@@ -164,6 +164,7 @@ jobs:
           # Write/service key so the build can persist model_leans (self-logging). Empty until
           # the secret is added -> the read key is used and writes are rejected (leans stay off).
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          LEAN_RECORD_REQUIRED: "1"
           MLB_MODEL_DEPLOYMENT_NOTICE: >-
             Synchronized MLBMA research build with live pitcher-prop lines.
             No displayed state is a wager instruction.
@@ -174,6 +175,14 @@ jobs:
             --data-dir _deploy_data \
             --out _site/index.html \
             --no-fetch
+      - name: Verify lean tracking
+        env:
+          MLBMODEL_CACHE_DIR: _deploy_data
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          LEAN_VERIFY_MIN_ACTIONABLE: "5"
+        run: python scripts/verify_lean_record.py
       - name: Post-build smoke
         run: |
           python -c "

@@ -300,12 +300,17 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                     ", ".join(f"{k}={v}" for k, v in sorted(sources.items())),
                 )
             elif lean_rows and os.getenv("SUPABASE_URL"):
-                log.error(
-                    "model lean record wrote 0 rows (%s candidates); check SUPABASE_KEY and migrations",
-                    len(lean_rows),
+                message = (
+                    f"model lean record wrote 0 rows ({len(lean_rows)} candidates); "
+                    "check SUPABASE_KEY / SUPABASE_SECRET_KEY and migrations"
                 )
+                log.error(message)
+                if os.getenv("LEAN_RECORD_REQUIRED", "").lower() in {"1", "true", "yes"}:
+                    raise RuntimeError(message)
         except Exception as exc:
             log.error("model lean record failed: %s", exc)
+            if os.getenv("LEAN_RECORD_REQUIRED", "").lower() in {"1", "true", "yes"}:
+                raise
 
         # Refresh closing odds on today's still-open leans with the freshest
         # matched prices — the last pre-game build leaves the de-facto close.
