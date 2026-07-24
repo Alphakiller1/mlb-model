@@ -40,12 +40,12 @@ def test_build_app_single_active_matchup_per_key():
     from mlbmodel.report.app import build_app
 
     data = Path(__file__).resolve().parents[1] / "deployment_data"
-    html = build_app("MIL@STL", fetch=False, data_dir=data)
+    html = build_app("MIL@PIT", fetch=False, data_dir=data)
     import re
 
     panels = re.findall(r'<div class="matchup-report" data-game="([^"]+)"([^>]*)>', html)
     assert len(panels) == len({key for key, _ in panels})
-    assert 'data-game="MIL@STL"' in html
-    assert 'data-game="MIL@STL#2"' in html
+    assert 'data-game="MIL@PIT"' in html
+    assert 'data-game="MIL@PIT#2"' in html
     visible = [key for key, attrs in panels if "hidden" not in attrs]
-    assert visible == ["MIL@STL"]
+    assert visible == ["MIL@PIT"]

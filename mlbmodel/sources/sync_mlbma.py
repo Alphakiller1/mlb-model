@@ -46,6 +46,7 @@ HUB_DATASETS = {
     "Pitch_Mix_Team_Batting_L14": "pitch_mix_team_batting_l14.csv",
     "Team_L10_SP_Hand": "team_l10_sp_hand.csv",
     "Signals_Today": "signals_today.csv",
+    "Signals_Convergence": "signals_convergence.csv",
 }
 IDENTITY_COLUMNS = {"Game_PK", "MLB_Game_PK", "Game_Number", "Slate_Date"}
 # Handedness is resolved from the authoritative MLB Stats API people record in

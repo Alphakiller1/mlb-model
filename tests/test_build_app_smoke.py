@@ -7,17 +7,19 @@ from mlbmodel.report.app import _NAV, build_app
 from mlbmodel.report.matchup import build_report, matchup_summary_html
 
 DATA = Path(__file__).resolve().parents[1] / "deployment_data"
+FIXTURE_AWAY, FIXTURE_HOME = "MIL", "PIT"
+FIXTURE_KEY = f"{FIXTURE_AWAY}@{FIXTURE_HOME}"
 
 
 def test_matchup_summary_html_compact():
-    report = build_report("NYY", "TBR", fetch=False, data_dir=DATA)
+    report = build_report(FIXTURE_AWAY, FIXTURE_HOME, fetch=False, data_dir=DATA)
     html = matchup_summary_html(report)
     assert "matchup-summary" in html
-    assert "NYY" in html and "TBR" in html
+    assert FIXTURE_AWAY in html and FIXTURE_HOME in html
 
 
 def test_build_app_renders_all_views():
-    html = build_app("NYY@TBR", fetch=False, data_dir=DATA)
+    html = build_app(FIXTURE_KEY, fetch=False, data_dir=DATA)
     for key, _label in _NAV:
         assert f'id="v-{key}"' in html
     assert "chase-nav-link" in html
@@ -48,11 +50,11 @@ def test_build_app_matchup_switch_hybrid_terminals():
     """Featured game is full; others ship compact + deferred full terminal in <template>."""
     import re
 
-    html = build_app("NYY@TBR", fetch=False, data_dir=DATA)
+    html = build_app(FIXTURE_KEY, fetch=False, data_dir=DATA)
     assert html.count('class="matchup-report"') >= 2
     panels = re.findall(r'<div class="matchup-report" data-game="([^"]+)"([^>]*)>', html)
     visible = [key for key, attrs in panels if "hidden" not in attrs]
-    assert visible == ["NYY@TBR"]
+    assert visible == [FIXTURE_KEY]
     assert "matchup-full-src" in html
     assert "matchup-summary" in html
     assert "matchup-body" in html
@@ -60,7 +62,7 @@ def test_build_app_matchup_switch_hybrid_terminals():
 
 
 def test_build_app_single_font_import_and_typography_tokens():
-    html = build_app("NYY@TBR", fetch=False, data_dir=DATA)
+    html = build_app(FIXTURE_KEY, fetch=False, data_dir=DATA)
     assert html.count("fonts.googleapis.com") == 1
     assert "--mm-text-base" in html
     assert "--mm-text-display" in html

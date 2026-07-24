@@ -53,10 +53,40 @@ def test_trend_run_factor_maps_feature_row():
 
 def test_signal_confidence_modifier():
     from mlbmodel.baseball.metrics import signal_confidence_modifier
+    from mlbmodel.genesis.logic_matrix import CONVERGENCE_THRESHOLD
 
-    signals = [{"fired": True}] * 4
+    signals = [{"fired": True}] * CONVERGENCE_THRESHOLD
     assert signal_confidence_modifier(signals, "NYY", "BOS", "medium") == "high"
     assert signal_confidence_modifier([], "NYY", "BOS", "high") == "high"
+    convergence = [{
+        "away": "NYY",
+        "home": "BOS",
+        "side": "away",
+        "is_convergence_play": True,
+        "convergence_count": CONVERGENCE_THRESHOLD,
+    }]
+    assert signal_confidence_modifier([], "NYY", "BOS", "medium", convergence=convergence) == "high"
+
+
+def test_signal_edge_uses_convergence_play():
+    from mlbmodel.baseball.metrics import signal_edge_adjustment
+
+    convergence = [{
+        "away": "NYY",
+        "home": "BOS",
+        "side": "away",
+        "is_convergence_play": True,
+        "convergence_count": 4,
+        "convergence_direction": "lineup",
+    }]
+    edge = signal_edge_adjustment(
+        [],
+        side="away",
+        convergence=convergence,
+        away="NYY",
+        home="BOS",
+    )
+    assert edge > 0
 
 
 def test_model_applies_offense_depth_when_metrics_present():

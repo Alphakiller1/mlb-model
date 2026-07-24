@@ -63,7 +63,7 @@ def test_matchup_breakdown_pitcher_rl_populated():
     assert "LHH" in splits and "RHH" in splits
     rows = _pitcher_rl_rows(splits)
     assert "c-na" not in rows or rows.count("c-na") < 4
-    assert "28.6" in rows or "29.8" in rows
+    assert "30.3" in rows or "30.5" in rows
 
 
 def test_matchup_breakdown_symmetric_columns():

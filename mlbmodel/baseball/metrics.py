@@ -4,14 +4,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from mlbmodel import settings
+from mlbmodel.genesis.logic_matrix import (
+    ALLOWED_METRIC_WEIGHTS,
+    COMPOSITE_BASE_WEIGHT,
+    CONVERGENCE_THRESHOLD,
+    MODEL_SENSITIVITIES,
+    composite_metric_weight,
+    convergence_for_game,
+    convergence_side_row,
+)
 
 if TYPE_CHECKING:
     from mlbmodel.baseball.model import TeamContext
 
 LEAGUE_AVG = 50.0
-OSI_W_ABQ = 0.25
-OSI_W_RCV = 0.35
-OSI_W_OBR = 0.40
 
 
 def _clip(value: float, low: float, high: float) -> float:
@@ -45,30 +51,30 @@ def composite_offense_score(
     if base is None:
         base = LEAGUE_AVG
 
-    parts: list[tuple[float, float]] = [(base, 0.55)]
+    parts: list[tuple[float, float]] = [(base, COMPOSITE_BASE_WEIGHT)]
     if context.abq is not None:
-        parts.append((context.abq, OSI_W_ABQ * 0.45))
+        parts.append((context.abq, composite_metric_weight("abq")))
     if context.rcv is not None:
-        parts.append((context.rcv, OSI_W_RCV * 0.45))
+        parts.append((context.rcv, composite_metric_weight("rcv")))
     if context.obr is not None:
-        parts.append((context.obr, OSI_W_OBR * 0.45))
+        parts.append((context.obr, composite_metric_weight("obr")))
     if context.pals is not None:
         parts.append((context.pals, settings.PALS_BLEND_WEIGHT))
     if context.proj_osi is not None:
         parts.append((context.proj_osi, settings.PROJ_OSI_BLEND_WEIGHT))
     if context.oor is not None:
-        parts.append((context.oor, 0.06))
+        parts.append((context.oor, MODEL_SENSITIVITIES["oor_blend"]))
 
     weight_sum = sum(weight for _, weight in parts)
     score = sum(value * weight for value, weight in parts) / weight_sum
 
     recent_boost = 0.0
     if context.osi_l7 is not None and context.osi_l14 is not None:
-        recent_boost += (context.osi_l7 - context.osi_l14) * 0.12
+        recent_boost += (context.osi_l7 - context.osi_l14) * MODEL_SENSITIVITIES["recent_osi"]
     if context.abq_l7 is not None and context.abq_l14 is not None:
-        recent_boost += (context.abq_l7 - context.abq_l14) * 0.06
+        recent_boost += (context.abq_l7 - context.abq_l14) * MODEL_SENSITIVITIES["recent_abq"]
     if context.rcv_l7 is not None and context.rcv_l14 is not None:
-        recent_boost += (context.rcv_l7 - context.rcv_l14) * 0.06
+        recent_boost += (context.rcv_l7 - context.rcv_l14) * MODEL_SENSITIVITIES["recent_rcv"]
     score = _clip(score + recent_boost, 35.0, 65.0)
 
     detail = {
@@ -108,9 +114,9 @@ def platoon_metric_factor(context: TeamContext, opposing_hand: str) -> float:
     platoon_avg = sum(values) / len(values)
     season_avg = _season_metric_avg(context)
     if season_avg is None:
-        return metric_run_factor(platoon_avg, sensitivity=0.0025)
+        return metric_run_factor(platoon_avg, sensitivity=MODEL_SENSITIVITIES["platoon_metric"])
     return _clip(
-        1 + (platoon_avg - season_avg) * 0.003,
+        1 + (platoon_avg - season_avg) * MODEL_SENSITIVITIES["platoon_delta"],
         0.97,
         1.03,
     )
@@ -135,12 +141,7 @@ def pitcher_allowed_skill_adjustment(
     if not profile:
         return 1.0
     allowed_parts: list[tuple[float, float]] = []
-    for key, weight in (
-        ("OSI_allowed", 0.35),
-        ("ABQ_allowed", 0.25),
-        ("RCV_allowed", 0.25),
-        ("OBR_allowed", 0.15),
-    ):
+    for key, weight in ALLOWED_METRIC_WEIGHTS.items():
         value = _number(profile.get(key))
         if value is not None:
             allowed_parts.append((value, weight))
@@ -176,9 +177,17 @@ def pitcher_allowed_skill_adjustment(
         profile.get("pitching_score")
     )
     if pitching_score is not None:
-        factor *= _clip(1 - (pitching_score - LEAGUE_AVG) * 0.002, 0.95, 1.05)
+        factor *= team_pitching_score_factor(pitching_score)
 
     return _regress(_clip(factor, 0.90, 1.10))
+
+
+def team_pitching_score_factor(pitching_score: float | None) -> float:
+    """Convert MLBMA Pitching Score (50=avg) into a bounded staff run multiplier."""
+    if pitching_score is None:
+        return 1.0
+    sensitivity = MODEL_SENSITIVITIES["pitching_score_run"]
+    return _regress(_clip(1 - (pitching_score - LEAGUE_AVG) * sensitivity, 0.95, 1.05))
 
 
 def sp_split_skill_adjustment(
@@ -288,7 +297,7 @@ def fielding_defense_factor(team_row) -> float:
             if col in {"oaa", "team_oaa"}:
                 value = LEAGUE_AVG + value * 5.0
             return _regress(
-                _clip(1 - (value - LEAGUE_AVG) * 0.003, *settings.DEFENSE_FACTOR_CLIP)
+                _clip(1 - (value - LEAGUE_AVG) * MODEL_SENSITIVITIES["defense"], *settings.DEFENSE_FACTOR_CLIP)
             )
     era = _number(get("team_era"))
     if era is not None:
@@ -301,7 +310,22 @@ def fielding_defense_factor(team_row) -> float:
     return 1.0
 
 
-def signal_edge_adjustment(signals: list[dict], *, side: str) -> float:
+def _is_truthy(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
+def signal_edge_adjustment(
+    signals: list[dict],
+    *,
+    side: str,
+    convergence: list[dict] | None = None,
+    away: str | None = None,
+    home: str | None = None,
+) -> float:
     """Additive edge boost from fired MLBMA signals for a lineup side."""
     boost = 0.0
     for row in signals:
@@ -311,11 +335,28 @@ def signal_edge_adjustment(signals: list[dict], *, side: str) -> float:
             continue
         magnitude = float(row.get("magnitude") or 0.0)
         direction = str(row.get("direction") or "").lower()
-        sign = 1.0 if direction in {"boost", "over", "up", "positive", "bullish"} else (
-            -1.0 if direction in {"fade", "under", "down", "negative", "bearish"} else 0.0
+        sign = 1.0 if direction in {"boost", "over", "up", "positive", "bullish", "lineup", "hot"} else (
+            -1.0 if direction in {"fade", "under", "down", "negative", "bearish", "pitching", "cold"} else 0.0
         )
         boost += sign * magnitude * settings.SIGNAL_EDGE_SCALE
-    return _clip(boost, -settings.SIGNAL_EDGE_CAP, settings.SIGNAL_EDGE_CAP)
+
+    if convergence and away and home:
+        row = convergence_side_row(convergence, away=away, home=home, side=side)
+        if row and _is_truthy(row.get("is_convergence_play")):
+            count = float(row.get("convergence_count") or 0.0)
+            scale = min(count / CONVERGENCE_THRESHOLD, 1.5)
+            direction = str(row.get("convergence_direction") or "").lower()
+            sign = 1.0 if direction in {"lineup", "hot", "boost", "over", "up", "positive", "bullish"} else (
+                -1.0 if direction in {"pitching", "cold", "fade", "under", "down", "negative", "bearish"} else 0.0
+            )
+            if sign:
+                boost += sign * scale * MODEL_SENSITIVITIES["convergence_edge_scale"] * 100
+
+    return _clip(
+        boost,
+        -settings.SIGNAL_EDGE_CAP - MODEL_SENSITIVITIES["convergence_edge_cap"],
+        settings.SIGNAL_EDGE_CAP + MODEL_SENSITIVITIES["convergence_edge_cap"],
+    )
 
 
 def signal_confidence_modifier(
@@ -323,12 +364,22 @@ def signal_confidence_modifier(
     away: str,
     home: str,
     confidence: str,
+    *,
+    convergence: list[dict] | None = None,
 ) -> str:
     """Bump model confidence when MLBMA signal convergence supports the projection."""
+    if convergence:
+        side_rows = convergence_for_game(convergence, away, home)
+        if any(_is_truthy(row.get("is_convergence_play")) for row in side_rows):
+            if confidence == "medium":
+                return "high"
+        elif confidence == "high" and not signals:
+            return "medium"
+
     if not signals:
         return confidence
     fired = sum(1 for row in signals if row.get("fired"))
-    if fired >= settings.SIGNAL_HIGH_CONVERGENCE and confidence == "medium":
+    if fired >= CONVERGENCE_THRESHOLD and confidence == "medium":
         return "high"
     if fired == 0 and confidence == "high":
         return "medium"

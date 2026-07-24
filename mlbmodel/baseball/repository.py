@@ -225,6 +225,10 @@ class DataRepository:
         frame = self.load("signals_today.csv")
         return frame.to_dict("records") if frame is not None else []
 
+    def signals_convergence(self) -> list[dict]:
+        frame = self.load("signals_convergence.csv")
+        return frame.to_dict("records") if frame is not None else []
+
     def trend_features(self, away: str, home: str) -> dict:
         """Cached situational-trend feature row (one parse per game per repo)."""
         key = (away.upper().strip(), home.upper().strip())
@@ -470,6 +474,12 @@ class DataRepository:
             if str(row.get("away") or "").upper() == away
             and str(row.get("home") or "").upper() == home
         ]
+        game_convergence = [
+            row
+            for row in self.signals_convergence()
+            if str(row.get("away") or "").upper() == away
+            and str(row.get("home") or "").upper() == home
+        ]
 
         batter_frame = self.load("batter_profiles.csv")
         batter_rows = batter_frame.to_dict("records") if batter_frame is not None else []
@@ -539,6 +549,7 @@ class DataRepository:
             away_defense_factor=away_defense,
             home_defense_factor=home_defense,
             game_signals=game_signals,
+            game_convergence=game_convergence,
             context_coverage_pct=coverage,
             missing_context=missing,
         )

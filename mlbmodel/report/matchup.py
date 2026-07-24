@@ -266,17 +266,22 @@ def _advantage(gd, anchors, repo):
 
 def _signal_boost(gd, market: str, side) -> float:
     market = str(market).lower()
+    kwargs = {
+        "convergence": gd.game_convergence,
+        "away": gd.away,
+        "home": gd.home,
+    }
     if market == "total":
         return (
-            signal_edge_adjustment(gd.game_signals, side="away")
-            + signal_edge_adjustment(gd.game_signals, side="home")
+            signal_edge_adjustment(gd.game_signals, side="away", **kwargs)
+            + signal_edge_adjustment(gd.game_signals, side="home", **kwargs)
         ) / 2
     side_key = (
         "away"
         if str(side).upper() in {gd.away, "AWAY"}
         else "home"
     )
-    return signal_edge_adjustment(gd.game_signals, side=side_key)
+    return signal_edge_adjustment(gd.game_signals, side=side_key, **kwargs)
 
 
 def _market_row(market, side, line, ou, gd, probs, anchors, quote, promotion):

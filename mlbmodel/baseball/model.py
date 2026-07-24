@@ -15,6 +15,7 @@ from mlbmodel.baseball.metrics import (
     offense_depth_factor,
     platoon_metric_factor,
     signal_confidence_modifier,
+    team_pitching_score_factor,
     trend_run_factor,
 )
 from mlbmodel.market.oddsmath import prob_to_american
@@ -102,6 +103,7 @@ class GameData:
     away_defense_factor: float = 1.0
     home_defense_factor: float = 1.0
     game_signals: list = field(default_factory=list)
+    game_convergence: list = field(default_factory=list)
     context_coverage_pct: int = 0
     missing_context: list[str] = field(default_factory=list)
 
@@ -162,6 +164,7 @@ def staff_factor(
     *,
     fallback_fip: float | None,
     fallback_pen_factor: float,
+    team_pitching_score: float | None = None,
 ) -> float:
     if not starter and not bullpen:
         return pitch_factor(fallback_fip, fallback_pen_factor)
@@ -178,6 +181,7 @@ def staff_factor(
     skill_mult = float(starter.get("skill_multiplier") or 1.0)
     pen_mult = float(bullpen.get("pen_multiplier") or 1.0)
     raw *= skill_mult * pen_mult
+    raw *= team_pitching_score_factor(team_pitching_score)
     return _regress(clip(raw, *settings.PITCH_FACTOR_CLIP))
 
 
@@ -226,12 +230,14 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         gd.home_bullpen_features,
         fallback_fip=gd.home_fip,
         fallback_pen_factor=gd.home_pen_factor,
+        team_pitching_score=gd.home_context.avg_pitching_score,
     )
     home_pitch = staff_factor(
         gd.away_starter_features,
         gd.away_bullpen_features,
         fallback_fip=gd.away_fip,
         fallback_pen_factor=gd.away_pen_factor,
+        team_pitching_score=gd.away_context.avg_pitching_score,
     )
     weather = weather_run_factor(gd.weather)
     umpire = umpire_run_factor(gd.live_context.get("umpire"))
@@ -451,6 +457,7 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         gd.away,
         gd.home,
         confidence_from_coverage(gd.context_coverage_pct, starts),
+        convergence=gd.game_convergence,
     )
     return Probabilities(
         exp_away_runs=round(exp_away, 2),
