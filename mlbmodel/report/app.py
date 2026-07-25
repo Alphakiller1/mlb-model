@@ -258,7 +258,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 **report,
                 "model_mean": (pitcher.get("projections") or {}).get(report.get("prop"), {}).get("mean"),
             })
-        for prop, dist in projections.items():
+        for prop, dist in (pitcher.get("projections") or {}).items():
             if not dist or dist.get("mean") is None:
                 continue
             prop_key = str(prop).lower()
