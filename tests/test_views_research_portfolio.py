@@ -43,7 +43,7 @@ def test_research_view_renders_gate_and_f5():
     html = research(reader, {"verdict": "HOLD", "reasons": ["thin sample"]}, f5_board)
     assert "Research" in html
     assert "Promotion gate" in html
-    assert "ca-section-head" in html
-    assert "ca-neon-icon" in html
+    assert "terminal-research" in html
+    assert "Validation gate" not in html
     assert "First 5 (F5) edges" in html
     assert "NYY@BOS" in html

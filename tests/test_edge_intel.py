@@ -90,8 +90,8 @@ def test_team_prediction_record_ml_only():
 
 def test_market_type_record_groups_source_and_market():
     rows = market_type_record([
-        {"settled": True, "source": "prop", "market": "k", "won": True, "push": False, "edge": 3.0},
-        {"settled": True, "source": "prop", "market": "k", "won": False, "push": False, "edge": 2.0},
+        {"settled": True, "source": "prop", "market": "k", "won": True, "push": False, "edge": 3.0, "line": 5.5},
+        {"settled": True, "source": "prop", "market": "k", "won": False, "push": False, "edge": 2.0, "line": 5.5},
         {"settled": True, "source": "f5", "market": "f5_total", "won": True, "push": False, "edge": 1.5},
         {"settled": True, "source": "f5", "market": "f5_total", "won": True, "push": False, "edge": 2.5},
     ], min_samples=2)

@@ -1,4 +1,10 @@
-from mlbmodel.leans.calibration import calibration_buckets, summarize_record
+from mlbmodel.leans.calibration import (
+    calibration_buckets,
+    hit_rate_by_lean_tag,
+    hit_rate_by_source,
+    is_bettable_lean,
+    summarize_record,
+)
 from mlbmodel.leans.grade import grade_lean
 from mlbmodel.leans.record import (
     collect_leans,
@@ -244,12 +250,32 @@ def test_grade_lean_prop_strikeouts():
 
 def test_calibration_buckets():
     rows = [
-        {"settled": True, "model_prob": 0.55, "won": True, "push": False},
-        {"settled": True, "model_prob": 0.56, "won": False, "push": False},
-        {"settled": True, "model_prob": 0.80, "won": True, "push": False},
+        {"settled": True, "model_prob": 0.55, "won": True, "push": False, "source": "sharp", "lean": "BET"},
+        {"settled": True, "model_prob": 0.56, "won": False, "push": False, "source": "sharp", "lean": "BET"},
+        {"settled": True, "model_prob": 0.80, "won": True, "push": False, "source": "matchup", "lean": "MONITOR"},
     ]
     buckets = calibration_buckets(rows, buckets=2)
     assert buckets
     summary = summarize_record(rows)
     assert summary["wins"] == 2
     assert summary["losses"] == 1
+
+
+def test_is_bettable_lean_excludes_projections_and_no_line_props():
+    rows = [
+        {"settled": True, "source": "projection", "lean": "PROJECTION", "won": True},
+        {"settled": True, "source": "sharp", "lean": "BET", "won": True, "model_prob": 55},
+        {"settled": True, "source": "prop", "lean": "OVER", "won": False, "line": 5.5},
+        {"settled": True, "source": "prizepicks", "lean": "OVER", "won": True, "line": None},
+    ]
+    assert is_bettable_lean(rows[0]) is False
+    assert is_bettable_lean(rows[1]) is True
+    assert is_bettable_lean(rows[2]) is True
+    assert is_bettable_lean(rows[3]) is False
+    summary = summarize_record(rows)
+    assert summary["wins"] == 1
+    assert summary["losses"] == 1
+    by_source = hit_rate_by_source(rows)
+    assert {row["source"] for row in by_source} == {"prop", "sharp"}
+    by_lean = hit_rate_by_lean_tag(rows)
+    assert {row["lean"] for row in by_lean} == {"BET", "OVER"}

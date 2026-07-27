@@ -194,7 +194,7 @@ def _collect_pickem(
     pickem_rows: list[dict],
     fresh_books: set[str] | None = None,
 ) -> list[dict]:
-    """Record every pick'em prop lean. Stale snapshots stay logged as STALE_LINE."""
+    """Record pick'em prop leans only when the source snapshot is fresh."""
     rows: list[dict] = []
     stale = 0
     for item in pickem_rows:
@@ -205,12 +205,11 @@ def _collect_pickem(
         is_fresh = fresh_books is None or book in fresh_books
         if not is_fresh:
             stale += 1
+            continue
         edge_pts = item.get("edge_pts")
         if edge_pts is None and item.get("p_over") is not None:
             edge_pts = abs(float(item["p_over"]) - 0.5) * 100
-        if not is_fresh:
-            lean_tag = "STALE_LINE"
-        elif (edge_pts or 0) >= PICKEM_LEAN_PTS:
+        if (edge_pts or 0) >= PICKEM_LEAN_PTS:
             lean_tag = lean
         else:
             lean_tag = "WATCH"
@@ -235,7 +234,7 @@ def _collect_pickem(
         )
     if stale:
         log.warning(
-            "pick'em: %s lean(s) used stale line snapshots (recorded as STALE_LINE)",
+            "pick'em: excluded %s stale line snapshot(s) from the lean ledger",
             stale,
         )
     return rows

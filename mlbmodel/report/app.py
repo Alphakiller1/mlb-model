@@ -86,7 +86,9 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         slate_date=slate_date or None,
     )
     prop_prices = load_prop_board(
-        fetch=fetch, cache_path=cache_dir / "prop_odds_latest.json"
+        fetch=fetch,
+        cache_path=cache_dir / "prop_odds_latest.json",
+        slate_date=slate_date or None,
     )
     pp_lines, pp_snapshot = load_pickem_lines_with_meta(
         prizepicks, cache_dir / "prizepicks_lines.json", fetch=fetch
@@ -115,6 +117,15 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         ("Underdog", ud_board),
         ("Sleeper", sl_board),
     ]
+    fresh_books = (
+        fresh_pickem_books(pickem_snapshots, str(slate_date)[:10])
+        if slate_date else set()
+    )
+    fresh_pickem_sources = [
+        (label, source_board)
+        for label, source_board in pickem_sources
+        if label.lower() in fresh_books
+    ]
     for pitcher in pitchers:
         reports = market_report(
             pitcher,
@@ -122,7 +133,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             promotion_status=promotion_status,
         )
         if not reports:
-            reports = pickem_market_reports(pitcher, pickem_sources)
+            reports = pickem_market_reports(pitcher, fresh_pickem_sources)
         pitcher["market_report"] = reports
         if reports:
             pitcher["market_state"] = str(reports[0].get("state") or "NO MARKET")
@@ -212,7 +223,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         f'<div class="terminal-view terminal-matchups">'
         f'<header class=terminal-pagehead><div><h2>Matchups</h2>'
         f'<p>Complete game analysis. Select a matchup to inspect model, market, drivers, and risk.</p></div>'
-        f'<span>MLB MODEL &middot; v1.8.5 &middot; {e(sd or "Slate pending")}</span></header>'
+        f'<span>MLB MODEL &middot; v1.9.0 &middot; {e(sd or "Slate pending")}</span></header>'
         f'<div class=matchup-selectorbar><label><span>Featured matchup</span>'
         f'<select id=gameSelect aria-label="Matchup" onchange="switchGame(this.value)">{options}</select></label>'
         f'<span><i class=signal-dot></i>Live model</span></div>'
@@ -237,8 +248,9 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         if str(m.get("market") or "").startswith("f5_")
     ]
     matchup_markets_by_pk = dict(model_by_pk)
-    cal_result = reader.get(
-        "model_leans?settled=eq.true&select=edge,won,push,source,settled&limit=2000"
+    cal_result = reader.get_all(
+        "model_leans?settled=eq.true&select=edge,won,push,source,settled",
+        max_rows=3000,
     )
     decision_thresholds = thresholds_from_leans(
         cal_result.rows if not cal_result.error else []
@@ -249,14 +261,20 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     pickem_rows = build_pickem_rows_from_boards(pitchers, pickem_sources)
     if not pickem_rows:
         pickem_rows = build_pickem_rows(pitchers)
+    fresh_pickem_rows = [
+        row
+        for row in pickem_rows
+        if str(row.get("book") or "").lower() in fresh_books
+    ]
     flat_props = []
     for pitcher in pitchers:
+        projections = pitcher.get("projections") or {}
         for report in pitcher.get("market_report") or []:
             flat_props.append({
                 "pitcher": pitcher.get("pitcher"),
                 "game_pk": pitcher.get("game_pk"),
                 **report,
-                "model_mean": (pitcher.get("projections") or {}).get(report.get("prop"), {}).get("mean"),
+                "model_mean": projections.get(report.get("prop"), {}).get("mean"),
             })
         for prop, dist in (pitcher.get("projections") or {}).items():
             if not dist or dist.get("mean") is None:
@@ -277,10 +295,11 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 "market_state": "NO MARKET",
             })
 
-    clv_result = reader.get(
+    clv_result = reader.get_all(
         "prediction_market_snapshots?settled=eq.true&won=not.is.null"
-        "&entry_prob=not.is.null&implied_probability=not.is.null"
-        "&select=market_type,entry_prob,implied_probability,won&limit=5000"
+        "&open_prob=not.is.null&implied_probability=not.is.null"
+        "&select=market_type,open_prob,implied_probability,won",
+        max_rows=3000,
     )
     clv_summary = clv_from_snapshots(clv_result.rows if not clv_result.error else [])
 
@@ -289,13 +308,12 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         market_plays=market_plays,
         model_by_pk=model_by_pk,
         prop_reports=flat_props,
-        pickem_rows=pickem_rows,
+        pickem_rows=fresh_pickem_rows,
     )
     edge_command = edge_command_html(opportunities, clv_summary=clv_summary)
 
     if sd:
         try:
-            fresh_books = fresh_pickem_books(pickem_snapshots, str(sd)[:10])
             lean_rows = collect_leans(
                 slate_date=str(sd)[:10],
                 market_plays=market_plays,
@@ -357,7 +375,13 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         ),
         "matchups": matchups,
         "trends": _trends(slate_reports, slate=slate),
-        "markets": _markets(slate, sharp_by_pk, model_by_pk, decision_thresholds),
+        "markets": _markets(
+            slate,
+            sharp_by_pk,
+            model_by_pk,
+            decision_thresholds,
+            promotion_status=promotion_status,
+        ),
         "props": _props(
             pitchers, prop_prices, pp_board, ud_board, sl_board,
             pickem_snapshots=pickem_snapshots, slate_date=str(sd or "")[:10] or None,

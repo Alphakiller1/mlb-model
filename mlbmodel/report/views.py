@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 import html
+from datetime import date
 
 from mlbmodel.baseball.model import model_probabilities
 from mlbmodel.leans.calibration import (
     calibration_buckets,
     clv_summary_from_leans,
+    hit_rate_by_lean_tag,
+    hit_rate_by_source,
+    is_bettable_lean,
     projection_error_summary,
     summarize_record,
     ungraded_reason_counts,
@@ -19,8 +23,10 @@ from mlbmodel.analytics.edge_intel import (
 from mlbmodel.report.decision import MKT_LABEL as _MKT_LABEL
 from mlbmodel.report.edge_ui import (
     clv_panel_html,
+    hit_rate_board_html,
     market_performance_html,
     team_accuracy_html,
+    terminal_hit_rate_html,
 )
 from mlbmodel.report.html_fmt import display as _display, edge_grade as _edge_grade, section_head, lean_dir_html
 from mlbmodel.report.html_fmt import (
@@ -91,6 +97,14 @@ def _fmt_line(value):
         return f" {float(value):g}"
     except (TypeError, ValueError):
         return f" {e(str(value))}"
+
+
+def _pitcher_game_label(pitcher: dict) -> str:
+    team = str(pitcher.get("team") or "")
+    opponent = str(pitcher.get("opponent") or "")
+    if str(pitcher.get("side") or "").lower() == "home":
+        return f"{opponent} @ {team}"
+    return f"{team} @ {opponent}"
 
 
 def _pct_width(value):
@@ -438,7 +452,7 @@ def _today_command_center_legacy(
 def _terminal_pagehead(title, subtitle, stamp):
     return f"""<header class=terminal-pagehead>
   <div><h2>{e(title)}</h2><p>{e(subtitle)}</p></div>
-  <span>MLB MODEL &middot; v1.8.5 &middot; {e(stamp or "Slate pending")}</span>
+  <span>MLB MODEL &middot; v1.9.0 &middot; {e(stamp or "Slate pending")}</span>
 </header>"""
 
 
@@ -584,14 +598,16 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
     for index, pitcher in enumerate(pitchers):
         team = str(pitcher.get("team") or "")
         opponent = str(pitcher.get("opponent") or "")
-        game = f"{team} @ {opponent}"
+        game = _pitcher_game_label(pitcher)
         if game not in games:
             games.append(game)
         projections = pitcher.get("projections") or {}
         strikeouts = projections.get("K", {}).get("mean")
+        is_priced = bool(pitcher.get("market_report"))
         starter_rows.append(
             f'<button type=button class="props-starter{" active" if index == 0 else ""}" '
-            f'data-prop-index="{index}" onclick="switchPropPitcher({index})">'
+            f'data-prop-index="{index}" data-prop-game="{e(game)}" '
+            f'data-prop-priced="{str(is_priced).lower()}" onclick="switchPropPitcher({index})">'
             f'{_headshot(pitcher.get("pitcher_id"))}'
             f'<span><b>{e(str(pitcher.get("pitcher") or "TBD"))}</b>'
             f'<i>{_logo(team, "tlogo xs")}{e(team)} <em>@</em> {e(opponent)} &middot; '
@@ -616,23 +632,26 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
             f'{distributions}'
             f'</section>'
         )
-    game_options = "".join(f'<option>{e(game)}</option>' for game in games)
+    game_options = "".join(
+        f'<option value="{e(game)}">{e(game)}</option>' for game in games
+    )
     starter_html = "".join(starter_rows) or '<div class=empty>No pitcher inputs loaded.</div>'
     details_html = "".join(detail_rows) or '<div class=empty>No pitcher projections loaded.</div>'
     return f"""<div class="terminal-view terminal-props">
   {_terminal_pagehead("Props", "Pitcher prop engine and research tool.", slate_date)}
   <div class=props-filterbar>
     <label><span>Date</span><input type=text value="{e(str(slate_date or "Latest slate"))}" readonly></label>
-    <label><span>Game</span><select aria-label="Prop game"><option>All games</option>{game_options}</select></label>
+    <label><span>Game</span><select id=propGameFilter aria-label="Prop game" onchange="filterPropStarters()"><option value="">All games</option>{game_options}</select></label>
     <label><span>Market</span><select aria-label="Prop market"><option>Strikeouts</option><option>Earned runs</option><option>Outs</option><option>Fantasy score</option></select></label>
     <label><span>Book</span><select aria-label="Prop book"><option>All books</option><option>Sportsbooks</option><option>Pick'em</option></select></label>
-    <label class=props-only-books><input type=checkbox><span>Show only priced lines</span></label>
+    <label class=props-only-books><input id=propPricedFilter type=checkbox onchange="filterPropStarters()"><span>Show only priced lines</span></label>
     <div class=props-counts><span>{book_n} book</span><span>{fantasy_n} fantasy</span></div>
   </div>
   <div class="props-workstation terminal-panel">
     <aside class=props-starter-browser>
       <header><span>Starter</span><span>Team</span><span>Proj K</span></header>
       <div>{starter_html}</div>
+      <p id=propsFilterEmpty class=props-filter-empty hidden>No starters match these filters.</p>
     </aside>
     <main class="pitcher-prop-deck props-terminal-detail-stack">{details_html}</main>
   </div>
@@ -654,8 +673,8 @@ def _results_workbench_legacy(reader):
     rows = result.rows
     clv_result = reader.get(
         "prediction_market_snapshots?settled=eq.true&won=not.is.null"
-        "&entry_prob=not.is.null&implied_probability=not.is.null"
-        "&select=market_type,entry_prob,implied_probability,won&limit=5000"
+        "&open_prob=not.is.null&implied_probability=not.is.null"
+        "&select=market_type,open_prob,implied_probability,won&limit=1000"
     )
     clv_summary = clv_from_snapshots(clv_result.rows if not clv_result.error else [])
     lean_clv = clv_summary_from_leans(rows)
@@ -665,6 +684,8 @@ def _results_workbench_legacy(reader):
     void_n = sum(1 for r in rows if r.get("void"))
     teams = team_prediction_record(rows)
     market_perf = market_type_record(rows)
+    by_source = hit_rate_by_source(rows)
+    by_lean = hit_rate_by_lean_tag(rows)
     summary = summarize_record(rows)
     cal = calibration_buckets(rows)
     hit = summary.get("hit_rate")
@@ -744,6 +765,11 @@ def _results_workbench_legacy(reader):
     clv_panel = clv_panel_html(clv_summary)
     team_panel = team_accuracy_html(teams)
     market_panel = market_performance_html(market_perf)
+    hit_board = hit_rate_board_html(
+        summary,
+        by_source=by_source,
+        by_lean=by_lean,
+    )
 
     return f"""<h2>Results</h2>
  <div class=cards>
@@ -755,6 +781,7 @@ def _results_workbench_legacy(reader):
    <div class=card><div class=k>Graded / pending / void</div><div class="v v-sm">{summary["total"]} / {pending_n} / {void_n}</div></div>
  </div>
  {lean_clv_cards}
+ {hit_board}
  {clv_panel}
  <div class=cols>
    {team_panel}
@@ -789,12 +816,31 @@ def _results_workbench_legacy(reader):
 
 
 def results(reader):
-    result = reader.get(
-        "model_leans?select=lean_id,slate_date,game_pk,source,market,selection,line,"
+    fields = (
+        "lean_id,slate_date,game_pk,source,market,selection,line,"
         "model_prob,model_value,edge,lean,won,push,settled,entry_odds,recorded_at,"
         "void,ungraded_reason,closing_odds,clv_pts,realized_value"
-        "&order=recorded_at.desc&limit=2000"
     )
+    if hasattr(reader, "get_all"):
+        settled_result = reader.get_all(
+            f"model_leans?settled=eq.true&select={fields}&order=recorded_at.desc",
+            max_rows=5000,
+        )
+        pending_result = reader.get_all(
+            f"model_leans?settled=eq.false&select={fields}&order=recorded_at.desc",
+            max_rows=5000,
+        )
+        result = settled_result if settled_result.error else pending_result
+        rows = sorted(
+            settled_result.rows + pending_result.rows,
+            key=lambda row: str(row.get("recorded_at") or ""),
+            reverse=True,
+        )
+    else:
+        result = reader.get(
+            f"model_leans?select={fields}&order=recorded_at.desc&limit=2000"
+        )
+        rows = result.rows
     if result.error:
         return f"""<div class="terminal-view terminal-results">
   {_terminal_pagehead("Progress / Validation", "Track model leans, outcomes, and model performance.", "Warehouse unavailable")}
@@ -812,21 +858,41 @@ def results(reader):
     <section class=terminal-panel><header><strong>Projection accuracy trend</strong></header><div class=validation-placeholder>Projection history unavailable.</div></section>
   </div>
 </div>"""
-    rows = result.rows
     summary = summarize_record(rows)
+    by_source = hit_rate_by_source(rows)
+    by_lean = hit_rate_by_lean_tag(rows)
+    market_perf = market_type_record(rows)
     lean_clv = clv_summary_from_leans(rows)
-    pending_n = sum(1 for row in rows if not row.get("settled"))
-    realized = sum(float(row.get("realized_value") or 0) for row in rows if row.get("settled"))
+    pending_rows = [row for row in rows if not row.get("settled")]
     hit = summary.get("hit_rate")
     hit_txt = f"{hit:.1f}%" if hit is not None else "&mdash;"
+    hit_rate_panel = terminal_hit_rate_html(
+        summary,
+        by_source=by_source,
+        by_lean=by_lean,
+        markets=market_perf,
+    )
     brier = summary.get("brier")
     brier_txt = f"{brier:.3f}" if brier is not None else "&mdash;"
     clv_text = f'{lean_clv["clv_pts"]:+.1f}pt' if lean_clv else "&mdash;"
-    prop_sources = {"prop", "projection", "prizepicks", "underdog", "sleeper", "pickem"}
-    prop_rows = [row for row in rows if str(row.get("source") or "").lower() in prop_sources]
-    market_rows = [row for row in rows if str(row.get("source") or "").lower() not in prop_sources]
+    projection_rows = [
+        row
+        for row in rows
+        if str(row.get("source") or "").lower() == "projection"
+        or str(row.get("lean") or "").upper().startswith("PROJECTION")
+    ]
+    market_rows = [row for row in rows if row not in projection_rows]
+    open_risk_rows = [
+        row
+        for row in pending_rows
+        if row not in projection_rows
+        and str(row.get("lean") or "").upper() != "STALE_LINE"
+        and (row.get("entry_odds") is not None or row.get("line") is not None)
+    ]
+    bettable_settled = [row for row in rows if is_bettable_lean(row)]
+    display_rows = bettable_settled[:16] + open_risk_rows[:8]
     recent_rows = []
-    for row in (prop_rows + market_rows)[:24]:
+    for row in display_rows:
         line = _display(row.get("line"), digits=1) if row.get("line") is not None else ""
         edge = f'{float(row["edge"]):+.1f}pt' if row.get("edge") is not None else "&mdash;"
         clv = f'{float(row["clv_pts"]):+.1f}pt' if row.get("clv_pts") is not None else "&mdash;"
@@ -842,25 +908,50 @@ def results(reader):
         else:
             state, outcome = "CLOSED", "L"
         outcome_class = "pos" if outcome == "W" else "neg" if outcome == "L" else "mut"
+        market = str(row.get("market") or "").lower()
+        market_label = {
+            "k": "Strikeouts",
+            "bb": "Walks",
+            "er": "Earned runs",
+            "outs": "Pitching outs",
+            "fantasy": "Fantasy score",
+            "f5_er": "F5 earned runs",
+            "f5_k": "F5 strikeouts",
+        }.get(market, _MKT_LABEL.get(market, market.replace("_", " ").title()))
+        selection = str(row.get("selection") or "")
+        if ":" in selection:
+            selection = selection.split(":", 1)[1]
+        selection = selection.replace("_", " ").title()
         recent_rows.append(
             f'<tr><td>{e(str(row.get("slate_date") or ""))}</td>'
-            f'<td><b>{e(str(row.get("source") or "model"))}</b></td>'
-            f'<td>{e(str(row.get("market") or ""))} {e(str(row.get("selection") or ""))} {line}</td>'
+            f'<td><b>{e(str(row.get("source") or "model").replace("_", " ").title())}</b></td>'
+            f'<td><b>{e(market_label)}</b><span class=result-selection>{e(selection)}{" " + line if line else ""}</span></td>'
             f'<td class=num>{entry}</td><td>{lean_dir_html(row.get("lean"))}</td>'
             f'<td class=num>{edge}</td><td><span class="pill {"side" if state == "WATCHING" else "mut"}">{state}</span></td>'
             f'<td class="num {outcome_class}">{outcome}</td><td class=num>{clv}</td></tr>'
         )
     recent = "".join(recent_rows) or '<tr><td colspan=9 class=mut>No model leans recorded yet.</td></tr>'
-    legacy = _results_workbench_legacy(reader)
-    grade_state = "On track" if pending_n == 0 else f"{pending_n} pending"
+    stale_unexplained = sum(
+        1
+        for row in pending_rows
+        if str(row.get("slate_date") or "")[:10] < date.today().isoformat()
+        and not row.get("ungraded_reason")
+    )
+    if stale_unexplained:
+        grade_state = f"{stale_unexplained} stale need review"
+    elif open_risk_rows:
+        grade_state = f"{len(open_risk_rows)} awaiting results"
+    else:
+        grade_state = "On track"
     return f"""<div class="terminal-view terminal-results">
   {_terminal_pagehead("Progress / Validation", "Track model leans, outcomes, and model performance.", "Continuous grading")}
   <div class="terminal-kpi-row terminal-kpi-row--results">
-    <div><span>Leans logged</span><b>{len(rows)}</b></div>
-    <div><span>Props + projections</span><b>{len(prop_rows)}</b></div>
+    <div><span>Ledger sample</span><b>{len(rows)}</b></div>
+    <div><span>Projection checks</span><b>{len(projection_rows)}</b></div>
     <div><span>Market leans</span><b>{len(market_rows)}</b></div>
-    <div><span>Open risk</span><b>{pending_n}</b></div>
-    <div><span>Graded record</span><b>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</b></div>
+    <div><span>Open risk</span><b>{len(open_risk_rows)}</b></div>
+    <div><span>Hit rate</span><b>{hit_txt}</b></div>
+    <div><span>Sample record</span><b>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</b></div>
     <div><span>CLV</span><b class=pos>{clv_text}</b></div>
     <div class=terminal-autograde><span class=signal-dot></span><b>Auto-grading</b><i>{e(grade_state)}</i></div>
   </div>
@@ -869,6 +960,7 @@ def results(reader):
     <thead><tr><th>Date</th><th>Source</th><th>Market</th><th>Entry</th><th>Model lean</th><th>Edge</th><th>State</th><th>Result</th><th>CLV</th></tr></thead>
     <tbody>{recent}</tbody>
   </table></div></section>
+  {hit_rate_panel}
   <div class=validation-grid>
     <section class=terminal-panel><header><strong>Model performance</strong></header><div class=validation-metrics>
       <div><span>CLV</span><b class=pos>{clv_text}</b><i>tracked closes</i></div>
@@ -878,7 +970,6 @@ def results(reader):
     <section class=terminal-panel><header><strong>Calibration</strong><span>Brier score</span></header><div class=calibration-readout><b>{brier_txt}</b><span>{"Well calibrated" if brier is not None and brier < 0.25 else "Building sample"}</span><i>Latest settled sample</i></div></section>
     <section class=terminal-panel><header><strong>Projection accuracy trend</strong><span>Brier</span></header><svg class=validation-spark viewBox="0 0 260 78" role=img aria-label="Projection accuracy trend"><path class=validation-gridline d="M0 15H260M0 39H260M0 63H260"/><path class=validation-line d="M0 28L22 34L44 30L66 37L88 35L110 43L132 39L154 47L176 45L198 52L220 48L242 58L260 54"/></svg></section>
   </div>
-  <div class=validation-detail-source hidden>{legacy}</div>
 </div>"""
 
 
@@ -896,7 +987,8 @@ def research(reader, pv, f5_board=None, clv_summary=None):
         f'<tr><td>{c["price_bucket"]}</td><td>{c["n"]}</td><td>{c["avg_price"]}</td>'
         f'<td>{c["actual_win_rate"]}</td><td class={"neg" if abs(c.get("gap") or 0)>0.1 else "mut"}>{c.get("gap")}</td></tr>'
         for c in cal) or '<tr><td class=mut colspan=5>No calibration sample.</td></tr>'
-    tone = "pos" if pv["verdict"] == "PROMOTE" else "mut"
+    promoted = pv["verdict"] == "PROMOTE"
+    tone = "pos" if promoted else "warnc"
 
     # First-5 (F5) board — the same graded F5 rows surfaced across the model, ranked by edge.
     f5 = sorted(
@@ -914,13 +1006,40 @@ def research(reader, pv, f5_board=None, clv_summary=None):
             for g, m in f5)
     else:
         f5rows = '<tr><td class=mut colspan=7>No F5 prices on slate.</td></tr>'
-    f5_panel = (f'<div class=ca-board>{section_head("First 5 (F5) edges", icon="markets")}<div class=body>'
-                f'<div class=table-scroll><table class=sortable><tr><th>Game</th><th>Market</th><th>Side</th>'
-                f'<th>Model%</th><th>Price</th><th>Edge</th><th>State</th></tr>{f5rows}</table></div></div></div>')
-
-    return f"""<h2>Research</h2>
- <div class=ca-board>{section_head("Promotion gate", icon="research")}<div class=body>
-   <div class="vbar {tone}"><b>{pv['verdict']}</b><span>{e('; '.join(pv.get('reasons', [])))}</span></div></div></div>
- {f5_panel}
- <div class=ca-board>{section_head("Kalshi price calibration", icon="research")}<div class=body>
-   <div class=table-scroll><table class=sortable><tr><th>Bucket</th><th>n</th><th>Avg price</th><th>Actual win%</th><th>Gap</th></tr>{crows}</table></div></div></div>"""
+    sample_n = sum(int(row.get("n") or 0) for row in cal)
+    clv_text = (
+        f'{float(clv_summary["clv_pts"]):+.1f}pt'
+        if clv_summary and clv_summary.get("clv_pts") is not None
+        else "&mdash;"
+    )
+    reasons = "; ".join(pv.get("reasons", [])) or "No blocking reasons reported."
+    return f"""<div class="terminal-view terminal-research">
+  {_terminal_pagehead("Research", "Validate calibration, promotion readiness, and first-five market evidence.", "Methodology lab")}
+  <div class="terminal-kpi-row terminal-kpi-row--research">
+    <div><span>Promotion state</span><b class={tone}>{e(str(pv["verdict"]))}</b></div>
+    <div><span>Calibration sample</span><b>{sample_n}</b></div>
+    <div><span>Snapshot CLV</span><b>{clv_text}</b></div>
+    <div><span>F5 priced edges</span><b>{len(f5)}</b></div>
+    <div class=terminal-live-state><span><i class=signal-dot></i>Execution</span><b>{"Enabled" if promoted else "Locked"}</b><span>Safety policy</span><b>Enforced</b></div>
+  </div>
+  <section class="terminal-panel research-gate-panel">
+    <header><strong>Promotion gate</strong><span>Out-of-sample validation</span></header>
+    <div class=research-gate-body><b class={tone}>{e(str(pv["verdict"]))}</b><p>{e(reasons)}</p></div>
+  </section>
+  <div class=research-grid>
+    <section class=terminal-panel>
+      <header><strong>First 5 (F5) edges</strong><span>Current slate</span></header>
+      <div class=terminal-table-scroll><table class="terminal-table sortable">
+        <thead><tr><th>Game</th><th>Market</th><th>Side</th><th>Model%</th><th>Price</th><th>Edge</th><th>State</th></tr></thead>
+        <tbody>{f5rows}</tbody>
+      </table></div>
+    </section>
+    <section class=terminal-panel>
+      <header><strong>Price calibration</strong><span>Prediction market snapshots</span></header>
+      <div class=terminal-table-scroll><table class="terminal-table sortable">
+        <thead><tr><th>Bucket</th><th>n</th><th>Avg price</th><th>Actual win%</th><th>Gap</th></tr></thead>
+        <tbody>{crows}</tbody>
+      </table></div>
+    </section>
+  </div>
+</div>"""

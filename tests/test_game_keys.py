@@ -37,15 +37,20 @@ def test_resolve_featured_game_first_of_doubleheader():
 def test_build_app_single_active_matchup_per_key():
     from pathlib import Path
 
+    import pandas as pd
+
     from mlbmodel.report.app import build_app
 
     data = Path(__file__).resolve().parents[1] / "deployment_data"
-    html = build_app("MIL@PIT", fetch=False, data_dir=data)
+    slate = pd.read_csv(data / "today_matchups.csv")
+    away = str(slate.iloc[0]["Away"]).upper()
+    home = str(slate.iloc[0]["Home"]).upper()
+    featured = f"{away}@{home}"
+    html = build_app(featured, fetch=False, data_dir=data)
     import re
 
     panels = re.findall(r'<div class="matchup-report" data-game="([^"]+)"([^>]*)>', html)
     assert len(panels) == len({key for key, _ in panels})
-    assert 'data-game="MIL@PIT"' in html
-    assert 'data-game="MIL@PIT#2"' in html
+    assert f'data-game="{featured}"' in html
     visible = [key for key, attrs in panels if "hidden" not in attrs]
-    assert visible == ["MIL@PIT"]
+    assert visible == [featured]

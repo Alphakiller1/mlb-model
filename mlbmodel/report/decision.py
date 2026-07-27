@@ -256,9 +256,19 @@ def markets_html(
     sharp_by_pk,
     model_by_pk=None,
     thresholds: DecisionThresholds | None = None,
+    promotion_status: str = "HOLD/ABSTAIN",
 ) -> str:
     thresholds = thresholds or DEFAULT_THRESHOLDS
-    plays = collect_market_plays(slate, sharp_by_pk, model_by_pk or {}, thresholds)
+    raw_plays = collect_market_plays(slate, sharp_by_pk, model_by_pk or {}, thresholds)
+    gate_open = str(promotion_status).upper() == "PROMOTE"
+    plays = []
+    for candidate in raw_plays:
+        play = dict(candidate)
+        if not gate_open and play["verdict"] in {"STRONG", "BET"}:
+            play["verdict"] = "MODEL"
+            play["stake"] = 0.0
+            play["gate_limited"] = True
+        plays.append(play)
 
     def row(play):
         mkt = MKT_LABEL.get(play["mkt_type"], play["mkt_type"].title())
@@ -300,10 +310,14 @@ def markets_html(
             f'<b class="{_VERDICT_CLASS[play["verdict"]]}">{play["stake"]:.1f}u</b>'
             if play["stake"] else '<span class=mut>—</span>'
         )
+        gate_note = (
+            '<div class="mut meta-sub">validation gate locked execution</div>'
+            if play.get("gate_limited") else ""
+        )
         return (
             f'<tr><td><button class=gamepick onclick="openGame(\'{e(play["game"])}\')">{e(play["game"])}</button></td>'
             f'<td>{bet}</td><td>{sharp}</td><td>{model}</td>'
-            f'<td title="{e(_VERDICT[play["verdict"]][4])}">{verdict_badge(play["verdict"])}</td>'
+            f'<td title="{e(_VERDICT[play["verdict"]][4])}">{verdict_badge(play["verdict"])}{gate_note}</td>'
             f'<td class=num>{stake}</td></tr>'
         )
 
@@ -324,9 +338,20 @@ def markets_html(
         f'<div class="mut mut-sm">{e(thresholds.summary())}</div>'
         if thresholds.calibrated else ""
     )
-    return f"""<h2>Markets</h2>
+    gate_note = (
+        '<div class="markets-gate-note"><b>Validation gate: HOLD</b>'
+        '<span>Qualified model edges remain research signals; executable BET labels and stake sizing are suppressed.</span></div>'
+        if not gate_open else
+        '<div class="markets-gate-note markets-gate-note--open"><b>Validation gate: PROMOTED</b>'
+        '<span>Stake sizing is enabled under the published model thresholds.</span></div>'
+    )
+    return f"""<div class="terminal-view terminal-markets">
+ <header class=terminal-pagehead><div><h2>Markets</h2>
+   <p>Compare model price, sharp divergence, and executable market state.</p></div>
+   <span>{e(promotion_status)}</span></header>
+ {gate_note}
  <div class=cards>
-   <div class=card><div class=k>Top play</div><div class="v v-sm">{e(top_txt)}</div>
+   <div class=card><div class=k>{"Top play" if gate_open else "Top research signal"}</div><div class="v v-sm">{e(top_txt)}</div>
      <div class="mut mut-sm">{e(top_sub)}</div></div>
    <div class=card><div class=k>Bets</div><div class=v>{n_bet}</div></div>
    <div class=card><div class=k>Leans</div><div class=v>{n_lean}</div></div>
@@ -335,9 +360,9 @@ def markets_html(
  </div>
  <div class=ca-board>{section_head("Decision board", icon="markets")}<div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter game or bet…" data-filter-for="markets-table" aria-label="Filter markets"></div>
-   <div class=table-scroll><table id=markets-table class=sortable><tr><th>Game</th><th>Bet</th>
+   <div class=table-scroll><table id=markets-table class=sortable><tr><th>Game</th><th>Market</th>
    <th title="Sharp-book de-vig minus public">Sharp</th>
    <th title="Model edge vs live price">Model</th>
    <th>Verdict</th><th>Stake</th></tr>{rows}</table></div>
  {cal_note}
- </div></div>"""
+ </div></div></div>"""

@@ -9,6 +9,7 @@ import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from mlbmodel import settings
 from mlbmodel.baseball.model import normal_cdf
@@ -64,6 +65,32 @@ class PropOddsBoard:
             for quote in self.quotes
             if normalize_name(quote.player) == key
         ]
+
+
+ET = ZoneInfo("America/New_York")
+
+
+def filter_events_for_slate(
+    events: list[dict],
+    slate_date: str | None,
+) -> list[dict]:
+    """Keep prop events whose first pitch falls on the active ET slate."""
+    if not slate_date:
+        return events
+    kept = []
+    for event in events:
+        commence = str(event.get("commence_time") or "").strip()
+        if not commence:
+            continue
+        try:
+            when = datetime.fromisoformat(commence.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        if when.astimezone(ET).date().isoformat() == slate_date:
+            kept.append(event)
+    return kept
 
 
 def _normalize_payloads(payloads: list[dict], fetched_at: str) -> list[dict]:
@@ -216,11 +243,13 @@ def load_prop_board(
     *,
     fetch: bool = False,
     cache_path: Path | None = None,
+    slate_date: str | None = None,
 ) -> PropOddsBoard:
     path = cache_path or settings.CACHE_DIR / "prop_odds_latest.json"
     if fetch:
         try:
             payloads, fetched = fetch_prop_payloads(path)
+            payloads = filter_events_for_slate(payloads, slate_date)
             return build_prop_board(payloads, fetched)
         except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
             fetch_error = str(exc)
@@ -232,8 +261,14 @@ def load_prop_board(
         return PropOddsBoard([], fetch_error or "No pitcher-prop price snapshot is loaded.")
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
+        events = filter_events_for_slate(payload.get("events") or [], slate_date)
+        if slate_date and not events:
+            return PropOddsBoard(
+                [],
+                f"No pitcher-prop prices are loaded for {slate_date}.",
+            )
         return build_prop_board(
-            payload.get("events") or [],
+            events,
             str(payload.get("fetched_at") or ""),
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:

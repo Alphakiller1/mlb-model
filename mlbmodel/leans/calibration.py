@@ -25,12 +25,78 @@ def _graded(rows: list[dict]) -> list[dict]:
     """Settled rows with a real W/L outcome and a model probability."""
     return [
         r for r in rows
-        if r.get("settled")
-        and not r.get("push")
-        and not r.get("void")
-        and r.get("won") is not None
+        if is_bettable_lean(r)
         and r.get("model_prob") is not None
     ]
+
+
+def is_bettable_lean(row: dict) -> bool:
+    """Graded rows that represent a real priced bet (W/L/P), not projection error tracking."""
+    if not row.get("settled") or row.get("void"):
+        return False
+    source = str(row.get("source") or "").lower()
+    if source == "projection":
+        return False
+    lean = str(row.get("lean") or "").upper()
+    if lean in {"PROJECTION", "PROJECTION_THIN", "STALE_LINE"}:
+        return False
+    if row.get("push"):
+        return True
+    if row.get("won") is None:
+        return False
+    priced_sources = {"prop", "prizepicks", "underdog", "sleeper", "pickem"}
+    if source in priced_sources and row.get("line") is None:
+        return False
+    if source == "prop" and str(row.get("selection") or "").lower() == "model":
+        return False
+    return True
+
+
+def record_from_rows(rows: list[dict]) -> dict:
+    """W-L-P and hit rate from bettable leans only."""
+    bettable = [r for r in rows if is_bettable_lean(r)]
+    wins = sum(1 for r in bettable if r.get("won"))
+    losses = sum(1 for r in bettable if r.get("won") is False and not r.get("push"))
+    pushes = sum(1 for r in bettable if r.get("push"))
+    decisions = wins + losses
+    return {
+        "total": len(bettable),
+        "wins": wins,
+        "losses": losses,
+        "pushes": pushes,
+        "sample": decisions,
+        "hit_rate": wins / decisions * 100 if decisions else None,
+    }
+
+
+def hit_rate_by_source(rows: list[dict], *, min_sample: int = 1) -> list[dict]:
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        if is_bettable_lean(row):
+            groups[str(row.get("source") or "unknown")].append(row)
+    out = []
+    for source, grp in sorted(groups.items()):
+        rec = record_from_rows(grp)
+        if rec["sample"] < min_sample:
+            continue
+        out.append({"source": source, **rec})
+    out.sort(key=lambda row: (-(row["hit_rate"] or 0), -row["sample"]))
+    return out
+
+
+def hit_rate_by_lean_tag(rows: list[dict], *, min_sample: int = 1) -> list[dict]:
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        if is_bettable_lean(row):
+            groups[str(row.get("lean") or "unknown").upper()].append(row)
+    out = []
+    for lean, grp in sorted(groups.items()):
+        rec = record_from_rows(grp)
+        if rec["sample"] < min_sample:
+            continue
+        out.append({"lean": lean, **rec})
+    out.sort(key=lambda row: (-(row["hit_rate"] or 0), -row["sample"]))
+    return out
 
 
 def brier_score(rows: list[dict]) -> float | None:
@@ -83,17 +149,12 @@ def calibration_buckets(rows: list[dict], *, buckets: int = 5, min_n: int = 5) -
 
 
 def summarize_record(rows: list[dict]) -> dict:
-    scored = [
-        r for r in rows
-        if r.get("settled") and not r.get("void")
-        and str(r.get("source") or "") != "projection"
-    ]
-    wins = sum(1 for r in scored if r.get("won"))
-    losses = sum(1 for r in scored if r.get("won") is False and not r.get("push"))
-    pushes = sum(1 for r in scored if r.get("push"))
+    bettable = record_from_rows(rows)
     voids = sum(1 for r in rows if r.get("void"))
     by_source: dict[str, dict] = defaultdict(lambda: {"w": 0, "l": 0, "p": 0})
-    for r in scored:
+    for r in rows:
+        if not is_bettable_lean(r):
+            continue
         src = str(r.get("source") or "unknown")
         if r.get("push"):
             by_source[src]["p"] += 1
@@ -102,12 +163,12 @@ def summarize_record(rows: list[dict]) -> dict:
         elif r.get("won") is False:
             by_source[src]["l"] += 1
     return {
-        "total": len(scored),
-        "wins": wins,
-        "losses": losses,
-        "pushes": pushes,
+        "total": bettable["total"],
+        "wins": bettable["wins"],
+        "losses": bettable["losses"],
+        "pushes": bettable["pushes"],
         "voids": voids,
-        "hit_rate": wins / (wins + losses) * 100 if (wins + losses) else None,
+        "hit_rate": bettable["hit_rate"],
         "brier": brier_score(rows),
         "by_source": dict(by_source),
     }

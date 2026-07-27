@@ -52,18 +52,28 @@ def test_impact_runs_html_signed_chip():
 def test_matchup_breakdown_pitcher_rl_populated():
     from mlbmodel.report.matchup_ui import _pitcher_rl_rows, _sp_metric_split
 
+    import pandas as pd
+
+    frame = pd.read_csv("deployment_data/sp_metric_splits.csv")
+    hand_rows = frame[frame["split_dimension"] == "batter_hand"]
+    pitcher_name = next(
+        name
+        for name, rows in hand_rows.groupby("pitcher_name")
+        if {"LHH", "RHH"}.issubset(set(rows["split_value"].astype(str)))
+    )
+
     class Repo:
         def load(self, name):
-            import pandas as pd
             if name != "sp_metric_splits.csv":
                 return None
-            return pd.read_csv("deployment_data/sp_metric_splits.csv")
+            return frame
 
-    splits = _sp_metric_split(Repo(), "Tarik Skubal", "hand")
+    splits = _sp_metric_split(Repo(), pitcher_name, "hand")
     assert "LHH" in splits and "RHH" in splits
     rows = _pitcher_rl_rows(splits)
     assert "c-na" not in rows or rows.count("c-na") < 4
-    assert "30.3" in rows or "30.5" in rows
+    assert f'{float(splits["LHH"]["K_pct"]):.1f}' in rows
+    assert f'{float(splits["RHH"]["K_pct"]):.1f}' in rows
 
 
 def test_matchup_breakdown_symmetric_columns():

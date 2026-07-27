@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from mlbmodel.leans.calibration import is_bettable_lean
 from mlbmodel.leans.record import edge_points
 from mlbmodel.report.decision import MKT_LABEL
 
@@ -169,14 +170,21 @@ def collect_slate_opportunities(
 
 def clv_from_snapshots(rows: list[dict]) -> dict | None:
     """Mean close-minus-entry probability (CLV) from executable snapshot rows."""
+    def entry_probability(row: dict):
+        value = row.get("entry_prob")
+        if value is None:
+            value = row.get("open_prob")
+        return value
+
     usable = [
         row for row in rows
-        if row.get("entry_prob") is not None and row.get("implied_probability") is not None
+        if entry_probability(row) is not None
+        and row.get("implied_probability") is not None
     ]
     if not usable:
         return None
     clv_vals = [
-        float(row["implied_probability"]) - float(row["entry_prob"])
+        float(row["implied_probability"]) - float(entry_probability(row))
         for row in usable
     ]
     wins = sum(1 for row in usable if row.get("won"))
@@ -184,7 +192,7 @@ def clv_from_snapshots(rows: list[dict]) -> dict | None:
     for row in usable:
         mkt = str(row.get("market_type") or "ml").lower()
         by_market[mkt].append(
-            float(row["implied_probability"]) - float(row["entry_prob"])
+            float(row["implied_probability"]) - float(entry_probability(row))
         )
     market_clv = {
         mkt: round(sum(vals) / len(vals) * 100, 2)
@@ -210,7 +218,7 @@ def team_prediction_record(
     teams: dict[str, dict] = defaultdict(lambda: {"w": 0, "l": 0, "p": 0})
 
     for row in lean_rows:
-        if not row.get("settled"):
+        if not is_bettable_lean(row):
             continue
         market = str(row.get("market") or "").lower()
         if market not in {"ml", "moneyline", "h2h", "f5_ml"}:
@@ -247,7 +255,7 @@ def market_type_record(lean_rows: list[dict], *, min_samples: int = 2) -> list[d
     groups: dict[tuple[str, str], dict] = defaultdict(lambda: {"w": 0, "l": 0, "p": 0, "edge_sum": 0.0, "n_edge": 0})
 
     for row in lean_rows:
-        if not row.get("settled"):
+        if not is_bettable_lean(row):
             continue
         market = str(row.get("market") or "unknown").lower()
         source = str(row.get("source") or "unknown")

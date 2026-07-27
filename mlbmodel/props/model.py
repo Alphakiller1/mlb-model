@@ -669,6 +669,7 @@ class PitcherProjectionEngine:
             "pitcher_id": int(_number(profile.get("pitcher_id")) or 0) or None,
             "team": team,
             "opponent": opponent,
+            "side": side,
             "hand": pitcher_hand,
             "state": state,
             "luck_runs": luck,
