@@ -94,7 +94,11 @@ def pitch_mix_net_html(pitch_matchup: dict) -> str:
     if coverage is not None:
         meta.append(f"{float(coverage):.0f}% pitch coverage")
     if matched is not None:
-        meta.append(f"{matched} batters")
+        meta.append(
+            f"{matched} batters"
+            if int(matched) > 0
+            else "team pitch-type fallback"
+        )
     if meta:
         parts.append(f'<span class="mut pitch-mix-net__meta">{e(" · ".join(meta))}</span>')
     parts.append("</div>")

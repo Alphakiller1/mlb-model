@@ -42,3 +42,29 @@ def test_props_view_one_toggle_card_per_pitcher_with_clear_play():
     assert "props-graded-table" not in rendered
     assert "Pick&apos;em board" not in rendered
     assert "prop-panel" not in rendered
+
+
+def test_props_view_uses_one_canonical_game_for_both_starters():
+    pitchers = [
+        {
+            "pitcher": "Away Starter",
+            "team": "NYY",
+            "opponent": "BOS",
+            "side": "away",
+            "projections": {"K": {"mean": 5.2}},
+        },
+        {
+            "pitcher": "Home Starter",
+            "team": "BOS",
+            "opponent": "NYY",
+            "side": "home",
+            "projections": {"K": {"mean": 6.1}},
+        },
+    ]
+
+    rendered = _props(pitchers, PropOddsBoard([]))
+
+    assert rendered.count('<option value="NYY @ BOS">') == 1
+    assert 'data-prop-game="NYY @ BOS"' in rendered
+    assert "BOS @ NYY" not in rendered
+    assert "filterPropStarters()" in rendered

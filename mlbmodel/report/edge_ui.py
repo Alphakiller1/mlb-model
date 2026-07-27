@@ -187,6 +187,103 @@ def team_accuracy_html(teams: list[dict], *, title: str = "Teams we predict best
 </div></div>"""
 
 
+def hit_rate_board_html(
+    summary: dict,
+    *,
+    by_source: list[dict] | None = None,
+    by_lean: list[dict] | None = None,
+    markets: list[dict] | None = None,
+) -> str:
+    hit = summary.get("hit_rate")
+    hit_cell = val_grade_html(hit, "rate", digits=1, suffix="%") if hit is not None else "—"
+    headline = (
+        f'<div class="cards cards--tight">'
+        f'<div class=card><div class=k>Bettable record</div>'
+        f'<div class=v>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</div></div>'
+        f'<div class=card><div class=k>Hit rate</div><div class=v>{hit_cell}</div></div>'
+        f'<div class=card><div class=k>Graded sample</div><div class=v>{summary.get("total", 0)}</div></div>'
+        f"</div>"
+    )
+    source_rows = "".join(
+        f'<tr><td><b>{e(row["source"])}</b></td>'
+        f'<td>{row["wins"]}-{row["losses"]}-{row["pushes"]}</td>'
+        f'<td class=num>{val_grade_html(row["hit_rate"], "rate", digits=0, suffix="%")}</td>'
+        f'<td class=mut>{row["sample"]}</td></tr>'
+        for row in (by_source or [])
+    ) or '<tr><td class=mut colspan=4>No bettable leans by source yet.</td></tr>'
+    lean_rows = "".join(
+        f'<tr><td>{lean_dir_html(row["lean"])}</td>'
+        f'<td>{row["wins"]}-{row["losses"]}-{row["pushes"]}</td>'
+        f'<td class=num>{val_grade_html(row["hit_rate"], "rate", digits=0, suffix="%")}</td>'
+        f'<td class=mut>{row["sample"]}</td></tr>'
+        for row in (by_lean or [])
+    ) or '<tr><td class=mut colspan=4>No bettable leans by tier yet.</td></tr>'
+    market_block = market_performance_html(markets) if markets else ""
+    return f"""<div class=ca-board>{section_head("Hit rate ledger", icon="results")}<div class=body>
+  {headline}
+  <div class=cols>
+    <div class=table-scroll><table class=sortable><tr><th>Source</th><th>Record</th><th>Hit%</th><th>n</th></tr>{source_rows}</table></div>
+    <div class=table-scroll><table class=sortable><tr><th>Lean tier</th><th>Record</th><th>Hit%</th><th>n</th></tr>{lean_rows}</table></div>
+  </div>
+  {market_block}
+</div></div>"""
+
+
+def terminal_hit_rate_html(
+    summary: dict,
+    *,
+    by_source: list[dict] | None = None,
+    by_lean: list[dict] | None = None,
+    markets: list[dict] | None = None,
+) -> str:
+    hit = summary.get("hit_rate")
+    hit_cell = f"{hit:.1f}%" if hit is not None else "&mdash;"
+    source_rows = "".join(
+        f'<tr><td><b>{e(row["source"])}</b></td>'
+        f'<td class=num>{row["wins"]}-{row["losses"]}-{row["pushes"]}</td>'
+        f'<td class=num>{row["hit_rate"]:.1f}%</td>'
+        f'<td class=num>{row["sample"]}</td></tr>'
+        for row in (by_source or [])
+        if row.get("hit_rate") is not None
+    ) or '<tr><td class=mut colspan=4>No bettable leans by source yet.</td></tr>'
+    lean_rows = "".join(
+        f'<tr><td>{lean_dir_html(row["lean"])}</td>'
+        f'<td class=num>{row["wins"]}-{row["losses"]}-{row["pushes"]}</td>'
+        f'<td class=num>{row["hit_rate"]:.1f}%</td>'
+        f'<td class=num>{row["sample"]}</td></tr>'
+        for row in (by_lean or [])
+        if row.get("hit_rate") is not None
+    ) or '<tr><td class=mut colspan=4>No bettable leans by tier yet.</td></tr>'
+    market_rows = "".join(
+        f'<tr><td>{e(m["source"])}</td><td>{e(m["market_label"])}</td>'
+        f'<td class=num>{m["w"]}-{m["l"]}-{m["p"]}</td>'
+        f'<td class=num>{m["hit_rate"]:.1f}%</td><td class=num>{m["n"]}</td></tr>'
+        for m in (markets or [])[:12]
+    ) or '<tr><td class=mut colspan=5>No market buckets yet.</td></tr>'
+    return f"""<section class=terminal-panel>
+  <header><strong>Hit rate ledger</strong><span>Latest bettable sample only</span></header>
+  <div class=validation-metrics>
+    <div><span>Hit rate</span><b>{hit_cell}</b><i>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</i></div>
+    <div><span>Graded bets</span><b>{summary.get("total", 0)}</b><i>excludes projections + voids</i></div>
+    <div><span>Decision sample</span><b>{summary["wins"] + summary["losses"]}</b><i>W + L</i></div>
+  </div>
+  <div class=validation-grid>
+    <div class=terminal-table-scroll><table class="terminal-table sortable">
+      <thead><tr><th>Source</th><th>Record</th><th>Hit%</th><th>n</th></tr></thead>
+      <tbody>{source_rows}</tbody>
+    </table></div>
+    <div class=terminal-table-scroll><table class="terminal-table sortable">
+      <thead><tr><th>Lean tier</th><th>Record</th><th>Hit%</th><th>n</th></tr></thead>
+      <tbody>{lean_rows}</tbody>
+    </table></div>
+    <div class=terminal-table-scroll><table class="terminal-table sortable">
+      <thead><tr><th>Source</th><th>Market</th><th>Record</th><th>Hit%</th><th>n</th></tr></thead>
+      <tbody>{market_rows}</tbody>
+    </table></div>
+  </div>
+</section>"""
+
+
 def market_performance_html(markets: list[dict]) -> str:
     if not markets:
         return (

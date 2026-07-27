@@ -171,8 +171,8 @@ def load_settled_ml_from_env(env_path: str) -> list[dict]:  # pragma: no cover
     url, key = env["SUPABASE_URL"], env["SUPABASE_KEY"]
     query = (
         "prediction_market_snapshots?market_type=eq.ml&settled=eq.true"
-        "&won=not.is.null&entry_prob=not.is.null"
-        "&select=game_pk,signal_time,entry_prob,signal_delta,won,"
+        "&won=not.is.null&open_prob=not.is.null"
+        "&select=game_pk,snapshot_time,open_prob,delta,won,"
         "implied_probability,volume"
     )
     request = urllib.request.Request(
@@ -180,7 +180,15 @@ def load_settled_ml_from_env(env_path: str) -> list[dict]:  # pragma: no cover
         headers={"apikey": key, "Authorization": f"Bearer {key}"},
     )
     with urllib.request.urlopen(request, timeout=40) as response:
-        return json.loads(response.read().decode())
+        return [
+            {
+                **row,
+                "entry_prob": row.get("open_prob"),
+                "signal_delta": row.get("delta"),
+                "signal_time": row.get("snapshot_time"),
+            }
+            for row in json.loads(response.read().decode())
+        ]
 
 
 def main():  # pragma: no cover

@@ -43,6 +43,7 @@ def test_results_view_renders_calibration_board():
             "won": False,
             "push": False,
             "model_prob": 0.55,
+            "line": 5.5,
             "recorded_at": "2026-07-05T12:00:00Z",
         },
     ]
@@ -54,12 +55,11 @@ def test_results_view_renders_calibration_board():
             "won": True,
         }],
     }))
-    assert "Results" in html
-    assert "ca-section-head" in html
+    assert "Progress / Validation" in html
+    assert "terminal-results" in html
     assert "Calibration" in html
-    assert "Closing line value" in html
-    assert "Teams we predict best" in html
-    assert "Edge by market" in html
+    assert "Hit rate ledger" in html
+    assert "Projection accuracy trend" in html
     assert "1-1-0" in html
 
 

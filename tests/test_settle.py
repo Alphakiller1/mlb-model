@@ -29,6 +29,16 @@ class MockReader:
         return ReadResult([], f"no route for {path}")
 
 
+class BulkWriter(MockWriter):
+    def __init__(self):
+        super().__init__()
+        self.upserts: list[tuple[str, list[dict], str]] = []
+
+    def upsert(self, table: str, rows: list[dict], on_conflict: str) -> int:
+        self.upserts.append((table, rows, on_conflict))
+        return len(rows)
+
+
 def test_sharp_grade_moneyline():
     won, push = grade(
         {"market_type": "ml", "selection": "NYY"},
@@ -134,6 +144,51 @@ def test_settle_leans_prop_uses_box_scores():
         settled = settle_leans(reader=reader, writer=writer)
     assert settled == 1
     assert writer.updates[0][2]["won"] is True
+
+
+def test_settle_leans_batches_complete_rows_for_real_writer_path():
+    lean = {
+        "lean_id": "lean-1",
+        "slate_date": "2026-07-06",
+        "game_pk": 1,
+        "source": "sharp",
+        "market": "total",
+        "selection": "over",
+        "line": 8.5,
+        "lean": "BET",
+        "model_version": "v1",
+        "pitcher_name": None,
+    }
+    reader = MockReader({
+        "model_leans?": ReadResult([lean]),
+        "game_outcomes?": ReadResult([{
+            "game_pk": 1,
+            "home_runs": 6,
+            "away_runs": 5,
+            "total_runs": 11,
+            "margin_home": 1,
+            "winner_team": "BOS",
+        }]),
+        "games?": ReadResult([{
+            "game_pk": 1,
+            "home_team": "BOS",
+            "away_team": "NYY",
+            "game_date": "2026-07-06",
+        }]),
+    })
+    writer = BulkWriter()
+
+    with patch("mlbmodel.leans.grade.fetch_pitcher_stats_for_date", return_value={}):
+        settled = settle_leans(reader=reader, writer=writer)
+
+    assert settled == 1
+    assert writer.updates == []
+    table, rows, conflict = writer.upserts[0]
+    assert table == "model_leans"
+    assert conflict == "lean_id"
+    assert rows[0]["slate_date"] == "2026-07-06"
+    assert rows[0]["settled"] is True
+    assert rows[0]["won"] is True
 
 
 def test_grade_lean_skips_without_outcome():

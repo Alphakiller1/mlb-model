@@ -3,11 +3,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
+
 from mlbmodel.report.app import _NAV, build_app
 from mlbmodel.report.matchup import build_report, matchup_summary_html
 
 DATA = Path(__file__).resolve().parents[1] / "deployment_data"
-FIXTURE_AWAY, FIXTURE_HOME = "MIL", "PIT"
+_SLATE = pd.read_csv(DATA / "today_matchups.csv")
+FIXTURE_AWAY = str(_SLATE.iloc[0]["Away"]).upper()
+FIXTURE_HOME = str(_SLATE.iloc[0]["Home"]).upper()
 FIXTURE_KEY = f"{FIXTURE_AWAY}@{FIXTURE_HOME}"
 
 

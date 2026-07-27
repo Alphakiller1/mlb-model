@@ -245,9 +245,10 @@ def settle_leans(
         return 0
     today = today or datetime.now(timezone.utc).date()
 
-    pending = reader.get(
-        "model_leans?settled=eq.false&select=lean_id,slate_date,game_pk,source,"
-        "market,selection,line,pitcher_name,entry_odds,closing_odds,ungraded_reason&limit=5000"
+    read_all = reader.get_all if hasattr(type(reader), "get_all") else reader.get
+    pending = read_all(
+        "model_leans?settled=eq.false&select=*"
+        "&order=slate_date.asc,lean_id.asc"
     )
     if pending.error:
         # Missing migration (PGRST205) or similar — degrade instead of aborting
@@ -262,10 +263,10 @@ def settle_leans(
             return 0
         raise RuntimeError(pending.error)
 
-    outcomes = reader.get(
+    outcomes = read_all(
         "game_outcomes?select=game_pk,home_runs,away_runs,total_runs,margin_home,winner_team"
     )
-    games = reader.get("games?select=game_pk,home_team,away_team,game_date")
+    games = read_all("games?select=game_pk,home_team,away_team,game_date")
     if outcomes.error or games.error:
         raise RuntimeError(outcomes.error or games.error)
 
@@ -284,6 +285,19 @@ def settle_leans(
 
     settled = 0
     now_iso = datetime.now(timezone.utc).isoformat()
+    bulk_updates: list[dict] = []
+    can_bulk_upsert = hasattr(type(writer), "upsert")
+
+    def persist(lean: dict, payload: dict) -> None:
+        if can_bulk_upsert:
+            bulk_updates.append({**lean, **payload})
+            return
+        writer.update(
+            "model_leans",
+            f"lean_id=eq.{lean['lean_id']}",
+            payload,
+        )
+
     for lean in pending.rows:
         pk = lean.get("game_pk")
         outcome = outcome_by_pk.get(int(pk)) if pk is not None else None
@@ -314,7 +328,7 @@ def settle_leans(
             clv = clv_points(lean.get("entry_odds"), lean.get("closing_odds"))
             if clv is not None:
                 payload["clv_pts"] = clv
-            writer.update("model_leans", f"lean_id=eq.{lean['lean_id']}", payload)
+            persist(lean, payload)
             settled += 1
             continue
 
@@ -322,9 +336,8 @@ def settle_leans(
         reason = result.reason or REASON_BAD_VALUES
         expired = _older_than(slate_date, today, VOID_AFTER_DAYS)
         if reason in _TERMINAL_REASONS or expired:
-            writer.update(
-                "model_leans",
-                f"lean_id=eq.{lean['lean_id']}",
+            persist(
+                lean,
                 {
                     "settled": True,
                     "void": True,
@@ -335,10 +348,14 @@ def settle_leans(
                 },
             )
         elif reason != (lean.get("ungraded_reason") or None):
-            writer.update(
+            persist(lean, {"ungraded_reason": reason})
+
+    if bulk_updates:
+        for offset in range(0, len(bulk_updates), 250):
+            writer.upsert(
                 "model_leans",
-                f"lean_id=eq.{lean['lean_id']}",
-                {"ungraded_reason": reason},
+                bulk_updates[offset : offset + 250],
+                on_conflict="lean_id",
             )
     return settled
 

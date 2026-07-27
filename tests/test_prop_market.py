@@ -1,4 +1,8 @@
-from mlbmodel.market.props import build_prop_board, market_report
+from mlbmodel.market.props import (
+    build_prop_board,
+    filter_events_for_slate,
+    market_report,
+)
 
 
 def _book(key, over, under):
@@ -52,4 +56,16 @@ def test_prop_board_pairs_prices_and_generates_market_state():
     assert over["model_probability"] > over["market_probability"]
     assert over["state"] == "MONITOR"
     assert under["state"] == "AVOID"
+
+
+def test_prop_events_are_filtered_by_eastern_slate_date():
+    events = [
+        {"id": "late-previous", "commence_time": "2026-07-27T02:00:00Z"},
+        {"id": "active", "commence_time": "2026-07-27T18:00:00Z"},
+        {"id": "next", "commence_time": "2026-07-28T18:00:00Z"},
+    ]
+
+    filtered = filter_events_for_slate(events, "2026-07-27")
+
+    assert [event["id"] for event in filtered] == ["active"]
 

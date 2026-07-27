@@ -19,7 +19,7 @@ mlb-model-sync = "mlbmodel.sources.sync_mlbma:main"
 mlb-model-trends = "mlbmodel.trends.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff==0.15.20"]
 
 [tool.setuptools.packages.find]
 include = ["mlbmodel*"]

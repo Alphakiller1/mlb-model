@@ -36,6 +36,27 @@ class SupabaseReader:
         except Exception as exc:
             return ReadResult([], f"warehouse read failed: {type(exc).__name__}")
 
+    def get_all(
+        self,
+        path: str,
+        *,
+        page_size: int = 1000,
+        max_rows: int = 25000,
+    ) -> ReadResult:
+        """Read a PostgREST collection past the project's 1,000-row response cap."""
+        rows: list[dict] = []
+        separator = "&" if "?" in path else "?"
+        for offset in range(0, max_rows, page_size):
+            result = self.get(
+                f"{path}{separator}limit={page_size}&offset={offset}"
+            )
+            if result.error:
+                return ReadResult(rows, result.error)
+            rows.extend(result.rows)
+            if len(result.rows) < page_size:
+                break
+        return ReadResult(rows)
+
 
 class SupabaseWriter:
     def __init__(self, url: str | None = None, key: str | None = None):

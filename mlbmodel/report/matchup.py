@@ -402,15 +402,29 @@ def _extras(away, home, gd, probs, anchors, repo):
 
 
 def _promotion(reader):
-    result = reader.get(
+    read_all = reader.get_all if hasattr(type(reader), "get_all") else reader.get
+    result = read_all(
         "prediction_market_snapshots?market_type=eq.ml&settled=eq.true"
         "&won=not.is.null&open_prob=not.is.null"
         "&select=game_pk,snapshot_time,open_prob,delta,won,"
-        "implied_probability,volume,entry_prob,signal_time"
+        "implied_probability,volume",
+        **({"max_rows": 3000} if hasattr(type(reader), "get_all") else {}),
     )
     if result.error:
-        return {"verdict": "HOLD/ABSTAIN", "reasons": [result.error]}
-    return promotion_verdict(result.rows)
+        return {
+            "verdict": "HOLD/ABSTAIN",
+            "reasons": ["Validation warehouse unavailable; promotion remains blocked."],
+        }
+    rows = [
+        {
+            **row,
+            "entry_prob": row.get("open_prob"),
+            "signal_delta": row.get("delta"),
+            "signal_time": row.get("snapshot_time"),
+        }
+        for row in result.rows
+    ]
+    return promotion_verdict(rows)
 
 
 

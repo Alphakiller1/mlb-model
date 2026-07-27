@@ -4,6 +4,12 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from mlbmodel.genesis.logic_matrix import (
+    CONVERGENCE_THRESHOLD,
+    LINEAGE_VERSION,
+    MODEL_SENSITIVITIES,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -22,12 +28,6 @@ def load_dotenv(path: Path | None = None) -> None:
 
 
 load_dotenv()
-
-from mlbmodel.genesis.logic_matrix import (
-    CONVERGENCE_THRESHOLD,
-    LINEAGE_VERSION,
-    MODEL_SENSITIVITIES,
-)
 
 _DEPLOYMENT_DATA = ROOT / "deployment_data"
 
