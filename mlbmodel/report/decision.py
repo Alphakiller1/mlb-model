@@ -264,10 +264,13 @@ def markets_html(
     plays = []
     for candidate in raw_plays:
         play = dict(candidate)
-        if not gate_open and play["verdict"] in {"STRONG", "BET"}:
-            play["verdict"] = "MODEL"
+        if not gate_open:
+            executable = play["verdict"] in {"STRONG", "BET", "LEAN"} or bool(play["stake"])
+            if play["verdict"] in {"STRONG", "BET"}:
+                play["verdict"] = "MODEL"
             play["stake"] = 0.0
-            play["gate_limited"] = True
+            if executable:
+                play["gate_limited"] = True
         plays.append(play)
 
     def row(play):

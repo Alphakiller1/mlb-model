@@ -22,6 +22,12 @@ def _price_str(price) -> str | None:
     return None
 
 
+def _governed_state(state: str, *, gate_open: bool) -> str:
+    if not gate_open and state.upper() in {"STRONG", "BET", "PLAY", "OVER", "UNDER"}:
+        return "MODEL"
+    return state
+
+
 def collect_slate_opportunities(
     *,
     pkmap: dict[int, str] | None,
@@ -29,9 +35,11 @@ def collect_slate_opportunities(
     model_by_pk: dict[int, list[dict]],
     prop_reports: list[dict],
     pickem_rows: list[dict],
+    promotion_status: str = "HOLD/ABSTAIN",
 ) -> list[dict]:
     """Unified, ranked list of today's actionable edges with market lines."""
     pkmap = pkmap or {}
+    gate_open = str(promotion_status).upper() == "PROMOTE"
     ops: list[dict] = []
     seen: set[tuple] = set()
 
@@ -66,7 +74,7 @@ def collect_slate_opportunities(
             price=_price_str(play.get("price")),
             model_pct=play.get("model_p"),
             edge_pts=edge_pts,
-            state=verdict,
+            state=_governed_state(verdict, gate_open=gate_open),
             context="sharp + model fusion",
             book=str(play.get("book") or "") or None,
         )
@@ -95,7 +103,7 @@ def collect_slate_opportunities(
                 price=_price_str(market.get("mkt")),
                 model_pct=market.get("model"),
                 edge_pts=edge_pts,
-                state=state or "EDGE",
+                state=_governed_state(state or "EDGE", gate_open=gate_open),
                 context="model vs live line",
                 book=str(market.get("book") or "") or None,
             )
@@ -127,7 +135,7 @@ def collect_slate_opportunities(
                 if item.get("model_probability") is not None else None
             ),
             edge_pts=edge_pts,
-            state=state or "EDGE",
+            state=_governed_state(state or "EDGE", gate_open=gate_open),
             context=pitcher,
             book=str(item.get("best_book") or "") or None,
             label=label,
@@ -159,7 +167,7 @@ def collect_slate_opportunities(
             price=None,
             model_pct=lean_prob * 100,
             edge_pts=float(edge_pts),
-            state=state,
+            state=_governed_state(state, gate_open=gate_open),
             context=f'{item.get("pitcher")} · {item.get("book", "")}',
             book=str(item.get("book") or "") or None,
         )

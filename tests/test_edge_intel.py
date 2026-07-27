@@ -65,6 +65,33 @@ def test_pickem_opportunity_uses_lean_probability_not_projection_mean():
     assert ops[0]["model_pct"] == 86.0
 
 
+def test_collect_slate_opportunities_suppresses_action_state_while_gate_holds():
+    kwargs = {
+        "pkmap": {1: "NYY@BOS"},
+        "market_plays": [{
+            "verdict": "BET",
+            "pk": 1,
+            "game": "NYY@BOS",
+            "mkt_type": "total",
+            "sel": "over",
+            "market_line": 8.5,
+            "price": -110,
+            "model_p": 56.0,
+            "medge": 4.0,
+            "score": 4000,
+        }],
+        "model_by_pk": {},
+        "prop_reports": [],
+        "pickem_rows": [],
+    }
+
+    held = collect_slate_opportunities(**kwargs)
+    promoted = collect_slate_opportunities(**kwargs, promotion_status="PROMOTE")
+
+    assert held[0]["state"] == "MODEL"
+    assert promoted[0]["state"] == "BET"
+
+
 def test_clv_from_snapshots():
     summary = clv_from_snapshots([
         {"market_type": "ml", "entry_prob": 0.45, "implied_probability": 0.50, "won": True},
