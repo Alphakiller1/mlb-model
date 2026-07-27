@@ -5,6 +5,7 @@ from mlbmodel.report.decision import (
     collect_market_plays,
     collect_model_market_plays,
     decide,
+    markets_html,
 )
 
 
@@ -94,3 +95,43 @@ def test_collect_market_plays_falls_back_to_model_fairs():
     plays = collect_market_plays(slate, {}, model_by_pk)
     assert len(plays) == 1
     assert plays[0]["verdict"] == "MODEL"
+
+
+def test_markets_hold_gate_suppresses_action_labels_and_exposure():
+    slate = [{"pk": 1, "away": "HOU", "home": "DET"}]
+    sharp_by_pk = {
+        1: [{
+            "divergence": 0.02,
+            "sharp_novig_prob": 0.55,
+            "soft_novig_prob": 0.50,
+            "market_type": "moneyline",
+            "selection": "DET",
+            "n_sharp_books": 3,
+            "n_soft_books": 5,
+            "steam_flag": False,
+        }]
+    }
+    model_by_pk = {
+        1: [{
+            "market": "ml",
+            "side": "DET",
+            "model": 58,
+            "edge": 3.0,
+            "ev": 0.04,
+            "mkt": -110,
+            "fair": -125,
+            "book": "draftkings",
+            "line": None,
+        }]
+    }
+
+    html = markets_html(
+        slate,
+        sharp_by_pk,
+        model_by_pk,
+        promotion_status="HOLD/ABSTAIN",
+    )
+
+    assert ">FAIR VALUE</span>" in html
+    assert '<div class=k>Exposure</div><div class=v>0.0u</div>' in html
+    assert ">1.0u</b>" not in html

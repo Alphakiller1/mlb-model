@@ -309,6 +309,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         model_by_pk=model_by_pk,
         prop_reports=flat_props,
         pickem_rows=fresh_pickem_rows,
+        promotion_status=promotion_status,
     )
     edge_command = edge_command_html(opportunities, clv_summary=clv_summary)
 

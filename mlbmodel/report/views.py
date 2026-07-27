@@ -134,6 +134,8 @@ def _state_badge(state):
     label = str(state or "No edge").replace("_", " ").title()
     if label.upper() in {"BET", "OVER", "UNDER"}:
         label = label.upper()
+    elif label.upper() == "MODEL":
+        label = "FAIR VALUE"
     return f'<span class=command-state data-tone="{_state_tone(state)}">{e(label)}</span>'
 
 
