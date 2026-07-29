@@ -360,9 +360,30 @@ def _extras(away, home, gd, probs, anchors, repo):
         r = m[(m["Away"] == away) & (m["Home"] == home)]
         if not r.empty:
             out["start"] = str(r.iloc[0].get("Time", "") or "")
-    ln = repo.load("today_lineups.csv")
-    if ln is not None and not ln.empty:
-        out["lineup"] = "lineups posted"
+    # Lineup chip reflects the live context (MLB.com feed, Rotowire fallback) — the old
+    # today_lineups.csv is never produced, so it always read "TBD" even with posted orders.
+    lineups = gd.live_context.get("lineups") or {}
+    away_status = (lineups.get("away") or {}).get("status", "unavailable")
+    home_status = (lineups.get("home") or {}).get("status", "unavailable")
+    sources = {
+        str((lineups.get(side) or {}).get("source") or "")
+        for side in ("away", "home")
+    } - {""}
+    if {away_status, home_status} == {"confirmed"}:
+        out["lineup"] = "lineups confirmed"
+    elif "unavailable" not in (away_status, home_status):
+        out["lineup"] = "lineups " + (
+            "projected" if away_status == home_status == "projected"
+            else f"{away} {away_status} · {home} {home_status}"
+        )
+    if sources and out["lineup"] != "lineups TBD · probables confirmed":
+        rotowire = any("rotowire" in s.lower() for s in sources)
+        mlb = any("mlb" in s.lower() for s in sources)
+        tag = " + ".join(
+            label for label, hit in (("MLB.com", mlb), ("Rotowire", rotowire)) if hit
+        )
+        if tag:
+            out["lineup"] += f" · {tag}"
     pm = repo.load("pitch_mix_pitcher.csv")
 
     def arsenal(name):
@@ -869,149 +890,6 @@ def _fmt_optional(value, *, digits=1, suffix=""):
     if isinstance(value, float):
         return f'{value:.{digits}f}{suffix}'
     return f'{value}{suffix}'
-
-
-def _workload_context_rows(gd, travel, esc):
-    away_starter = gd.away_starter_features
-    home_starter = gd.home_starter_features
-    away_pen = gd.away_bullpen_features
-    home_pen = gd.home_bullpen_features
-    away_line = gd.away_lineup_features
-    home_line = gd.home_lineup_features
-    away_travel = travel.get("away") or {}
-    home_travel = travel.get("home") or {}
-    away_injury = gd.away_injury_features
-    home_injury = gd.home_injury_features
-
-    def line_value(value):
-        if value.get("status") not in {"confirmed", "projected"}:
-            return "Not posted"
-        return (
-            f'{value.get("projected_osi", "—")} vs '
-            f'{value.get("team_baseline_osi", "—")} baseline · '
-            f'{value.get("matched_batters", 0)}/9 matched'
-        )
-
-    def travel_value(value):
-        if value.get("status") != "available":
-            return "No recent game"
-        return (
-            f'{value.get("rest_hours", 0):.1f}h rest · '
-            f'{value.get("travel_miles", 0):.0f} mi'
-        )
-
-    def injury_value(value):
-        players = value.get("impact_players") or []
-        if not players:
-            return "No quantified hitter loss"
-        return ", ".join(player["player"] for player in players[:3])
-
-    rows = [
-        (
-            "Starter expected level",
-            f'{away_starter.get("skill_fip", settings.LEAGUE_FIP):.2f} runs/9 scale',
-            f'{home_starter.get("skill_fip", settings.LEAGUE_FIP):.2f} runs/9 scale',
-            "Lower is better",
-        ),
-        (
-            "Starter workload",
-            f'{away_starter.get("expected_ip", 5.2):.1f} projected innings',
-            f'{home_starter.get("expected_ip", 5.2):.1f} projected innings',
-            "Shapes bullpen exposure and outs props",
-        ),
-        (
-            "Bullpen quality",
-            f'{away_pen.get("skill_fip", settings.LEAGUE_BULLPEN_ERA):.2f} skill · '
-            f'{away_pen.get("pitches_1d") or 0:.0f} pitches yesterday · '
-            f'{away_pen.get("pitches_2d") or 0:.0f} in 2d',
-            f'{home_pen.get("skill_fip", settings.LEAGUE_BULLPEN_ERA):.2f} skill · '
-            f'{home_pen.get("pitches_1d") or 0:.0f} pitches yesterday · '
-            f'{home_pen.get("pitches_2d") or 0:.0f} in 2d',
-            "Lower quality and fresher workload favor the offense",
-        ),
-        (
-            "Lineup vs starter hand",
-            line_value(away_line),
-            line_value(home_line),
-            f'{esc(gd.away)} vs {esc(gd.home_hand)}HP · {esc(gd.home)} vs {esc(gd.away_hand)}HP',
-        ),
-        (
-            "Unavailable hitters",
-            injury_value(away_injury),
-            injury_value(home_injury),
-            "Quantified before confirmed lineups",
-        ),
-        (
-            "Rest and travel",
-            travel_value(away_travel),
-            travel_value(home_travel),
-            "Short rest, distance, timezone",
-        ),
-    ]
-    return "".join(
-        f'<tr><td><b>{esc(label)}</b></td><td>{esc(away_value)}</td>'
-        f'<td>{esc(home_value)}</td><td class=mut>{context_note}</td></tr>'
-        for label, away_value, home_value, context_note in rows
-    )
-
-
-def _matchup_context_panel(gd, probability, context, esc):
-    """Environment, splits, and workload — always visible before market boards."""
-    weather = context.get("weather") or {}
-    lineups = context.get("lineups") or {}
-    umpire = context.get("umpire") or {}
-    travel = context.get("travel") or {}
-    away_lineup = (lineups.get("away") or {}).get("status", "unavailable")
-    home_lineup = (lineups.get("home") or {}).get("status", "unavailable")
-    umpire_label = (
-        umpire.get("umpire")
-        if umpire.get("status") == "announced"
-        else "Not announced"
-    )
-    park_pct = (gd.park_factor - 1.0) * 100
-    park_cell = val_grade_html(gd.park_factor, "park", digits=3)
-
-    def split_row(team, ctx, opposing_hand, arsenal):
-        platoon = ctx.platoon_osi
-        woba = ctx.woba
-        arsenal_note = ""
-        if arsenal.get("er_factor") is not None:
-            arsenal_note = (
-                f' · pitch-mix {pitch_mix_runs_chip(arsenal.get("er_factor"))}'
-                f' <span class=mut>({arsenal.get("batters_matched", 0)} batters)</span>'
-            )
-        return (
-            f'<tr><td><b>{esc(team)}</b><span class=mut> vs {esc(opposing_hand)}HP</span></td>'
-            f'<td>{val_chip_html(platoon, "osi", digits=0) if platoon is not None else "<span class=c-na>—</span>"}</td>'
-            f'<td>{val_chip_html(woba, "woba", digits=3) if woba is not None else "<span class=c-na>—</span>"}</td>'
-            f'<td>{val_chip_html(ctx.osi, "osi", digits=0) if ctx.osi is not None else "<span class=c-na>—</span>"}</td>'
-            f'<td class=mut>{esc(str(ctx.window_direction or "—"))}{arsenal_note}</td></tr>'
-        )
-
-    splits_rows = (
-        split_row(gd.away, gd.away_context, gd.home_hand, gd.away_arsenal_features)
-        + split_row(gd.home, gd.home_context, gd.away_hand, gd.home_arsenal_features)
-    )
-    workload_rows = _workload_context_rows(gd, travel, esc)
-    env_bits = [
-        f'<span><b>Park</b>{park_cell} <span class=mut>({park_pct:+.1f}% runs)</span></span>',
-        f'<span><b>Weather</b>{esc(_weather_detail(weather))}</span>',
-        f'<span><b>Plate umpire</b>{esc(str(umpire_label))}</span>',
-        f'<span><b>Lineups</b>{esc(gd.away)} {esc(away_lineup)} · {esc(gd.home)} {esc(home_lineup)}</span>',
-        f'<span><b>SP hands</b>{esc(gd.away_sp)} ({esc(gd.away_hand)}HP) · {esc(gd.home_sp)} ({esc(gd.home_hand)}HP)</span>',
-        f'<span><b>Coverage</b>{probability.data_coverage_pct}%</span>',
-    ]
-    return f"""<div class=ca-board>{section_head("Matchup context", icon="matchups")}<div class=body>
-      <div class=matchup-env-strip>{"".join(env_bits)}</div>
-      <div class=matchup-context-grid>
-        <div><div class=ca-subhead>Splits &amp; handedness</div>
-          <div class=table-scroll><table><tr><th>Team</th><th>Platoon OSI</th><th>wOBA</th><th>OSI</th><th>Trend · pitch-mix runs</th></tr>{splits_rows}</table></div>
-        </div>
-        <div><div class=ca-subhead>Bullpen, workload &amp; inputs</div>
-          <div class=table-scroll><table><tr><th>Input</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th><th>Meaning</th></tr>{workload_rows}</table></div>
-        </div>
-      </div>
-    </div></div>"""
 
 
 def _f5_panel(r, gd, esc):

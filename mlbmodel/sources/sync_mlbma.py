@@ -254,6 +254,23 @@ def sync(out: Path, slate_date: str | None = None) -> dict:
 
     write_rows(rows, out / "today_matchups.csv")
     os.utime(out / "today_matchups.csv", (fetched_at.timestamp(), fetched_at.timestamp()))
+
+    def _lineup_summary(context: dict) -> dict:
+        """Per-side lineup status/source counts. The deploy log is the only place we can
+        see whether Rotowire projections engage from a datacenter runner, so this must
+        appear in the printed sync manifest."""
+        status_counts: dict[str, int] = {}
+        source_counts: dict[str, int] = {}
+        for game in (context.get("games") or {}).values():
+            for side in ("away", "home"):
+                entry = (game.get("lineups") or {}).get(side) or {}
+                status = str(entry.get("status") or "unavailable")
+                status_counts[status] = status_counts.get(status, 0) + 1
+                source = entry.get("source")
+                if source:
+                    source_counts[str(source)] = source_counts.get(str(source), 0) + 1
+        return {"status": status_counts, "source": source_counts}
+
     context_error = None
     try:
         live_context = collect_live_context(
@@ -288,6 +305,7 @@ def sync(out: Path, slate_date: str | None = None) -> dict:
         "hub_updated_at": hub_updated,
         "live_context_fetched_at": live_context.get("fetched_at"),
         "live_context_games": len(live_context.get("games") or {}),
+        "live_context_lineups": _lineup_summary(live_context),
         "live_context_error": context_error,
         "fetched_at": fetched_at.isoformat(timespec="seconds"),
     }

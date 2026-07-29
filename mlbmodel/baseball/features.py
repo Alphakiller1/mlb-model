@@ -233,8 +233,11 @@ def lineup_features(
         reliability = min(1.0, max(0.25, (number(row.get("PA")) or 0) / 80))
         values.append((score, order_weight * reliability))
     projected = weighted(values)
+    # A confirmed order (MLB.com feed, or Rotowire once the club posts it) carries full
+    # weight; a projected order is a best guess, so its delta is damped 25%.
+    sensitivity = 0.004 if lineup.get("status") == "confirmed" else 0.003
     factor = (
-        max(0.90, min(1.10, 1 + (projected - baseline) * 0.004))
+        max(0.90, min(1.10, 1 + (projected - baseline) * sensitivity))
         if projected is not None and len(values) >= 6
         else 1.0
     )

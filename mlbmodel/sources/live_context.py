@@ -212,17 +212,42 @@ def _pipeline_lineup(rows: list[dict], team: str) -> list[dict]:
         if settings.team_abbr(row.get("Team", "")) == team
     ]
     selected.sort(key=lambda row: int(_number(row.get("Bat_Order")) or 99))
-    return [
-        {
-            "order": int(_number(row.get("Bat_Order")) or index),
-            "player_id": None,
-            "player": str(row.get("Player") or "").strip(),
-            "position": str(row.get("Position") or "").strip(),
-            "bats": str(row.get("Bats") or "").strip(),
-        }
-        for index, row in enumerate(selected, start=1)
-        if str(row.get("Player") or "").strip()
-    ]
+    # Doubleheaders put two cards for the same team on one slate; without slot dedupe the
+    # two 9-man orders merge into an 18-man blob that dilutes every order-weighted factor.
+    # Keep the first card's slot 1-9.
+    lineup: list[dict] = []
+    seen_orders: set[int] = set()
+    for row in selected:
+        name = str(row.get("Player") or "").strip()
+        if not name:
+            continue
+        order = int(_number(row.get("Bat_Order")) or (len(lineup) + 1))
+        if order in seen_orders:
+            continue
+        seen_orders.add(order)
+        lineup.append(
+            {
+                "order": order,
+                "player_id": None,
+                "player": name,
+                "position": str(row.get("Position") or "").strip(),
+                "bats": str(row.get("Bats") or "").strip(),
+            }
+        )
+        if len(lineup) >= 9:
+            break
+    return lineup
+
+
+def _pipeline_status(rows: list[dict], team: str) -> str:
+    """Projected-lineup status for a team: Rotowire marks cards confirmed once the club
+    posts its order, so a fully confirmed card upgrades from ``projected``."""
+    statuses = {
+        str(row.get("Status") or "").strip().lower()
+        for row in rows
+        if settings.team_abbr(row.get("Team", "")) == team
+    }
+    return "confirmed" if statuses and statuses == {"confirmed"} else "projected"
 
 
 def _weather(
@@ -614,29 +639,32 @@ def collect(
         official_home = _official_lineup(feed, "home")
         projected_away = _pipeline_lineup(pipeline_lineups, away)
         projected_home = _pipeline_lineup(pipeline_lineups, home)
-        projected_label = (
-            "Rotowire (projected)" if lineup_source == "rotowire"
-            else "MLBMA Today_Lineups"
-        )
+
+        def _side_lineup(official: list[dict], projected: list[dict], team: str) -> dict:
+            if len(official) >= 9:
+                return {
+                    "status": "confirmed",
+                    "source": "MLB live feed",
+                    "players": official,
+                }
+            if len(projected) >= 9:
+                if lineup_source == "rotowire":
+                    status = _pipeline_status(pipeline_lineups, team)
+                    return {
+                        "status": status,
+                        "source": f"Rotowire ({status})",
+                        "players": projected,
+                    }
+                return {
+                    "status": "projected",
+                    "source": "MLBMA Today_Lineups",
+                    "players": projected,
+                }
+            return {"status": "unavailable", "source": None, "players": projected}
+
         lineups = {
-            "away": {
-                "status": "confirmed" if len(official_away) >= 9 else (
-                    "projected" if len(projected_away) >= 9 else "unavailable"
-                ),
-                "source": "MLB live feed" if len(official_away) >= 9 else (
-                    projected_label if len(projected_away) >= 9 else None
-                ),
-                "players": official_away if len(official_away) >= 9 else projected_away,
-            },
-            "home": {
-                "status": "confirmed" if len(official_home) >= 9 else (
-                    "projected" if len(projected_home) >= 9 else "unavailable"
-                ),
-                "source": "MLB live feed" if len(official_home) >= 9 else (
-                    projected_label if len(projected_home) >= 9 else None
-                ),
-                "players": official_home if len(official_home) >= 9 else projected_home,
-            },
+            "away": _side_lineup(official_away, projected_away, away),
+            "home": _side_lineup(official_home, projected_home, home),
         }
         officials = (
             ((feed.get("liveData") or {}).get("boxscore") or {}).get("officials") or []

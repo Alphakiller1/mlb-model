@@ -383,6 +383,30 @@ def _bullpen_block(prof: dict, pen_factor, pen_features: dict, esc) -> str:
     )
 
 
+def _posted_lineup_block(features: dict, source, esc) -> str:
+    status = str(features.get("status") or "unavailable")
+    if status not in {"confirmed", "projected"}:
+        return '<div class=matchup-bullpen-strip><div><span class=k>Status</span><span class=mut>Not posted yet</span></div></div>'
+    pill = "pos" if status == "confirmed" else "warnc"
+    projected = features.get("projected_osi")
+    baseline = features.get("team_baseline_osi")
+    matched = features.get("matched_batters") or 0
+    factor = features.get("factor")
+    factor_html = (
+        _metric_cells(factor, "park", digits=3) if factor is not None else "—"
+    )
+    return (
+        f'<div class=matchup-bullpen-strip>'
+        f'<div><span class=k>Status</span><span class="pill {pill}">{esc(status)}</span></div>'
+        f'<div><span class=k>Order OSI</span>'
+        f'{_metric_cells(projected, "osi", digits=0) if projected is not None else "<span class=c-na>—</span>"}'
+        f'<span class=mut> vs {esc(str(baseline if baseline is not None else "—"))} team base</span></div>'
+        f'<div><span class=k>Run factor</span>{factor_html}'
+        f'<span class=mut> · {matched}/9 matched{" · " + esc(str(source)) if source else ""}</span></div>'
+        f'</div>'
+    )
+
+
 def _breakdown_team_head(team: str, sp_name: str, side: str, esc) -> str:
     from mlbmodel.report.matchup import _logo
 
@@ -410,6 +434,7 @@ def matchup_context_html(r, gd, repo, esc) -> str:
     away_sp_loc = _sp_metric_split(repo, gd.away_sp, "location")
     home_sp_loc = _sp_metric_split(repo, gd.home_sp, "location")
 
+    live_lineups = (getattr(gd, "live_context", None) or {}).get("lineups") or {}
     pitchers = {row.get("team"): row for row in r.get("pitchers", []) if row.get("team")}
     away_mix = pitch_mix_board_html(
         (pitchers.get(gd.away) or {}).get("pitch_matchup") or {},
@@ -456,6 +481,19 @@ def matchup_context_html(r, gd, repo, esc) -> str:
             "Lineup H/A",
             _split_table(lineup_ha_hdr, _lineup_ha_rows(away_prof), empty_cols=4),
             _split_table(lineup_ha_hdr, _lineup_ha_rows(home_prof), empty_cols=4),
+        ),
+        _breakdown_section_row(
+            "Posted lineup",
+            _posted_lineup_block(
+                getattr(gd, "away_lineup_features", None) or {},
+                ((live_lineups.get("away") or {}) or {}).get("source"),
+                esc,
+            ),
+            _posted_lineup_block(
+                getattr(gd, "home_lineup_features", None) or {},
+                ((live_lineups.get("home") or {}) or {}).get("source"),
+                esc,
+            ),
         ),
         _breakdown_section_row(
             "Bullpen",

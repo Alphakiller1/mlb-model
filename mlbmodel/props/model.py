@@ -27,6 +27,7 @@ from mlbmodel.baseball.metrics import (
     pitcher_allowed_skill_adjustment,
     sp_split_skill_adjustment,
 )
+from mlbmodel.baseball.model import model_probabilities
 from mlbmodel.baseball.repository import DataRepository
 from mlbmodel.report.game_keys import parse_game_key
 from mlbmodel.sources.sync_mlbma import matchup_keys
@@ -318,8 +319,11 @@ class PitcherProjectionEngine:
             values.append((score, weight * reliability))
             matched.append(player.get("player"))
         lineup_score = _weighted(values)
+        # Confirmed orders carry full weight; projected orders are a best guess, damped 25%
+        # (mirrors mlbmodel.baseball.features.lineup_features).
+        sensitivity = 0.004 if (lineup or {}).get("status") == "confirmed" else 0.003
         factor = (
-            _clip(1 + (lineup_score - baseline) * 0.004, 0.90, 1.10)
+            _clip(1 + (lineup_score - baseline) * sensitivity, 0.90, 1.10)
             if lineup_score is not None and len(matched) >= 6
             else 1.0
         )
@@ -503,6 +507,7 @@ class PitcherProjectionEngine:
         pitcher_name: str,
         pitcher_hand: str,
         side: str,
+        win_probability: float | None = None,
     ) -> dict:
         profile = self._profile(pitcher_name, team)
         fallback_profile = (
@@ -594,6 +599,11 @@ class PitcherProjectionEngine:
         run_factor *= sp_split_skill_adjustment(
             profile, self.sp_metric_splits, pitcher_hand
         )
+        # Outing length responds to the posted lineup: the same run environment that
+        # raises expected ER also raises pitch counts and shortens the start, so the
+        # Outs/K exposure shrinks against strong lineups and stretches against weak ones.
+        ip_factor = _clip(1 - (run_factor - 1) * 0.45, 0.94, 1.06)
+        expected_ip = _clip(expected_ip * ip_factor, 2.5, 7.0)
         era = _number(profile.get("ERA")) or skill_era
         blended_era = skill_era * 0.70 + era * 0.30
         er_mean = max(0.2, blended_era / 9 * expected_ip * run_factor)
@@ -652,8 +662,16 @@ class PitcherProjectionEngine:
         # PrizePicks pitcher fantasy score: Out +1, K +3, ER -3, Quality Start +4 (>=6 IP & <=3
         # ER, computed exactly from the joint sim), Win +6 (modeled as PP_WIN_PROB, see above).
         qs_bonus = np.where((outs >= 18) & (earned_runs <= 3), 4.0, 0.0)
+        # Team win prob from the game model (when supplied) replaces the flat league
+        # prior; the 0.80 haircut is the share of team wins credited to the starter
+        # (5+ IP with the lead), which recovers the 0.40 prior at a 50/50 game.
+        starter_win = (
+            _clip(win_probability * 0.80, 0.15, 0.65)
+            if win_probability is not None
+            else PP_WIN_PROB
+        )
         pp_fantasy = (
-            outs + strikeouts * 3.0 - earned_runs * 3.0 + qs_bonus + 6.0 * PP_WIN_PROB
+            outs + strikeouts * 3.0 - earned_runs * 3.0 + qs_bonus + 6.0 * starter_win
         )
         state, luck = self._performance_state(profile, log_factors, skill_era)
 
@@ -686,6 +704,10 @@ class PitcherProjectionEngine:
             "k_rate": round(k_rate, 2),
             "bb_rate": round(bb_rate, 2),
             "run_factor": round(run_factor, 4),
+            "ip_factor": round(ip_factor, 4),
+            "team_win_prob": (
+                round(win_probability, 3) if win_probability is not None else None
+            ),
             "projections": {
                 "K": _distribution(strikeouts).as_dict(),
                 "BB": _distribution(walks).as_dict(),
@@ -715,6 +737,7 @@ def build_pitcher_board(repo: DataRepository) -> list[dict]:
     slate = repo.slate()
     if slate is None:
         return []
+    anchors = repo.anchors()
     board = []
     slate_rows = [row.to_dict() for _, row in slate.iterrows()]
     keys = matchup_keys(slate_rows)
@@ -726,6 +749,11 @@ def build_pitcher_board(repo: DataRepository) -> list[dict]:
             game = repo.load_game(away, home, game_number=game_number)
         except (FileNotFoundError, ValueError):
             continue
+        try:
+            probs = model_probabilities(game, anchors)
+            away_win, home_win = probs.p_away_win, probs.p_home_win
+        except (KeyError, TypeError, ValueError):
+            away_win = home_win = None
         board.append(
             engine.project(
                 game,
@@ -734,6 +762,7 @@ def build_pitcher_board(repo: DataRepository) -> list[dict]:
                 pitcher_name=game.away_sp,
                 pitcher_hand=game.away_hand,
                 side="away",
+                win_probability=away_win,
             )
         )
         board.append(
@@ -744,6 +773,7 @@ def build_pitcher_board(repo: DataRepository) -> list[dict]:
                 pitcher_name=game.home_sp,
                 pitcher_hand=game.home_hand,
                 side="home",
+                win_probability=home_win,
             )
         )
     state_order = {
