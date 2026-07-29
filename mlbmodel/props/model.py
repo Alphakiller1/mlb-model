@@ -600,12 +600,17 @@ class PitcherProjectionEngine:
             profile, self.sp_metric_splits, pitcher_hand
         )
         # Outing length responds to the posted lineup: the same run environment that
-        # raises expected ER also raises pitch counts and shortens the start, so the
-        # Outs/K exposure shrinks against strong lineups and stretches against weak ones.
+        # raises expected ER also raises pitch counts and shortens the start, so Outs
+        # (and the batters-faced-driven K/BB/H) shrink against a strong posted lineup.
         ip_factor = _clip(1 - (run_factor - 1) * 0.45, 0.94, 1.06)
-        expected_ip = _clip(expected_ip * ip_factor, 2.5, 7.0)
+        outing_ip = _clip(expected_ip * ip_factor, 2.5, 7.0)
         era = _number(profile.get("ERA")) or skill_era
         blended_era = skill_era * 0.70 + era * 0.30
+        # ER stays on the UNSHORTENED workload. Multiplying the shortened outing by the
+        # run factor would net out to only ~55% of the run-environment signal (a tough
+        # lineup both raises the rate and trims the innings), silently re-calibrating a
+        # market that already has a grading/CLV history. The hook comes after the damage,
+        # so ER accrues at the elevated rate over a normal workload.
         er_mean = max(0.2, blended_era / 9 * expected_ip * run_factor)
         f5_mean = max(0.1, blended_era / 9 * min(5.0, expected_ip) * run_factor)
 
@@ -617,7 +622,7 @@ class PitcherProjectionEngine:
         rng = np.random.default_rng(seed)
         iterations = 30000
         ip_samples = rng.normal(
-            expected_ip,
+            outing_ip,
             max(0.65, min(1.35, log_factors.get("ip_sd") or 1.0)),
             iterations,
         )
@@ -700,7 +705,10 @@ class PitcherProjectionEngine:
             "lineup": lineup_strength,
             "pitch_matchup": pitch_matchup,
             "skill_era": round(skill_era, 2),
-            "expected_ip": round(expected_ip, 2),
+            # The projected outing (what the Outs distribution is drawn from), plus the
+            # uncoupled workload baseline it came from, so the shift is auditable.
+            "expected_ip": round(outing_ip, 2),
+            "baseline_ip": round(expected_ip, 2),
             "k_rate": round(k_rate, 2),
             "bb_rate": round(bb_rate, 2),
             "run_factor": round(run_factor, 4),
