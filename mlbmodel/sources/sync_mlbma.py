@@ -143,7 +143,16 @@ def materialize_hub(out: Path, datasets: list[dict]) -> dict[str, str]:
         dataset = by_name[name]
         rows = dataset.get("rows")
         if not isinstance(rows, list) or not rows:
-            raise RuntimeError(f"MLBMA hub dataset {name} is empty")
+            local = out / filename
+            if local.exists():
+                import sys
+                print(
+                    f"[sync_mlbma] hub dataset {name} is empty — keeping existing {filename}",
+                    file=sys.stderr,
+                )
+                updated[name] = ""
+                continue
+            raise RuntimeError(f"MLBMA hub dataset {name} is empty and no local fallback found at {local}")
         write_csv(rows, out / filename)
         updated[name] = str(dataset.get("updated_at") or "")
     return updated
