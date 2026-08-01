@@ -1,0 +1,30 @@
+{
+  "sync_id": "544aeb5ed8df9ab3",
+  "status": "exact",
+  "source": "mlbma_pipeline",
+  "slate_date": "2026-08-01",
+  "game_count": 15,
+  "matchup_keys": [
+    "STL@TOR",
+    "MIN@SEA",
+    "CHW@TBR",
+    "MIA@NYM",
+    "PIT@CIN",
+    "PHI@BAL",
+    "TEX@HOU",
+    "ARI@CLE",
+    "WSN@ATL",
+    "NYY@CHC",
+    "KCR@COL",
+    "SFG@SDP",
+    "BOS@LAD",
+    "MIL@LAA",
+    "DET@ATH"
+  ],
+  "pipeline_slate_date": "2026-08-01",
+  "pipeline_updated_at": "2026-08-01T01:20:55-04:00",
+  "live_context_games": 15,
+  "live_context_error": null,
+  "fetched_at": "2026-08-01T05:59:37+00:00",
+  "batter_tables_fallback": true
+}
