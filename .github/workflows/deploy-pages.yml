@@ -46,7 +46,12 @@ jobs:
       - name: Synchronize MLBMA run inputs
         run: |
           mkdir -p _deploy_data
-          cp deployment_data/game_results.csv _deploy_data/
+          # Seed _deploy_data with the full committed snapshot so that any hub dataset that
+          # returns empty rows (e.g. Batter_Profiles during off-peak pipeline windows) has a
+          # local fallback and doesn't abort the build. sync_mlbma overwrites each file with
+          # fresh hub data when available; stale ones are kept with a stderr warning.
+          cp deployment_data/*.csv _deploy_data/ 2>/dev/null || true
+          cp deployment_data/*.json _deploy_data/ 2>/dev/null || true
           # Slate sync is build-fatal and network-bound: a single transient failure here
           # (its most likely failure mode) fails the whole deploy and freezes the live site
           # on a stale slate. Retry with backoff so a blip becomes a short delay, not a miss.
