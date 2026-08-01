@@ -1,0 +1,399 @@
+/**
+ * MLB Model — Purple · Black desk layer (all sections).
+ * Loaded last in shell_css(). Overrides MLBMA board chrome with desk identity.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --desk-bg: #07060C;
+  --desk-raised: #0C0B14;
+  --desk-panel: #12101C;
+  --desk-panel-2: #1A1728;
+  --desk-line: #2A2540;
+  --desk-line-strong: #4A3F6E;
+  --brand: #9A6BFF;
+  --brand-deep: #5B2BE0;
+  --brand-light: #C4B0FF;
+  --signal: #3DFF9A;
+  --watch: #E8B84A;
+  --cut: #FF5C6A;
+  --mute: #6B6680;
+  --gold: #E8C24A;
+  --font-ui: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-display: "Barlow Condensed", "IBM Plex Sans", system-ui, sans-serif;
+  --font-body: var(--font-ui);
+  --sans: var(--font-ui);
+  --display: var(--font-display);
+  --mono: var(--font-mono);
+}
+
+/* Page canvas */
+body.platform-dashboard,
+body.opening-dashboard {
+  background: var(--desk-bg) !important;
+  color: var(--ink, #F4F2FA);
+  font-family: var(--font-ui);
+}
+
+#main.ca-page-shell,
+#main {
+  max-width: 1280px;
+  background: transparent;
+  font-family: var(--font-ui);
+}
+
+#main h1,
+#main h2,
+#main h3,
+#main .ca-section-head .title,
+#main .card .v,
+#main .edge-hero-stat b,
+#main .pitcher-prop-id b,
+#main table th {
+  font-family: var(--font-display) !important;
+}
+
+#main .mono,
+#main td.num,
+#main .sym-metric-board .mono {
+  font-family: var(--font-mono) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Unified page heads (every view) */
+#main .pagehead,
+#main .desk-pagehead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(74, 63, 110, 0.45);
+}
+
+#main .desk-pagehead__eyebrow,
+#main .pagehead__eyebrow {
+  font-family: var(--font-display);
+  font-size: var(--mm-text-2xs, 11px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+#main > .view > h2:first-child,
+#main .pagehead h2,
+#main .desk-pagehead h2 {
+  font-family: var(--font-display) !important;
+  font-weight: 800;
+  font-size: clamp(28px, 3vw, 36px);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin: 0;
+  line-height: 1.02;
+  color: var(--text, #F5F6FA);
+}
+
+#main > .view > h2:first-child::before,
+#main .pagehead h2::before,
+#main .desk-pagehead h2::before {
+  content: "Chase Analytics · MLB Model";
+  display: block;
+  font-size: var(--mm-text-2xs, 11px);
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+#main .desk-pagehead__sub,
+#main .pagehead-sub,
+#main .viewhero-sub {
+  color: var(--text-2, #A4A8B6);
+  font-size: var(--mm-text-sm, 13px);
+  margin: 8px 0 0;
+  letter-spacing: 0.02em;
+}
+
+#main .desk-pagehead__trail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+#main .desk-pagehead select,
+#main .pagehead select {
+  min-width: 200px;
+  background: var(--desk-panel-2);
+  color: var(--ink, #F4F2FA);
+  border: 1px solid var(--desk-line-strong);
+  border-radius: 6px;
+  padding: 10px 38px 10px 14px;
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%239A6BFF' stroke-width='2' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+#main .desk-pagehead select:hover,
+#main .pagehead select:hover {
+  border-color: var(--brand);
+}
+
+/* KPI / summary cards — purple-black desk */
+#main .cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+#main .card {
+  position: relative;
+  background: linear-gradient(180deg, var(--desk-panel-2) 0%, var(--desk-panel) 100%);
+  border: 1px solid rgba(74, 63, 110, 0.55);
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-shadow: inset 0 1px 0 rgba(196, 176, 255, 0.06), 0 10px 28px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+#main .card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--brand), var(--brand-deep));
+  opacity: 0.85;
+}
+
+#main .card:hover {
+  transform: none;
+  border-color: rgba(154, 107, 255, 0.45);
+  box-shadow: inset 0 1px 0 rgba(196, 176, 255, 0.08), 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+#main .card .k {
+  color: var(--text-3, #8A839E);
+  font-family: var(--font-display);
+  font-size: var(--mm-text-2xs, 11px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+#main .card .v {
+  color: var(--text, #F5F6FA);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(22px, 2.4vw, 28px);
+  margin-top: 6px;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+#main .card .v.v-sm { font-size: 16px; line-height: 1.25; }
+#main .card .mut,
+#main .card .mut-sm {
+  color: var(--text-3, #8A839E);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+/* Boards + tables — all sections */
+#main .ca-board {
+  border: 1px solid rgba(74, 63, 110, 0.55) !important;
+  border-radius: 8px !important;
+  background: linear-gradient(180deg, var(--desk-panel-2) 0%, var(--desk-panel) 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(196, 176, 255, 0.06), 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+#main .ca-board + .ca-board,
+#main .cols .ca-board { margin-top: 0; }
+#main .cols { gap: 10px; }
+
+#main .ca-section-head .title {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 15px !important;
+}
+
+#main .table-scroll table th {
+  background: rgba(0, 0, 0, 0.28) !important;
+  color: var(--text-3, #8A839E) !important;
+  border-bottom: 1px solid rgba(74, 63, 110, 0.4) !important;
+  font-family: var(--font-display) !important;
+  letter-spacing: 0.1em;
+  font-size: 10px !important;
+}
+
+#main .table-scroll table td {
+  border-bottom: 1px solid rgba(74, 63, 110, 0.28) !important;
+}
+
+#main .table-scroll tbody tr:hover td {
+  background: rgba(154, 107, 255, 0.06) !important;
+}
+
+#main .empty {
+  border: 1px dashed rgba(74, 63, 110, 0.55);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text-2, #A4A8B6);
+  padding: 16px;
+}
+
+/* Edge hero / Today command */
+#main .edge-hero {
+  border: 1px solid rgba(74, 63, 110, 0.55) !important;
+  border-radius: 8px !important;
+  background: linear-gradient(180deg, var(--desk-panel-2), var(--desk-raised)) !important;
+  box-shadow: inset 0 1px 0 rgba(196, 176, 255, 0.06), 0 14px 36px rgba(0, 0, 0, 0.45) !important;
+}
+
+#main .edge-hero::before {
+  background: linear-gradient(90deg, transparent, var(--brand) 22%, var(--brand-light) 50%, var(--brand-deep) 78%, transparent) !important;
+}
+
+#main .edge-hero-stat .k { color: var(--gold) !important; }
+
+/* Verdict bars (Research / Markets) */
+#main .vbar {
+  border: 1px solid rgba(74, 63, 110, 0.55);
+  border-radius: 8px;
+  background: var(--desk-panel-2);
+  padding: 12px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: baseline;
+}
+
+#main .vbar.pos { border-left: 3px solid var(--signal); }
+#main .vbar.warnc { border-left: 3px solid var(--watch); }
+#main .vbar.neg { border-left: 3px solid var(--cut); }
+#main .vbar.mut { border-left: 3px solid var(--mute); }
+#main .vbar b {
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Status pills — desk map */
+#main .pill.pos { color: var(--signal) !important; border-color: rgba(61, 255, 154, 0.35) !important; }
+#main .pill.warnc { color: var(--watch) !important; border-color: rgba(232, 184, 74, 0.35) !important; }
+#main .pill.neg { color: var(--cut) !important; border-color: rgba(255, 92, 106, 0.35) !important; }
+#main .pill.mut { color: var(--mute) !important; }
+
+/* Today slate — mirrored A/H cells */
+#main .slate-sym {
+  display: inline-grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 6px;
+  align-items: center;
+  min-width: 120px;
+}
+#main .slate-sym__a { text-align: right; }
+#main .slate-sym__h { text-align: left; }
+#main .slate-sym__mid {
+  color: var(--text-3, #8A839E);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+#main .side { color: var(--brand-light) !important; font-weight: 700; }
+
+/* Props */
+#main .pitcher-prop-card {
+  border: 1px solid rgba(74, 63, 110, 0.55) !important;
+  border-radius: 8px !important;
+  background: linear-gradient(180deg, var(--desk-panel-2), var(--desk-panel)) !important;
+  box-shadow: inset 0 1px 0 rgba(196, 176, 255, 0.05), 0 10px 28px rgba(0, 0, 0, 0.4) !important;
+}
+#main .pitcher-prop-card.on,
+#main .pitcher-prop-card:hover {
+  border-color: rgba(154, 107, 255, 0.55) !important;
+}
+#main .prop-chip {
+  border: 1px solid rgba(74, 63, 110, 0.45) !important;
+  border-radius: 6px !important;
+  background: rgba(0, 0, 0, 0.28) !important;
+}
+
+/* Trends */
+#main .trend-matchup-deck .ca-board,
+#main .trend-list {
+  border-color: rgba(74, 63, 110, 0.45);
+}
+#main .trend-list li {
+  border-bottom: 1px solid rgba(74, 63, 110, 0.28);
+  padding: 8px 0;
+}
+#main .trend-matchup-panel {
+  animation: viewin 0.18s ease both;
+}
+
+/* Markets decision board */
+#main #v-markets .card .v.v-sm {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+/* Results / Research denser boards */
+#main #v-results .cols,
+#main #v-research .cols {
+  margin-bottom: 10px;
+}
+
+/* Matchup banners */
+#main .matchup-banner--v2,
+#main .matchup-banner {
+  border: 1px solid rgba(74, 63, 110, 0.55) !important;
+  border-radius: 8px !important;
+  background: linear-gradient(
+    90deg,
+    rgba(154, 107, 255, 0.10) 0%,
+    transparent 42%,
+    transparent 58%,
+    rgba(154, 107, 255, 0.10) 100%
+  ), linear-gradient(180deg, var(--desk-panel-2), var(--desk-panel)) !important;
+}
+
+/* Site footer */
+.site-footer {
+  border-top: 1px solid rgba(74, 63, 110, 0.45) !important;
+  max-width: 1280px;
+}
+.site-footer__mark em {
+  background: linear-gradient(90deg, var(--brand-light), var(--brand)) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
+
+/* Nav active — purple rail */
+.chase-nav-link.active {
+  color: #F4F2FA !important;
+}
+.chase-product-tag {
+  color: var(--brand-light) !important;
+}
+
+.deployment-notice {
+  border: 1px solid rgba(74, 63, 110, 0.55) !important;
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, rgba(154, 107, 255, 0.12), rgba(0, 0, 0, 0.2)) !important;
+}
+
+@media (max-width: 760px) {
+  #main .cards { grid-template-columns: repeat(2, 1fr); }
+  #main .desk-pagehead,
+  #main .pagehead { flex-direction: column; align-items: stretch; }
+  #main .desk-pagehead select,
+  #main .pagehead select { width: 100%; }
+}
