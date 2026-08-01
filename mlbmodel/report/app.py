@@ -23,19 +23,17 @@ from mlbmodel.market.quotes import load_board
 from mlbmodel.market import prizepicks, underdog, sleeper
 from mlbmodel import settings
 from mlbmodel.props.model import build_pitcher_board
-from mlbmodel.report import chase_theme
 from mlbmodel.trends import build_slate_reports
 from mlbmodel.report.matchup import (
     _CSS,
     _promotion,
     build_report,
     matchup_summary_html,
-    premium_matchup_terminal_html,
     report_body,
 )
 from mlbmodel.report.decision import collect_market_plays as _collect_market_plays, markets_html as _markets
-from mlbmodel.analytics.edge_intel import clv_from_snapshots, collect_slate_opportunities
-from mlbmodel.report.edge_ui import edge_command_html
+from mlbmodel.analytics.edge_intel import clv_from_snapshots
+from mlbmodel.report.html_fmt import desk_pagehead
 from mlbmodel.leans.closing import build_price_index, update_closing_odds
 from mlbmodel.leans.decision_calibration import thresholds_from_leans
 from mlbmodel.leans.record import collect_leans, record_leans
@@ -51,7 +49,13 @@ from mlbmodel.report.game_keys import (
     parse_game_key,
     resolve_featured_game,
 )
-from mlbmodel.report.shell import NAV as _NAV, shell_css, shell_js, slate_view_label
+from mlbmodel.report.shell import (
+    NAV as _NAV,
+    desk_sidebar_html,
+    shell_css,
+    shell_js,
+    slate_view_label,
+)
 from mlbmodel.report.views import (
     props as _props,
     research as _research,
@@ -86,9 +90,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         slate_date=slate_date or None,
     )
     prop_prices = load_prop_board(
-        fetch=fetch,
-        cache_path=cache_dir / "prop_odds_latest.json",
-        slate_date=slate_date or None,
+        fetch=fetch, cache_path=cache_dir / "prop_odds_latest.json"
     )
     pp_lines, pp_snapshot = load_pickem_lines_with_meta(
         prizepicks, cache_dir / "prizepicks_lines.json", fetch=fetch
@@ -117,15 +119,6 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         ("Underdog", ud_board),
         ("Sleeper", sl_board),
     ]
-    fresh_books = (
-        fresh_pickem_books(pickem_snapshots, str(slate_date)[:10])
-        if slate_date else set()
-    )
-    fresh_pickem_sources = [
-        (label, source_board)
-        for label, source_board in pickem_sources
-        if label.lower() in fresh_books
-    ]
     for pitcher in pitchers:
         reports = market_report(
             pitcher,
@@ -133,7 +126,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             promotion_status=promotion_status,
         )
         if not reports:
-            reports = pickem_market_reports(pitcher, fresh_pickem_sources)
+            reports = pickem_market_reports(pitcher, pickem_sources)
         pitcher["market_report"] = reports
         if reports:
             pitcher["market_state"] = str(reports[0].get("state") or "NO MARKET")
@@ -196,7 +189,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             )
             if "pk" in game:
                 model_by_pk[game["pk"]] = r.get("markets", [])
-            full_terminal = premium_matchup_terminal_html(r, report_body(r))
+            full_terminal = report_body(r)
             if game_key == featured_key:
                 report = f'<div class=matchup-body>{full_terminal}</div>'
             else:
@@ -220,14 +213,15 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         )
     options = "".join(option_rows)
     matchups = (
-        f'<div class="terminal-view terminal-matchups">'
-        f'<header class=terminal-pagehead><div><h2>Matchups</h2>'
-        f'<p>Complete game analysis. Select a matchup to inspect model, market, drivers, and risk.</p></div>'
-        f'<span>MLB MODEL &middot; v1.9.0 &middot; {e(sd or "Slate pending")}</span></header>'
-        f'<div class=matchup-selectorbar><label><span>Featured matchup</span>'
-        f'<select id=gameSelect aria-label="Matchup" onchange="switchGame(this.value)">{options}</select></label>'
-        f'<span><i class=signal-dot></i>Live model</span></div>'
-        f'{"".join(matchup_reports)}</div>'
+        desk_pagehead(
+            "Matchups",
+            sub=f"Process: Decision → Model → Markets → Why → Splits → Sharp → Risks · {e(sd or 'Slate pending')}",
+            trailing=(
+                f'<select id=gameSelect aria-label="Matchup" '
+                f'onchange="switchGame(this.value)">{options}</select>'
+            ),
+        )
+        + "".join(matchup_reports)
     )
 
     pkmap = {g["pk"]: g["key"] for g in slate if "pk" in g and g.get("key")}
@@ -248,9 +242,8 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         if str(m.get("market") or "").startswith("f5_")
     ]
     matchup_markets_by_pk = dict(model_by_pk)
-    cal_result = reader.get_all(
-        "model_leans?settled=eq.true&select=edge,won,push,source,settled",
-        max_rows=3000,
+    cal_result = reader.get(
+        "model_leans?settled=eq.true&select=edge,won,push,source,settled&limit=2000"
     )
     decision_thresholds = thresholds_from_leans(
         cal_result.rows if not cal_result.error else []
@@ -261,60 +254,26 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     pickem_rows = build_pickem_rows_from_boards(pitchers, pickem_sources)
     if not pickem_rows:
         pickem_rows = build_pickem_rows(pitchers)
-    fresh_pickem_rows = [
-        row
-        for row in pickem_rows
-        if str(row.get("book") or "").lower() in fresh_books
-    ]
     flat_props = []
     for pitcher in pitchers:
-        projections = pitcher.get("projections") or {}
         for report in pitcher.get("market_report") or []:
             flat_props.append({
                 "pitcher": pitcher.get("pitcher"),
                 "game_pk": pitcher.get("game_pk"),
                 **report,
-                "model_mean": projections.get(report.get("prop"), {}).get("mean"),
-            })
-        for prop, dist in (pitcher.get("projections") or {}).items():
-            if not dist or dist.get("mean") is None:
-                continue
-            prop_key = str(prop).lower()
-            if any(str(r.get("prop") or "").lower() == prop_key for r in (pitcher.get("market_report") or [])):
-                continue
-            flat_props.append({
-                "pitcher": pitcher.get("pitcher"),
-                "game_pk": pitcher.get("game_pk"),
-                "prop": prop,
-                "side": "model",
-                "line": None,
-                "model_mean": dist.get("mean"),
-                "model_probability": None,
-                "edge": None,
-                "state": "PROJECTION",
-                "market_state": "NO MARKET",
+                "model_mean": (pitcher.get("projections") or {}).get(report.get("prop"), {}).get("mean"),
             })
 
-    clv_result = reader.get_all(
+    clv_result = reader.get(
         "prediction_market_snapshots?settled=eq.true&won=not.is.null"
-        "&open_prob=not.is.null&implied_probability=not.is.null"
-        "&select=market_type,open_prob,implied_probability,won",
-        max_rows=3000,
+        "&entry_prob=not.is.null&implied_probability=not.is.null"
+        "&select=market_type,entry_prob,implied_probability,won&limit=5000"
     )
     clv_summary = clv_from_snapshots(clv_result.rows if not clv_result.error else [])
 
-    opportunities = collect_slate_opportunities(
-        pkmap=pkmap,
-        market_plays=market_plays,
-        model_by_pk=model_by_pk,
-        prop_reports=flat_props,
-        pickem_rows=fresh_pickem_rows,
-        promotion_status=promotion_status,
-    )
-    edge_command = edge_command_html(opportunities, clv_summary=clv_summary)
-
     if sd:
         try:
+            fresh_books = fresh_pickem_books(pickem_snapshots, str(sd)[:10])
             lean_rows = collect_leans(
                 slate_date=str(sd)[:10],
                 market_plays=market_plays,
@@ -337,17 +296,12 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                     ", ".join(f"{k}={v}" for k, v in sorted(sources.items())),
                 )
             elif lean_rows and os.getenv("SUPABASE_URL"):
-                message = (
-                    f"model lean record wrote 0 rows ({len(lean_rows)} candidates); "
-                    "check SUPABASE_KEY / SUPABASE_SECRET_KEY and migrations"
+                log.error(
+                    "model lean record wrote 0 rows (%s candidates); check SUPABASE_KEY and migrations",
+                    len(lean_rows),
                 )
-                log.error(message)
-                if os.getenv("LEAN_RECORD_REQUIRED", "").lower() in {"1", "true", "yes"}:
-                    raise RuntimeError(message)
         except Exception as exc:
             log.error("model lean record failed: %s", exc)
-            if os.getenv("LEAN_RECORD_REQUIRED", "").lower() in {"1", "true", "yes"}:
-                raise
 
         # Refresh closing odds on today's still-open leans with the freshest
         # matched prices — the last pre-game build leaves the de-facto close.
@@ -364,25 +318,10 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             log.warning("closing-odds refresh failed: %s", exc)
 
     views = {
-        "today": _today(
-            slate,
-            sd,
-            sharp_by_pk,
-            sync,
-            edge_command,
-            opportunities=opportunities,
-            clv_summary=clv_summary,
-            gate=gate,
-        ),
+        "today": _today(slate, sd, sharp_by_pk, sync),
         "matchups": matchups,
         "trends": _trends(slate_reports, slate=slate),
-        "markets": _markets(
-            slate,
-            sharp_by_pk,
-            model_by_pk,
-            decision_thresholds,
-            promotion_status=promotion_status,
-        ),
+        "markets": _markets(slate, sharp_by_pk, model_by_pk, decision_thresholds),
         "props": _props(
             pitchers, prop_prices, pp_board, ud_board, sl_board,
             pickem_snapshots=pickem_snapshots, slate_date=str(sd or "")[:10] or None,
@@ -405,18 +344,21 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         f'<div class=deployment-notice>{e(notice_text)}</div>'
         if notice_text else ""
     )
-    chase_nav = chase_theme.nav_html(nav_items, "today", "MLB Model", status=(sd or "Live"))
+    sidebar = desk_sidebar_html(
+        nav_items,
+        active="today",
+        slate_date=str(sd or ""),
+        meta_lines=[
+            f'Slate <b>{e(sd or "—")}</b>',
+            "Model <b>v1-expected-runs</b>",
+            f'Sync <b>{e(str((sync or {}).get("status") or "—"))}</b>',
+        ],
+    )
     footer = (
         '<footer class=site-footer>'
-        '<div class=site-footer__brand>'
-        '<svg viewBox="0 0 36 36" width="22" height="22" aria-hidden="true">'
-        '<path d="M18 5 C21 13 24 20 33 31 L3 31 C12 20 15 13 18 5 Z" fill="#7C4DFF"/></svg>'
-        '<span class=site-footer__mark>CHASE&nbsp;<em>ANALYTICS</em></span>'
-        '<span class=site-footer__tag>MLB Model · decision-support engine</span>'
-        '</div>'
-        '<p><b>Paper-trading and research software.</b> It does not provide betting advice, no '
-        'displayed state is a wager instruction, and nothing here promises profit. Methodology, '
-        'confidence tiers, and known limitations: '
+        '<div class=site-footer__mark>CHASE <em>ANALYTICS</em></div>'
+        '<p><b>Paper-trading and research software.</b> Not betting advice. No displayed state '
+        'is a wager instruction. Methodology: '
         '<a href="https://github.com/Alphakiller1/mlb-model/blob/main/METHODOLOGY.md">METHODOLOGY.md</a>. '
         'If you or someone you know has a gambling problem, call 1-800-GAMBLER.</p>'
         '<div class=site-footer__links>'
@@ -427,14 +369,17 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         '</footer>'
     )
     return (
-        f'<!DOCTYPE html><html lang=en class=view-opening><head><meta charset=utf-8>'
+        f'<!DOCTYPE html><html lang=en><head><meta charset=utf-8>'
         f'<meta name=viewport content="width=device-width,initial-scale=1">'
         f'<title>MLB Model — Chase Analytics</title>'
-        f'<style>{chase_theme.theme_css()}{_CSS}{shell_css()}</style></head>'
-        f'<body class="platform-dashboard opening-dashboard">'
-        f'{chase_nav}'
-        f'<main id=main class=ca-page-shell>{notice}{sections}</main>'
+        f'<style>{shell_css()}{_CSS}</style></head>'
+        f'<body class="desk-app">'
+        f'<div class="desk-frame">'
+        f'{sidebar}'
+        f'<div class="desk-main">'
+        f'<main id=main class="desk-content">{notice}{sections}</main>'
         f'{footer}'
+        f'</div></div>'
         f'<script>{shell_js()}</script></body></html>'
     )
 

@@ -129,23 +129,24 @@ def section_icon_html(key: str, *, small: bool = True) -> str:
 
 
 def section_head(title: str, *, icon: str | None = None, purpose: str = "") -> str:
-
     """MLBMA-style section header with optional neon icon badge."""
-
     icon_html = section_icon_html(icon) if icon else ""
-
     purpose_html = f'<div class="purpose">{e(purpose)}</div>' if purpose else ""
-
     return (
-
         f'<div class="ca-section-head">{icon_html}'
-
         f'<div class="ca-section-head__body">'
-
         f'<div class="title">{e(title)}</div>{purpose_html}'
-
         f"</div></div>"
+    )
 
+
+def desk_pagehead(title: str, *, sub: str = "", trailing: str = "") -> str:
+    """Unified section page head for every MLB Model view."""
+    sub_html = f'<p class=desk-pagehead__sub>{sub}</p>' if sub else ""
+    trail = f'<div class=desk-pagehead__trail>{trailing}</div>' if trailing else ""
+    return (
+        f'<div class=desk-pagehead><div>'
+        f'<h2>{e(title)}</h2>{sub_html}</div>{trail}</div>'
     )
 
 

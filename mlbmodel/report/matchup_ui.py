@@ -8,6 +8,7 @@ from functools import lru_cache
 
 from mlbmodel.report.html_fmt import (
     edge_grade,
+    prob_chip_html,
     run_impact_grade,
     section_head,
     val_chip_html,
@@ -226,6 +227,204 @@ def _weather_wind_label(weather: dict) -> str:
     rain = weather.get("precipitation_probability_pct")
     rain_bit = f" · rain {float(rain or 0):.0f}%" if rain is not None else ""
     return f"{float(temp):.0f}°F · wind {direction} {abs(float(wind or 0)):.0f} mph{rain_bit}"
+
+
+def _sym_cell(value_html: str, *, side: str, win: bool = False) -> str:
+    cls = f"sym-metric-cell sym-metric-cell--{side}"
+    if win:
+        cls += " sym-metric-cell--win"
+    return f'<div class="{cls}">{value_html}</div>'
+
+
+def _sym_row(label: str, away_html: str, home_html: str, *, away_win: bool = False, home_win: bool = False) -> str:
+    return (
+        f'<div class=sym-metric-row>'
+        f'{_sym_cell(away_html, side="away", win=away_win)}'
+        f'<div class=sym-metric-label>{label}</div>'
+        f'{_sym_cell(home_html, side="home", win=home_win)}'
+        f'</div>'
+    )
+
+
+def sym_projection_board_html(r: dict, esc, *, compact: bool = False) -> str:
+    """Canonical mirrored desk board: Away | axis | Home (+ factors when not compact)."""
+    from mlbmodel.baseball.model import fair_price
+    from mlbmodel.report.html_fmt import display as _display
+    from mlbmodel.report.matchup import _logo
+
+    gd, prob = r["gd"], r["probs"]
+    ex = r.get("extras") or {}
+    context = getattr(gd, "live_context", None) or {}
+    weather = context.get("weather") or {}
+    away_win_p = float(getattr(prob, "p_away_win", 0) or 0)
+    home_win_p = float(getattr(prob, "p_home_win", 0) or 0)
+    away_runs = float(getattr(prob, "exp_away_runs", 0) or 0)
+    home_runs = float(getattr(prob, "exp_home_runs", 0) or 0)
+    fair_away = fair_price(away_win_p) if away_win_p > 0 else None
+    fair_home = fair_price(home_win_p) if home_win_p > 0 else None
+    tot = away_runs + home_runs
+    start = str(ex.get("start") or getattr(gd, "start_time", "") or "").strip() or "TBD"
+    park = str(ex.get("park") or getattr(gd, "park_name", "") or context.get("venue") or "Park")
+    park_factor = ex.get("park_factor") or getattr(gd, "park_factor", None)
+    park_txt = f"{esc(str(park)[:28])}" + (
+        f" · {float(park_factor):.2f}" if isinstance(park_factor, (int, float)) else ""
+    )
+    wx = str(weather.get("summary") or weather.get("condition") or "Wx TBD")
+
+    def _fip(v):
+        return _display(v, digits=2) if v is not None else "—"
+
+    def _kpct(v):
+        return val_chip_html(v, "kpct", digits=1, suffix="%") if v is not None else '<span class="c-na">—</span>'
+
+    def _sp_block(name, hand, fip, k):
+        nm = esc(str(name or "TBD"))
+        hd = esc(str(hand or ""))
+        return (
+            f'<span class=sym-metric-board__sp><b>{nm}</b>'
+            f'{(" · " + hd) if hd else ""}<br>'
+            f'<span class=mono>FIP {_fip(fip)} · K% {_display(k, digits=1) if k is not None else "—"}</span></span>'
+        )
+
+    win_bar = ""
+    if away_win_p > 0 or home_win_p > 0:
+        a_pct = max(0.0, min(100.0, away_win_p * 100))
+        h_pct = max(0.0, min(100.0, home_win_p * 100))
+        win_bar = (
+            f'<div class=sym-metric-bar aria-hidden=true>'
+            f'<div class="sym-metric-bar__track sym-metric-bar__track--away">'
+            f'<i style="width:{a_pct:.1f}%"></i></div>'
+            f'<div class=sym-metric-label>Balance</div>'
+            f'<div class="sym-metric-bar__track sym-metric-bar__track--home">'
+            f'<i style="width:{h_pct:.1f}%"></i></div></div>'
+        )
+
+    a_osi = getattr(gd, "away_osi", None)
+    h_osi = getattr(gd, "home_osi", None)
+    rows = [
+        _sym_row(
+            "Win %",
+            prob_chip_html(away_win_p, digits=1) if away_win_p else '<span class="c-na">—</span>',
+            prob_chip_html(home_win_p, digits=1) if home_win_p else '<span class="c-na">—</span>',
+            away_win=away_win_p > home_win_p,
+            home_win=home_win_p > away_win_p,
+        ),
+        win_bar,
+        _sym_row(
+            "Proj R",
+            val_chip_html(away_runs, "team_runs", digits=1),
+            val_chip_html(home_runs, "team_runs", digits=1),
+            away_win=away_runs > home_runs,
+            home_win=home_runs > away_runs,
+        ),
+        _sym_row(
+            "Fair ML",
+            f'<span class=mono>{fair_away:+d}</span>' if fair_away is not None else '<span class="c-na">—</span>',
+            f'<span class=mono>{fair_home:+d}</span>' if fair_home is not None else '<span class="c-na">—</span>',
+        ),
+        _sym_row(
+            "SP FIP",
+            f'<span class=mono>{_fip(getattr(gd, "away_fip", None))}</span>',
+            f'<span class=mono>{_fip(getattr(gd, "home_fip", None))}</span>',
+            away_win=(
+                getattr(gd, "away_fip", None) is not None
+                and getattr(gd, "home_fip", None) is not None
+                and gd.away_fip < gd.home_fip
+            ),
+            home_win=(
+                getattr(gd, "away_fip", None) is not None
+                and getattr(gd, "home_fip", None) is not None
+                and gd.home_fip < gd.away_fip
+            ),
+        ),
+    ]
+    if not compact:
+        rows.extend([
+            _sym_row(
+                "SP K%",
+                _kpct(getattr(gd, "away_k", None)),
+                _kpct(getattr(gd, "home_k", None)),
+                away_win=(
+                    getattr(gd, "away_k", None) is not None
+                    and getattr(gd, "home_k", None) is not None
+                    and gd.away_k > gd.home_k
+                ),
+                home_win=(
+                    getattr(gd, "away_k", None) is not None
+                    and getattr(gd, "home_k", None) is not None
+                    and gd.home_k > gd.away_k
+                ),
+            ),
+            _sym_row(
+                "OSI",
+                val_chip_html(a_osi, "osi", digits=1) if a_osi is not None else '<span class="c-na">—</span>',
+                val_chip_html(h_osi, "osi", digits=1) if h_osi is not None else '<span class="c-na">—</span>',
+                away_win=a_osi is not None and h_osi is not None and a_osi > h_osi,
+                home_win=a_osi is not None and h_osi is not None and h_osi > a_osi,
+            ),
+            _sym_row(
+                "Model / mkt tot",
+                f'<span class=mono>{tot:.1f}</span>',
+                f'<span class=mono>{_display(ex.get("mkt_total"), digits=1) if ex.get("mkt_total") is not None else "—"}</span>',
+            ),
+        ])
+
+    factors = ""
+    if not compact:
+        away_edges, home_edges = [], []
+        for a in (r.get("advantage") or [])[:6]:
+            side = a.get("edge")
+            label = str(a.get("cat") or "").strip()
+            if not label:
+                continue
+            if side == gd.away:
+                away_edges.append(label)
+            elif side == gd.home:
+                home_edges.append(label)
+        for f in (r.get("factors") or [])[:8]:
+            side = str(f.get("side") or "")
+            label = _short_factor(str(f.get("name") or ""))
+            if side == gd.away and label not in away_edges:
+                away_edges.append(label)
+            elif side == gd.home and label not in home_edges:
+                home_edges.append(label)
+        away_edges = away_edges[:3] or ["—"]
+        home_edges = home_edges[:3] or ["—"]
+        factors = (
+            '<div class=sym-factors>'
+            f'<div><div class=sym-factors__title>{esc(gd.away)} edges</div><ul>'
+            + "".join(f"<li><b>{esc(x)}</b></li>" for x in away_edges)
+            + f'</ul></div><div><div class=sym-factors__title>{esc(gd.home)} edges</div><ul>'
+            + "".join(f"<li><b>{esc(x)}</b></li>" for x in home_edges)
+            + "</ul></div></div>"
+        )
+
+    return f"""<section class="sym-metric-board" aria-label="Symmetric matchup board">
+  <div class=sym-metric-board__head>
+    <div class="sym-metric-board__team sym-metric-board__team--away">
+      <div>
+        <div class=mut style="letter-spacing:.14em;text-transform:uppercase;font-size:10px;margin-bottom:4px">Away</div>
+        <b>{esc(gd.away)}</b>
+        {_sp_block(getattr(gd, "away_sp", None), getattr(gd, "away_hand", ""), getattr(gd, "away_fip", None), getattr(gd, "away_k", None))}
+      </div>
+      {_logo(gd.away, "tlogo")}
+    </div>
+    <div class=sym-metric-board__axis>
+      <span>VS</span>
+      <div class=sym-metric-board__axis-meta>{esc(start)}<br>{park_txt}<br>{esc(wx)}</div>
+    </div>
+    <div class="sym-metric-board__team sym-metric-board__team--home">
+      {_logo(gd.home, "tlogo")}
+      <div>
+        <div class=mut style="letter-spacing:.14em;text-transform:uppercase;font-size:10px;margin-bottom:4px">Home</div>
+        <b>{esc(gd.home)}</b>
+        {_sp_block(getattr(gd, "home_sp", None), getattr(gd, "home_hand", ""), getattr(gd, "home_fip", None), getattr(gd, "home_k", None))}
+      </div>
+    </div>
+  </div>
+  <div class=sym-metric-board__rows>{"".join(rows)}</div>
+  {factors}
+</section>"""
 
 
 def matchup_banner_html(r: dict, esc) -> str:
@@ -532,21 +731,22 @@ def advantage_panel_html(gd, advantage_rows, esc) -> str:
         edge = _adv_edge_html(a, away, home, esc)
         away_win = a.get("edge") == away
         home_win = a.get("edge") == home
-        away_cls = " adv-edge-win" if away_win else ""
-        home_cls = " adv-edge-win" if home_win else ""
-        return (
-            f'<tr><td><b>{esc(a["cat"])}</b></td>'
-            f'<td class="side{away_cls}">{av}</td>'
-            f'<td class="num{home_cls}">{hv}</td>'
-            f'<td>{base}</td><td>{edge}</td></tr>'
+        label = (
+            f'<b>{esc(a["cat"])}</b>'
+            f'<span class=sym-metric-label__meta>{base} · {edge}</span>'
         )
+        return _sym_row(label, av, hv, away_win=away_win, home_win=home_win)
 
     rows = "".join(adv_row(a) for a in advantage_rows)
     return (
         f'<div class=ca-board>{section_head("Matchup advantage", icon="matchups")}<div class=body>'
-        f'<div class=table-scroll><table class=matchup-adv-table>'
-        f'<tr><th>Category</th><th>{esc(away)}</th><th>{esc(home)}</th>'
-        f'<th>League avg</th><th>Edge</th></tr>{rows}</table></div></div></div>'
+        f'<div class="sym-metric-board sym-metric-board--adv">'
+        f'<div class=sym-metric-board__head>'
+        f'<div class="sym-metric-board__team sym-metric-board__team--away"><b>{esc(away)}</b></div>'
+        f'<div class=sym-metric-board__axis><span>Edge</span></div>'
+        f'<div class="sym-metric-board__team sym-metric-board__team--home"><b>{esc(home)}</b></div>'
+        f'</div>'
+        f'<div class=sym-metric-board__rows>{rows}</div></div></div></div>'
     )
 
 

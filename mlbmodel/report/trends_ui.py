@@ -231,10 +231,12 @@ def trend_matchup_panel(report, *, active: bool = False) -> str:
 
 
 def trends_section_html(reports, *, slate: list[dict] | None = None) -> str:
+    from mlbmodel.report.html_fmt import desk_pagehead
+
     if not reports:
         return (
-            '<div class=pagehead><div><h2>Trends</h2></div></div>'
-            '<div class=empty>No slate loaded.</div>'
+            desk_pagehead("Trends", sub="Signals by matchup · open a game for full report")
+            + '<div class=empty>No slate loaded.</div>'
         )
 
     options = []
@@ -262,9 +264,13 @@ def trends_section_html(reports, *, slate: list[dict] | None = None) -> str:
         panels.append(trend_matchup_panel(report, active=(index == 0)))
 
     return (
-        f'<div class=pagehead>'
-        f'<div><h2>Trends</h2><p class=pagehead-sub>Signals by matchup</p></div>'
-        f'<select id=trendGameSelect aria-label="Matchup" onchange="switchTrendGame(this.value)">'
-        f'{"".join(options)}</select></div>'
-        f'<div class=trend-matchup-deck id=trend-matchup-deck>{"".join(panels)}</div>'
+        desk_pagehead(
+            "Trends",
+            sub="Signals by matchup · open a game for full report",
+            trailing=(
+                f'<select id=trendGameSelect aria-label="Matchup" '
+                f'onchange="switchTrendGame(this.value)">{"".join(options)}</select>'
+            ),
+        )
+        + f'<div class=trend-matchup-deck id=trend-matchup-deck>{"".join(panels)}</div>'
     )

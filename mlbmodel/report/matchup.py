@@ -43,6 +43,7 @@ from mlbmodel.report.html_fmt import (
     val_chip_html,
     val_grade_html,
 )
+from mlbmodel.report.pitch_mix_ui import pitch_mix_runs_chip
 from mlbmodel.report.matchup_ui import (
     advantage_panel_html,
     f5_section_html,
@@ -50,6 +51,7 @@ from mlbmodel.report.matchup_ui import (
     matchup_context_html,
     pitcher_deck_html,
     run_impacts_html,
+    sym_projection_board_html,
 )
 from mlbmodel.storage.supabase import SupabaseReader
 
@@ -265,22 +267,17 @@ def _advantage(gd, anchors, repo):
 
 def _signal_boost(gd, market: str, side) -> float:
     market = str(market).lower()
-    kwargs = {
-        "convergence": gd.game_convergence,
-        "away": gd.away,
-        "home": gd.home,
-    }
     if market == "total":
         return (
-            signal_edge_adjustment(gd.game_signals, side="away", **kwargs)
-            + signal_edge_adjustment(gd.game_signals, side="home", **kwargs)
+            signal_edge_adjustment(gd.game_signals, side="away")
+            + signal_edge_adjustment(gd.game_signals, side="home")
         ) / 2
     side_key = (
         "away"
         if str(side).upper() in {gd.away, "AWAY"}
         else "home"
     )
-    return signal_edge_adjustment(gd.game_signals, side=side_key, **kwargs)
+    return signal_edge_adjustment(gd.game_signals, side=side_key)
 
 
 def _market_row(market, side, line, ou, gd, probs, anchors, quote, promotion):
@@ -359,30 +356,9 @@ def _extras(away, home, gd, probs, anchors, repo):
         r = m[(m["Away"] == away) & (m["Home"] == home)]
         if not r.empty:
             out["start"] = str(r.iloc[0].get("Time", "") or "")
-    # Lineup chip reflects the live context (MLB.com feed, Rotowire fallback) — the old
-    # today_lineups.csv is never produced, so it always read "TBD" even with posted orders.
-    lineups = gd.live_context.get("lineups") or {}
-    away_status = (lineups.get("away") or {}).get("status", "unavailable")
-    home_status = (lineups.get("home") or {}).get("status", "unavailable")
-    sources = {
-        str((lineups.get(side) or {}).get("source") or "")
-        for side in ("away", "home")
-    } - {""}
-    if {away_status, home_status} == {"confirmed"}:
-        out["lineup"] = "lineups confirmed"
-    elif "unavailable" not in (away_status, home_status):
-        out["lineup"] = "lineups " + (
-            "projected" if away_status == home_status == "projected"
-            else f"{away} {away_status} · {home} {home_status}"
-        )
-    if sources and out["lineup"] != "lineups TBD · probables confirmed":
-        rotowire = any("rotowire" in s.lower() for s in sources)
-        mlb = any("mlb" in s.lower() for s in sources)
-        tag = " + ".join(
-            label for label, hit in (("MLB.com", mlb), ("Rotowire", rotowire)) if hit
-        )
-        if tag:
-            out["lineup"] += f" · {tag}"
+    ln = repo.load("today_lineups.csv")
+    if ln is not None and not ln.empty:
+        out["lineup"] = "lineups posted"
     pm = repo.load("pitch_mix_pitcher.csv")
 
     def arsenal(name):
@@ -422,29 +398,15 @@ def _extras(away, home, gd, probs, anchors, repo):
 
 
 def _promotion(reader):
-    read_all = reader.get_all if hasattr(type(reader), "get_all") else reader.get
-    result = read_all(
+    result = reader.get(
         "prediction_market_snapshots?market_type=eq.ml&settled=eq.true"
         "&won=not.is.null&open_prob=not.is.null"
         "&select=game_pk,snapshot_time,open_prob,delta,won,"
-        "implied_probability,volume",
-        **({"max_rows": 3000} if hasattr(type(reader), "get_all") else {}),
+        "implied_probability,volume,entry_prob,signal_time"
     )
     if result.error:
-        return {
-            "verdict": "HOLD/ABSTAIN",
-            "reasons": ["Validation warehouse unavailable; promotion remains blocked."],
-        }
-    rows = [
-        {
-            **row,
-            "entry_prob": row.get("open_prob"),
-            "signal_delta": row.get("delta"),
-            "signal_time": row.get("snapshot_time"),
-        }
-        for row in result.rows
-    ]
-    return promotion_verdict(rows)
+        return {"verdict": "HOLD/ABSTAIN", "reasons": [result.error]}
+    return promotion_verdict(result.rows)
 
 
 
@@ -531,8 +493,14 @@ def _sharp_for(gpk, reader):
 # don't all need renaming; nothing here redefines a canonical token to a different value.
 _CSS = """
 :root{
-  --ink: var(--text); --ink2: var(--text-2); --muted: var(--text-3); --muted-2: var(--text-4);
-  --accent: var(--ca-brand); --v-deep: var(--ca-purple-dark);
+  /* Desk contrast lock — do not alias to missing MLBMA tokens */
+  --text: #F5F5F7; --text-2: #D2D2DA; --text-3: #B0B0BA; --text-4: #9494A0;
+  --ink: #F5F5F7; --ink2: #D2D2DA; --muted: #B0B0BA; --muted-2: #9494A0;
+  --side: #F5F5F7; --accent: #B794FF; --v-light: #D2D2DA; --v-deep: #9B6DFF;
+  --ca-brand: #B794FF; --ca-purple: #B794FF; --ca-purple-light: #D2D2DA; --ca-purple-dark: #9B6DFF;
+  --green: #2EE59D; --red: #FF4D5E; --teal: #2EE59D; --gold: #F0C75E;
+  --border: #2C2C33; --border-2: #2C2C33; --border-soft: #2C2C33; --border-violet: #454552;
+  --raised: #1E1E22; --card: #161618; --bg-2: #111113;
 }
 .wrap{max-width:1180px;margin:0 auto;padding:22px 20px 70px;display:flex;flex-direction:column;gap:18px}
 .num,td,th,.chip,.mval{font-variant-numeric:tabular-nums}.pos{color:var(--green)}.neg{color:var(--red)}.warnc{color:var(--gold)}.side{color:var(--side)}.mut{color:var(--muted)}
@@ -891,6 +859,149 @@ def _fmt_optional(value, *, digits=1, suffix=""):
     return f'{value}{suffix}'
 
 
+def _workload_context_rows(gd, travel, esc):
+    away_starter = gd.away_starter_features
+    home_starter = gd.home_starter_features
+    away_pen = gd.away_bullpen_features
+    home_pen = gd.home_bullpen_features
+    away_line = gd.away_lineup_features
+    home_line = gd.home_lineup_features
+    away_travel = travel.get("away") or {}
+    home_travel = travel.get("home") or {}
+    away_injury = gd.away_injury_features
+    home_injury = gd.home_injury_features
+
+    def line_value(value):
+        if value.get("status") not in {"confirmed", "projected"}:
+            return "Not posted"
+        return (
+            f'{value.get("projected_osi", "—")} vs '
+            f'{value.get("team_baseline_osi", "—")} baseline · '
+            f'{value.get("matched_batters", 0)}/9 matched'
+        )
+
+    def travel_value(value):
+        if value.get("status") != "available":
+            return "No recent game"
+        return (
+            f'{value.get("rest_hours", 0):.1f}h rest · '
+            f'{value.get("travel_miles", 0):.0f} mi'
+        )
+
+    def injury_value(value):
+        players = value.get("impact_players") or []
+        if not players:
+            return "No quantified hitter loss"
+        return ", ".join(player["player"] for player in players[:3])
+
+    rows = [
+        (
+            "Starter expected level",
+            f'{away_starter.get("skill_fip", settings.LEAGUE_FIP):.2f} runs/9 scale',
+            f'{home_starter.get("skill_fip", settings.LEAGUE_FIP):.2f} runs/9 scale',
+            "Lower is better",
+        ),
+        (
+            "Starter workload",
+            f'{away_starter.get("expected_ip", 5.2):.1f} projected innings',
+            f'{home_starter.get("expected_ip", 5.2):.1f} projected innings',
+            "Shapes bullpen exposure and outs props",
+        ),
+        (
+            "Bullpen quality",
+            f'{away_pen.get("skill_fip", settings.LEAGUE_BULLPEN_ERA):.2f} skill · '
+            f'{away_pen.get("pitches_1d") or 0:.0f} pitches yesterday · '
+            f'{away_pen.get("pitches_2d") or 0:.0f} in 2d',
+            f'{home_pen.get("skill_fip", settings.LEAGUE_BULLPEN_ERA):.2f} skill · '
+            f'{home_pen.get("pitches_1d") or 0:.0f} pitches yesterday · '
+            f'{home_pen.get("pitches_2d") or 0:.0f} in 2d',
+            "Lower quality and fresher workload favor the offense",
+        ),
+        (
+            "Lineup vs starter hand",
+            line_value(away_line),
+            line_value(home_line),
+            f'{esc(gd.away)} vs {esc(gd.home_hand)}HP · {esc(gd.home)} vs {esc(gd.away_hand)}HP',
+        ),
+        (
+            "Unavailable hitters",
+            injury_value(away_injury),
+            injury_value(home_injury),
+            "Quantified before confirmed lineups",
+        ),
+        (
+            "Rest and travel",
+            travel_value(away_travel),
+            travel_value(home_travel),
+            "Short rest, distance, timezone",
+        ),
+    ]
+    return "".join(
+        f'<tr><td><b>{esc(label)}</b></td><td>{esc(away_value)}</td>'
+        f'<td>{esc(home_value)}</td><td class=mut>{context_note}</td></tr>'
+        for label, away_value, home_value, context_note in rows
+    )
+
+
+def _matchup_context_panel(gd, probability, context, esc):
+    """Environment, splits, and workload — always visible before market boards."""
+    weather = context.get("weather") or {}
+    lineups = context.get("lineups") or {}
+    umpire = context.get("umpire") or {}
+    travel = context.get("travel") or {}
+    away_lineup = (lineups.get("away") or {}).get("status", "unavailable")
+    home_lineup = (lineups.get("home") or {}).get("status", "unavailable")
+    umpire_label = (
+        umpire.get("umpire")
+        if umpire.get("status") == "announced"
+        else "Not announced"
+    )
+    park_pct = (gd.park_factor - 1.0) * 100
+    park_cell = val_grade_html(gd.park_factor, "park", digits=3)
+
+    def split_row(team, ctx, opposing_hand, arsenal):
+        platoon = ctx.platoon_osi
+        woba = ctx.woba
+        arsenal_note = ""
+        if arsenal.get("er_factor") is not None:
+            arsenal_note = (
+                f' · pitch-mix {pitch_mix_runs_chip(arsenal.get("er_factor"))}'
+                f' <span class=mut>({arsenal.get("batters_matched", 0)} batters)</span>'
+            )
+        return (
+            f'<tr><td><b>{esc(team)}</b><span class=mut> vs {esc(opposing_hand)}HP</span></td>'
+            f'<td>{val_chip_html(platoon, "osi", digits=0) if platoon is not None else "<span class=c-na>—</span>"}</td>'
+            f'<td>{val_chip_html(woba, "woba", digits=3) if woba is not None else "<span class=c-na>—</span>"}</td>'
+            f'<td>{val_chip_html(ctx.osi, "osi", digits=0) if ctx.osi is not None else "<span class=c-na>—</span>"}</td>'
+            f'<td class=mut>{esc(str(ctx.window_direction or "—"))}{arsenal_note}</td></tr>'
+        )
+
+    splits_rows = (
+        split_row(gd.away, gd.away_context, gd.home_hand, gd.away_arsenal_features)
+        + split_row(gd.home, gd.home_context, gd.away_hand, gd.home_arsenal_features)
+    )
+    workload_rows = _workload_context_rows(gd, travel, esc)
+    env_bits = [
+        f'<span><b>Park</b>{park_cell} <span class=mut>({park_pct:+.1f}% runs)</span></span>',
+        f'<span><b>Weather</b>{esc(_weather_detail(weather))}</span>',
+        f'<span><b>Plate umpire</b>{esc(str(umpire_label))}</span>',
+        f'<span><b>Lineups</b>{esc(gd.away)} {esc(away_lineup)} · {esc(gd.home)} {esc(home_lineup)}</span>',
+        f'<span><b>SP hands</b>{esc(gd.away_sp)} ({esc(gd.away_hand)}HP) · {esc(gd.home_sp)} ({esc(gd.home_hand)}HP)</span>',
+        f'<span><b>Coverage</b>{probability.data_coverage_pct}%</span>',
+    ]
+    return f"""<div class=ca-board>{section_head("Matchup context", icon="matchups")}<div class=body>
+      <div class=matchup-env-strip>{"".join(env_bits)}</div>
+      <div class=matchup-context-grid>
+        <div><div class=ca-subhead>Splits &amp; handedness</div>
+          <div class=table-scroll><table><tr><th>Team</th><th>Platoon OSI</th><th>wOBA</th><th>OSI</th><th>Trend · pitch-mix runs</th></tr>{splits_rows}</table></div>
+        </div>
+        <div><div class=ca-subhead>Bullpen, workload &amp; inputs</div>
+          <div class=table-scroll><table><tr><th>Input</th><th>{esc(gd.away)}</th><th>{esc(gd.home)}</th><th>Meaning</th></tr>{workload_rows}</table></div>
+        </div>
+      </div>
+    </div></div>"""
+
+
 def _f5_panel(r, gd, esc):
     """First-5-innings panel — congruent with the market report: same graded F5 rows, shown
     with the live price + edge when F5 odds are available, model fair value otherwise."""
@@ -1093,88 +1204,24 @@ def matchup_summary_html(report: dict) -> str:
  </div></div></div>"""
 
 
-def premium_matchup_terminal_html(report: dict, detail_html: str) -> str:
-    """Compact first-screen decision terminal matching the Chase premium reference."""
-    esc = html.escape
-    gd, probability = report["gd"], report["probs"]
-    extras = report.get("extras") or {}
-    markets = report.get("markets") or []
-    priced = [market for market in markets if market.get("edge") is not None]
-    best = max(priced, key=lambda market: float(market.get("edge") or -999), default=None)
-    if best:
-        state = str(best.get("state") or "MONITOR")
-        best_strip = (
-            f'<span class="pill {best.get("tone", "warnc")}">{esc(state)}</span>'
-            f'<b>{esc(str(best.get("label") or "Market"))}</b>'
-            f'<span>edge <strong>{float(best.get("edge") or 0):+.1f}pt</strong></span>'
-            f'<span>EV <strong>{float(best.get("ev") or 0):+.3f}</strong></span>'
-            f'<span>max <strong>{int(best["max"]):+d}</strong></span>'
-        )
-    else:
-        best_strip = '<span class="pill mut">NO EDGE</span><b>No paired market snapshot</b>'
-    best_edge = float(best.get("edge") or 0) if best else 0.0
-
-    away_win = probability.p_away_win * 100
-    home_win = probability.p_home_win * 100
-    favored = gd.home if home_win >= away_win else gd.away
-    favored_win = max(away_win, home_win)
-    first_total = next(
-        (market for market in markets if market.get("market") == "total"), None
+def _desk_step(num: str, title: str, sub: str, body: str, *, step_id: str) -> str:
+    """One stage in the matchup breakdown process."""
+    return (
+        f'<section class="desk-step" id="{step_id}">'
+        f'<header class="desk-step__head">'
+        f'<span class="desk-step__n">{num}</span>'
+        f'<div><h3 class="desk-step__title">{title}</h3>'
+        f'<p class="desk-step__sub">{sub}</p></div>'
+        f"</header>"
+        f'<div class="desk-step__body">{body}</div>'
+        f"</section>"
     )
-    market_total = (
-        str(first_total.get("line")) if first_total and first_total.get("line") is not None
-        else "--"
-    )
-    home_fair = fair_price(probability.p_home_win)
-    f5_over = (extras.get("f5") or {}).get("over")
-
-    factor_rows = "".join(
-        f'<tr><td><b>{esc(str(factor.get("name") or "Model factor"))}</b></td>'
-        f'<td>{esc(str(factor.get("side") or "Both"))}</td>'
-        f'<td>{esc(str(factor.get("market") or "Model projection"))}</td></tr>'
-        for factor in (report.get("factors") or [])[:3]
-    ) or '<tr><td colspan=3 class=mut>No driver stack available.</td></tr>'
-    risk_rows = "".join(
-        f'<li><b>{esc(risk.label)}</b><span>{esc(risk.implication)}</span></li>'
-        for risk in (report.get("risks") or [])[:3]
-    ) or '<li><b>No additional risk flags.</b></li>'
-    market_rows = "".join(_graded_market_row(market, esc) for market in markets)
-    if not market_rows:
-        market_rows = '<tr><td colspan=8 class=mut>No priced markets for this matchup.</td></tr>'
-
-    return f"""<div class=premium-matchup-terminal>
-  <section class=premium-matchup-identity>
-    <div class=premium-matchup-title>{_logo(gd.away, "tlogo xl")}<b>{esc(gd.away)}</b><span>@</span><b>{esc(gd.home)}</b>{_logo(gd.home, "tlogo xl")}</div>
-    <div class=premium-matchup-meta><span>{esc(str(extras.get("start") or gd.start_time or "TBD"))}</span><span>{esc(str(extras.get("lineup") or "Lineups pending"))}</span><span>Confidence {esc(str(probability.confidence))}</span></div>
-    <div class=premium-starters>
-      <div>{_headshot(extras.get("a_id"))}<span><b>{esc(gd.away_sp)}</b><i>{esc(gd.away_hand)}HP &middot; FIP {_fmt_optional(gd.away_fip, digits=2)}</i></span></div>
-      <em>vs</em>
-      <div>{_headshot(extras.get("h_id"))}<span><b>{esc(gd.home_sp)}</b><i>{esc(gd.home_hand)}HP &middot; FIP {_fmt_optional(gd.home_fip, digits=2)}</i></span></div>
-    </div>
-  </section>
-  <div class=premium-monitor-strip>{best_strip}</div>
-  <div class=premium-matchup-kpis>
-    <div><span>Win %</span><b>{favored_win:.0f}% <i>{esc(favored)}</i></b></div>
-    <div><span>Proj score</span><b>{esc(gd.away)} {probability.exp_away_runs:.1f} &ndash; {probability.exp_home_runs:.1f}</b></div>
-    <div><span>Proj total</span><b>{probability.exp_total:.1f}</b></div>
-    <div><span>Mkt total</span><b>{esc(market_total)}</b></div>
-    <div><span>Fair ML</span><b>{home_fair:+d}</b></div>
-    <div><span>F5 over</span><b>{f'{float(f5_over):.0f}%' if f5_over is not None else '--'}</b></div>
-    <div><span>Best edge</span><b class={"pos" if best_edge > 0 else "mut"}>{best_edge:+.1f}pt</b></div>
-  </div>
-  <div class=premium-evidence-grid>
-    <section class=terminal-panel><header><strong>Why {esc(favored)}</strong><span>Clearest edges</span></header><table class=terminal-table><thead><tr><th>Factor</th><th>Edge</th><th>Affects</th></tr></thead><tbody>{factor_rows}</tbody></table></section>
-    <section class=terminal-panel><header><strong>Top risks</strong><span>Incomplete inputs</span></header><ul class=premium-risk-list>{risk_rows}</ul></section>
-  </div>
-  <nav class=terminal-tabs aria-label="Matchup evidence"><button class=active>Markets</button><button>Charts</button><button>Matchup</button><button>Drivers</button><button>Sharp</button></nav>
-  <section class=terminal-panel><div class=terminal-table-scroll><table class="terminal-table premium-market-table"><thead><tr><th>Market</th><th>Mkt</th><th>Fair</th><th>Impl</th><th>Model</th><th>Edge</th><th>EV</th><th>State</th></tr></thead><tbody>{market_rows}</tbody></table></div></section>
-  <details class=premium-deep-evidence><summary>Detailed matchup evidence and methodology</summary>{detail_html}</details>
-</div>"""
 
 
 def report_body(r):
-    """Render a matchup as a betting decision surface, not a written report."""
+    """Linear matchup process: Decision → Model → Markets → Why → Splits → Sharp → Risks."""
     gd, esc = r["gd"], html.escape
+    prob = r["probs"]
 
     def market_row(market):
         return _graded_market_row(market, esc)
@@ -1185,91 +1232,148 @@ def report_body(r):
         key=lambda market: market["edge"],
         default=None,
     )
+    gate = esc(str(r["promotion"].get("verdict", "HOLD/ABSTAIN")))
+    conf = esc(str(getattr(prob, "confidence", None) or "—"))
+    n_sharp = len(r.get("sharp") or [])
     if opportunity and opportunity["edge"] > 0:
         edge_cls = edge_grade((opportunity.get("edge") or 0) / 100)
-        decision = (
-            f'<div class="matchup-verdict vbar {opportunity["tone"]}">'
-            f'<span class="pill {opportunity["tone"]} matchup-verdict__badge">{opportunity["state"]}</span>'
-            f'<span class=matchup-verdict__pick><b>{esc(opportunity["label"])}</b></span>'
-            f'<span class=matchup-verdict__stats>'
-            f'model {pct_chip_html(opportunity.get("model"), digits=1)} '
-            f'market {pct_chip_html(opportunity.get("impl"), digits=1)} '
-            f'edge <b class="{edge_cls}">{opportunity["edge"]:+.1f}pt</b>'
-            f'</span></div>'
-        )
+        tone = opportunity["tone"]
+        state = esc(str(opportunity["state"]))
+        decision = f"""<div class="desk-verdict {tone}">
+  <div>
+    <div class="desk-verdict__label">{state}</div>
+    <div class="desk-verdict__pick"><b>{esc(opportunity["label"])}</b></div>
+  </div>
+  <div class="desk-verdict__stats">
+    <div><div class=k>Edge</div><div class="v {edge_cls}">{opportunity["edge"]:+.1f}<span class=mut>pt</span></div></div>
+    <div><div class=k>Model</div><div class=v>{pct_chip_html(opportunity.get("model"), digits=1)}</div></div>
+    <div><div class=k>Mkt</div><div class=v>{pct_chip_html(opportunity.get("impl"), digits=1)}</div></div>
+    <div><div class=k>Conf</div><div class=v>{conf}</div></div>
+  </div>
+  <div class="desk-verdict__meta">Gate {gate} · sharp {n_sharp}</div>
+</div>"""
     else:
         reason = (
             "No positive priced edge"
             if any(market["mkt"] is not None for market in r["markets"])
             else "No paired market snapshot"
         )
-        decision = f'<div class="matchup-verdict vbar mut"><span class="pill mut">NO ACTION</span><span>{esc(reason)}</span></div>'
+        decision = f"""<div class="desk-verdict mut">
+  <div>
+    <div class="desk-verdict__label">NO-EDGE</div>
+    <div class="desk-verdict__pick">{esc(reason)}</div>
+  </div>
+  <div class="desk-verdict__stats">
+    <div><div class=k>Edge</div><div class=v>—</div></div>
+    <div><div class=k>Model</div><div class=v>—</div></div>
+    <div><div class=k>Mkt</div><div class=v>—</div></div>
+    <div><div class=k>Conf</div><div class=v>{conf}</div></div>
+  </div>
+  <div class="desk-verdict__meta">Gate {gate} · abstain</div>
+</div>"""
 
-    banner = matchup_banner_html(r, esc)
     factors = r.get("factors") or []
     repo = r.get("repo")
     if repo is None:
         repo = DataRepository(r.get("data_dir"))
 
-    context_panel = matchup_context_html(r, gd, repo, esc)
     advantage_panel = advantage_panel_html(gd, r.get("advantage", []), esc)
     run_impacts_panel = run_impacts_html(factors, esc)
     f5_panel = f5_section_html(r, gd, repo, esc)
     pitcher_deck = pitcher_deck_html(r, gd, repo, esc)
-    risk_rows = "".join(
-        f'<tr><td><b>{esc(signal.label)}</b></td>'
-        f'<td>{esc(signal.implication)}</td>'
-        f'<td><span class="pill {"neg" if signal.severity == "high" else "warnc"}">'
-        f'{esc(signal.category)}</span></td></tr>'
-        for signal in r["risks"][:5]
-    ) or '<tr><td class=mut colspan=3>No additional risk flags.</td></tr>'
+    breakdown = matchup_context_html(r, gd, repo, esc)
+    # Full board for the process — not the compact strip
+    sym_board = sym_projection_board_html(r, esc, compact=False)
+
+    risks = list(r.get("risks") or [])
+    if risks:
+        risk_rows = "".join(
+            f'<div class=factor-row><span class=k>{esc(signal.category)}</span>'
+            f'<span class=who>{esc(signal.label)}</span>'
+            f'<span class=mkt>{esc(signal.implication)}</span></div>'
+            for signal in risks[:6]
+        )
+    else:
+        risk_rows = (
+            '<div class=factor-row><span class=k>—</span>'
+            '<span class=who>No active risk flags</span>'
+            '<span class=mkt>Proceed on price + gate only</span></div>'
+        )
+
     sharp_rows = "".join(
         f'<tr><td>{esc(signal["market_type"])}</td><td>{esc(str(signal["selection"]))}</td>'
-        f'<td>{float(signal.get("divergence") or 0) * 100:+.1f}pt</td>'
+        f'<td class=num>{float(signal.get("divergence") or 0) * 100:+.1f}pt</td>'
         f'<td>{"STEAM" if signal.get("steam_flag") else "—"}</td></tr>'
         for signal in r["sharp"]
     ) or '<tr><td class=mut colspan=4>No sharp-money snapshot for this game.</td></tr>'
 
     has_price = any(market.get("mkt") is not None for market in r["markets"])
-    has_sharp = bool(r["sharp"])
-    market_panel = (
-        f'<div class=ca-board>{section_head("Market report", icon="markets")}<div class=body><div class=table-scroll>'
-        f'<table><tr><th>Bet</th><th title="best available American price">Best</th>'
-        f'<th title="book\'s price with its two-sided hold removed">No-vig fair</th>'
-        f'<th title="model fair price from the projection">Model fair</th>'
-        f'<th>Model%</th><th title="model% minus the no-vig market%">Edge</th>'
-        f'<th>EV</th><th>State</th></tr>{market_rows}</table>'
-        f'</div></div></div>'
-        if has_price else ''
+    market_table = (
+        f'<div class=table-scroll><table><tr><th>Bet</th><th>Best</th><th>Fair</th>'
+        f'<th>Model fair</th><th>Model%</th><th>Edge</th><th>EV</th><th>State</th></tr>'
+        f'{market_rows}</table></div>'
+        if has_price
+        else '<div class=empty>No priced markets yet — use the model board, then wait for a number.</div>'
     )
-    sharp_panel = (
-        f'<div class=ca-board>{section_head("Sharp market activity", icon="markets")}<div class=body><div class=table-scroll><table>'
-        f'<tr><th>Market</th><th>Side</th><th>Sharp gap</th><th>Move</th></tr>{sharp_rows}</table>'
-        f'</div></div></div>'
-        if has_sharp else ''
+    markets_body = market_table + (f5_panel or "")
+
+    why_body = (
+        f'<div class=decision-grid>{advantage_panel or ""}{run_impacts_panel or ""}</div>'
+        if (advantage_panel or run_impacts_panel)
+        else '<div class=empty>No factor decomposition for this slate.</div>'
     )
+    splits_body = breakdown or pitcher_deck or '<div class=empty>Splits unavailable.</div>'
 
-    return f"""{banner}
-    {decision}
-    {context_panel}
+    process_nav = """<nav class="desk-process" aria-label="Matchup breakdown process">
+  <a href="#m-decision"><b>01</b> Decision</a>
+  <a href="#m-model"><b>02</b> Model</a>
+  <a href="#m-markets"><b>03</b> Markets</a>
+  <a href="#m-why"><b>04</b> Why</a>
+  <a href="#m-splits"><b>05</b> Splits</a>
+  <a href="#m-sharp"><b>06</b> Sharp</a>
+  <a href="#m-risks"><b>07</b> Risks</a>
+</nav>"""
 
-    <div class=decision-grid>
-      {advantage_panel}
-      {run_impacts_panel}
-    </div>
+    steps = "".join([
+        _desk_step(
+            "01", "Decision",
+            "Action first — what the desk would do at the current number",
+            decision, step_id="m-decision",
+        ),
+        _desk_step(
+            "02", "Model projection",
+            "Symmetric Away | label | Home — fair prices before the market",
+            sym_board, step_id="m-model",
+        ),
+        _desk_step(
+            "03", "Markets",
+            "Best available vs model fair · edge · EV · state — price the bet",
+            markets_body, step_id="m-markets",
+        ),
+        _desk_step(
+            "04", "Why the number moves",
+            "Unit advantages and run drivers that built the projection",
+            why_body, step_id="m-why",
+        ),
+        _desk_step(
+            "05", "Unit breakdown",
+            "Pitcher · lineup · bullpen · pitch mix — Away vs Home lanes",
+            splits_body, step_id="m-splits",
+        ),
+        _desk_step(
+            "06", "Sharp confirmation",
+            "Does sharp money agree, conflict, or stay quiet?",
+            f'<div class=table-scroll><table><tr><th>Market</th><th>Side</th><th>Sharp gap</th><th>Move</th></tr>{sharp_rows}</table></div>',
+            step_id="m-sharp",
+        ),
+        _desk_step(
+            "07", "Risks & invalidation",
+            "What can break the projection after you have a price",
+            risk_rows, step_id="m-risks",
+        ),
+    ])
 
-    {f5_panel}
-    {pitcher_deck}
-
-    {market_panel}
-    {sharp_panel}
-    <div class=ca-board>{section_head("What can break the projection", icon="research")}<div class=body><div class=table-scroll><table>
-      <tr><th>Risk</th><th>Betting implication</th><th>Type</th></tr>{risk_rows}</table>
-    </div></div></div>
-
-    <details class=model-details><summary>Model lineage</summary>
-      <p>Gate: <b>{esc(r["promotion"].get("verdict", "HOLD/ABSTAIN"))}</b> · sequential run build from lineup, SP, bullpen, park, weather, ump.</p>
-    </details>"""
+    return f'<div class="matchup-process">{process_nav}{steps}</div>'
 
 
 def render_html(r):

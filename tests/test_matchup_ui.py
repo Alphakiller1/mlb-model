@@ -140,6 +140,28 @@ def test_advantage_panel_color_coded():
     }]
     panel = advantage_panel_html(gd, rows, html.escape)
     assert 'class="chip' in panel
-    assert "adv-edge-win" in panel
+    assert "sym-metric-row" in panel
+    assert "sym-metric-cell--win" in panel
     assert "NYY" in panel
     assert "league-avg" in panel
+
+
+def test_sym_projection_board_mirrored():
+    from mlbmodel.report.matchup_ui import sym_projection_board_html
+
+    gd = type("GD", (), {
+        "away": "NYY", "home": "BOS",
+        "away_fip": 4.12, "home_fip": 3.88,
+        "away_k": 22.1, "home_k": 24.0,
+    })()
+    prob = type("Prob", (), {
+        "p_away_win": 0.47, "p_home_win": 0.53,
+        "exp_away_runs": 4.2, "exp_home_runs": 4.7,
+        "exp_total": 8.9, "exp_margin": -0.5,
+    })()
+    panel = sym_projection_board_html({"gd": gd, "probs": prob}, html.escape)
+    assert "sym-metric-board" in panel
+    assert panel.count("sym-metric-cell--away") >= 4
+    assert panel.count("sym-metric-cell--home") >= 4
+    assert "Win %" in panel
+    assert "SP FIP" in panel
