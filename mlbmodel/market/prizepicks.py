@@ -103,8 +103,14 @@ def parse_payload(payload: dict, cache_path: str | Path | None = None) -> list[d
 
 
 def fetch_lines(cache_path: str | Path | None = None) -> list[dict]:
-    """Fetch + parse live (urllib). Works locally; the edge may 403 automated clients, so the
-    build path downloads with curl and calls ``parse_payload`` on the raw JSON instead."""
+    """Fetch + parse live (urllib).
+
+    The endpoint is behind DataDome, which returns a geo.captcha-delivery.com interstitial
+    (HTTP 403) to automated clients. As of 2026-08-07 that block applies to residential IPs
+    too, not just datacenter ones — curl with a full browser header set and both headless and
+    headed Playwright were all refused — so this raises and callers fall back to the committed
+    snapshot. Kept because it costs nothing and starts working again the moment the edge does.
+    """
     request = urllib.request.Request(
         PP_URL, headers={"User-Agent": _UA, "Accept": "application/json"}
     )
