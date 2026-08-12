@@ -17,3 +17,10 @@ sample_matchup_report.html
 # working screenshots (keep docs/screenshots/ only)
 /shot-*.png
 mlb_model_app.html
+
+# local dashboard builds + run logs (the deployed page is built in CI from
+# deployment_data/, so a checked-in copy is only ever stale)
+mlb_model_desk_*.html
+mlb_model_today.html
+model_report_today.html
+mlb_model_run_log.txt

@@ -209,6 +209,13 @@ jobs:
           assert 'ca-board' in html
           assert 'matchup-full-src' in html
           assert 'ca-section-head' in html
+          assert 'bd-card' in html, 'slate board missing'
+          # Shared brand contract with wnba-edge-model and nfl-model. The graphite fork
+          # below is what these three products silently drifted into once before.
+          for key in ('#08090F', '#9A6BFF', 'DM Sans', 'Roboto Condensed'):
+              assert key in html, key
+          for forked in ('#B794FF', 'IBM Plex'):
+              assert forked not in html, f'off-brand token resurfaced: {forked}'
           icons = list(Path('_site/assets/icons').glob('*.svg'))
           assert len(icons) >= 8, f'expected vendored icons, got {len(icons)}'
           print(f'OK: {size_kb} KB, all views present, {len(icons)} icons')

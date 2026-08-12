@@ -174,6 +174,9 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
 
     matchup_reports = []
     model_by_pk = {}
+    # Kept so the slate board can render each game's own priced markets and pitcher art
+    # from the same report the Matchups view uses — one build, two surfaces, no drift.
+    reports_by_key = {}
     for game in slate:
         game_key = game.get("key") or f'{game["away"]}@{game["home"]}'
         _, _, game_number = parse_game_key(game_key)
@@ -189,6 +192,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             )
             if "pk" in game:
                 model_by_pk[game["pk"]] = r.get("markets", [])
+            reports_by_key[game_key] = r
             full_terminal = report_body(r)
             if game_key == featured_key:
                 report = f'<div class=matchup-body>{full_terminal}</div>'
@@ -318,7 +322,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             log.warning("closing-odds refresh failed: %s", exc)
 
     views = {
-        "today": _today(slate, sd, sharp_by_pk, sync),
+        "today": _today(slate, sd, sharp_by_pk, sync, reports_by_key),
         "matchups": matchups,
         "trends": _trends(slate_reports, slate=slate),
         "markets": _markets(

@@ -23,13 +23,9 @@ from mlbmodel.report.edge_ui import (
     team_accuracy_html,
 )
 from mlbmodel.report.html_fmt import display as _display, edge_grade as _edge_grade, section_head, lean_dir_html, desk_pagehead
-from mlbmodel.report.html_fmt import (
-    prob_chip_html,
-    pct_chip_html,
-    val_chip_html,
-    val_grade_html,
-)
-from mlbmodel.report.matchup import _logo
+from mlbmodel.report.html_fmt import pct_chip_html
+from mlbmodel.report.board import board_html
+from mlbmodel.report.board_mlb import build_board
 from mlbmodel.report.shell import slate_view_label
 from mlbmodel.report.props_ui import pitcher_prop_deck, prop_channel_counts
 from mlbmodel.report.game_keys import assign_slate_keys, parse_game_key
@@ -73,51 +69,20 @@ def slate(repo, pitcher_rows=None):
 
 
 # ── sections (each = context -> conclusion -> evidence; honest empty states) ──
-def today(slate, sd, sharp_by_pk, sync=None):
-    rows = ""
-    for g in slate:
-        if g.get("err"):
-            rows += f'<tr><td>{e(g["away"])}@{e(g["home"])}</td><td colspan=8 class=mut>no model inputs</td></tr>'
-            continue
-        sc = len(sharp_by_pk.get(g["pk"], []))
-        game = g.get("key") or f'{g["away"]}@{g["home"]}'
-        ph = g.get("ph")
-        pa = (1.0 - float(ph)) if isinstance(ph, (int, float)) else None
-        rows += (f'<tr><td><button class=gamepick onclick="openGame(\'{game}\')">'
-                 f'<span class=gcell>{_logo(g["away"],"tlogo sm")}<b>{e(g["away"])}</b>'
-                 f'<span class=mut>@</span>{_logo(g["home"],"tlogo sm")}<b>{e(g["home"])}</b></span></button></td>'
-                 f'<td class=mut>{e(g["time"])}</td>'
-                 f'<td><span class=slate-sym>'
-                 f'<span class=slate-sym__a>{prob_chip_html(pa)}</span>'
-                 f'<span class=slate-sym__mid>|</span>'
-                 f'<span class=slate-sym__h>{prob_chip_html(ph)}</span></span></td>'
-                 f'<td>{val_chip_html(g["total"], "game_total", digits=1)}</td>'
-                 f'<td>{val_grade_html(g["margin"], "margin", digits=1, suffix="")}</td>'
-                 f'<td class=side>{e(g["lean"])}</td>'
-                 f'<td class=mut><span class=slate-sym>'
-                 f'<span class=slate-sym__a>{e(str(g.get("asp") or "—"))}</span>'
-                 f'<span class=slate-sym__mid>/</span>'
-                 f'<span class=slate-sym__h>{e(str(g.get("hsp") or "—"))}</span></span></td>'
-                 f'<td>{("<span class=pill warnc>"+str(sc)+"</span>") if sc else "<span class=mut>—</span>"}</td></tr>')
-    ok = [g for g in slate if not g.get("err")]
-    n = len(ok)
+def today(slate, sd, sharp_by_pk, sync=None, reports_by_key=None):
+    """The slate board — one card per game, each carrying its own priced markets.
+
+    Replaces the old eight-column table: a table could not show *which* markets were priced
+    per game, which is the thing a slate view exists to answer. Card anatomy is the shared
+    Board kernel, so MLB, WNBA and NFL read identically.
+    """
+    board = build_board(slate, sd, reports_by_key or {}, sharp_by_pk, sync)
     nsharp = sum(len(v) for v in sharp_by_pk.values())
-    sync = sync or {}
-    sync_label = "Exact" if sync.get("status") == "exact" else (
-        "Live fallback" if sync.get("status") == "fallback" else "Untracked"
-    )
-    label = slate_view_label(sd)
-    return f"""{desk_pagehead(label, sub=f'{n} games · {e(sd or "—")} · sharp {nsharp} · sync {e(sync_label)} · open a row to price it')}
- <section class=panel>
-   <div class=panel__head>
-     <h3 class=panel__title>Slate</h3>
-     <span class=panel__note>Win% · total · lean · sharp</span>
-   </div>
-   <div class=table-scroll><table class=sortable>
-     <tr><th>Game</th><th>Time</th><th>Win% A | H</th><th>Tot</th><th>Margin</th><th>Lean</th><th>SPs</th><th>Sharp</th></tr>
-     {rows or '<tr><td class=mut colspan=8>No slate loaded.</td></tr>'}
-   </table></div>
- </section>"""
+    return f"""{desk_pagehead(
+        slate_view_label(sd),
+        sub=f'Every game, its expected runs and its priced markets · sharp {nsharp} · open a card to price it',
+    )}
+ {board_html(board)}"""
 
 
 def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,

@@ -55,11 +55,10 @@ def test_results_view_renders_calibration_board():
             "won": True,
         }],
     }))
-    assert "Progress / Validation" in html
-    assert "terminal-results" in html
+    assert "desk-pagehead" in html and "ca-board" in html
     assert "Calibration" in html
-    assert "Hit rate ledger" in html
-    assert "Projection accuracy trend" in html
+    assert "By source" in html
+    assert "Projection error" in html
     assert "1-1-0" in html
 
 

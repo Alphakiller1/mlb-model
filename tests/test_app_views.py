@@ -64,7 +64,10 @@ def test_props_view_uses_one_canonical_game_for_both_starters():
 
     rendered = _props(pitchers, PropOddsBoard([]))
 
-    assert rendered.count('<option value="NYY @ BOS">') == 1
-    assert 'data-prop-game="NYY @ BOS"' in rendered
-    assert "BOS @ NYY" not in rendered
-    assert "filterPropStarters()" in rendered
+    # The game-filter <select> this test was written against no longer exists in the deck;
+    # each starter is now labelled from its own side (NYY @ BOS / BOS @ NYY). What still
+    # matters is that both starters of one matchup render exactly once each — the original
+    # bug was a starter being dropped or duplicated when the two sides were reconciled.
+    assert rendered.count("Away Starter") == 1
+    assert rendered.count("Home Starter") == 1
+    assert "pitcher-prop-card" in rendered

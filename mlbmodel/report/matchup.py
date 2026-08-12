@@ -43,11 +43,11 @@ from mlbmodel.report.html_fmt import (
     val_chip_html,
     val_grade_html,
 )
+from mlbmodel.report.chase_theme import brand_css
 from mlbmodel.report.pitch_mix_ui import pitch_mix_runs_chip
 from mlbmodel.report.matchup_ui import (
     advantage_panel_html,
     f5_section_html,
-    matchup_banner_html,
     matchup_context_html,
     pitcher_deck_html,
     run_impacts_html,
@@ -486,21 +486,16 @@ def _sharp_for(gpk, reader):
     return result.rows
 
 
-# ── render (Chase Analytics / Sharp Money Tracker design contract) ────────────
-# Base tokens/fonts come from chase_theme.theme_css() (chase_tokens.css + chase_components.css,
-# vendored from mlbma-pipeline's canonical design system). These are compatibility aliases only
-# -- same values, legacy names -- so the ~150 `var(--ink)`/`var(--muted)`/etc. references below
-# don't all need renaming; nothing here redefines a canonical token to a different value.
+# ── render (Chase Analytics design contract) ─────────────────────────────────
+# Colours and typefaces come from chase_tokens.css, which every entry point loads first.
+# The block below defines ONLY the legacy alias names that chase_tokens.css does not carry,
+# each pointing at a real token. Do not give a canonical token a literal value here: doing
+# exactly that is what forked this product onto its own graphite palette.
 _CSS = """
 :root{
-  /* Desk contrast lock — do not alias to missing MLBMA tokens */
-  --text: #F5F5F7; --text-2: #D2D2DA; --text-3: #B0B0BA; --text-4: #9494A0;
-  --ink: #F5F5F7; --ink2: #D2D2DA; --muted: #B0B0BA; --muted-2: #9494A0;
-  --side: #F5F5F7; --accent: #B794FF; --v-light: #D2D2DA; --v-deep: #9B6DFF;
-  --ca-brand: #B794FF; --ca-purple: #B794FF; --ca-purple-light: #D2D2DA; --ca-purple-dark: #9B6DFF;
-  --green: #2EE59D; --red: #FF4D5E; --teal: #2EE59D; --gold: #F0C75E;
-  --border: #2C2C33; --border-2: #2C2C33; --border-soft: #2C2C33; --border-violet: #454552;
-  --raised: #1E1E22; --card: #161618; --bg-2: #111113;
+  --ink: var(--text); --ink2: var(--text-2);
+  --muted: var(--text-3); --muted-2: var(--text-4);
+  --accent: var(--ca-purple);
 }
 .wrap{max-width:1180px;margin:0 auto;padding:22px 20px 70px;display:flex;flex-direction:column;gap:18px}
 .num,td,th,.chip,.mval{font-variant-numeric:tabular-nums}.pos{color:var(--green)}.neg{color:var(--red)}.warnc{color:var(--gold)}.side{color:var(--side)}.mut{color:var(--muted)}
@@ -1388,7 +1383,8 @@ def render_html(r):
     return (f'<!DOCTYPE html><html lang=en><head><meta charset=utf-8>'
             f'<meta name=viewport content="width=device-width,initial-scale=1">'
             f'<title>{e(r["away"])}@{e(r["home"])} — MLB Model</title>'
-            f'<style>{_CSS}</style></head><body><div class=wrap>{report_body(r)}</div>'
+            f'<style>{brand_css()}{_CSS}</style></head>'
+            f'<body><div class=wrap>{report_body(r)}</div>'
             f'<script>{script}</script></body></html>')
 
 

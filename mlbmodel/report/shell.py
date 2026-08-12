@@ -6,6 +6,8 @@ import html
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from mlbmodel.report.board import BOARD_JS, board_css
+from mlbmodel.report.chase_theme import brand_css
 from mlbmodel.report.interactive import TABLE_UI_CSS, TABLE_UI_JS
 
 _STATIC = Path(__file__).resolve().parent / "static"
@@ -71,9 +73,13 @@ def desk_sidebar_html(
 
 
 def shell_css() -> str:
-    """Primary identity is desk_app.css (mockup system). No MLBMA board stack."""
+    """Brand tokens first, then the desk layout, then the shared board.
+
+    Order matters: chase_tokens.css must land before desk_app.css so the desk's local
+    names (--ink, --panel, --line …) resolve to Chase values instead of forking the palette.
+    """
     desk = (_STATIC / "desk_app.css").read_text(encoding="utf-8")
-    return desk + TABLE_UI_CSS
+    return brand_css() + desk + board_css() + TABLE_UI_CSS
 
 
 def shell_js() -> str:
@@ -95,18 +101,6 @@ def shell_js() -> str:
         "if(p.getAttribute('data-prop-detail')===String(i)){p.removeAttribute('hidden');}else{p.setAttribute('hidden','');}});"
         "document.querySelectorAll('[data-prop-index]').forEach(function(b){"
         "b.classList.toggle('active',b.getAttribute('data-prop-index')===String(i));});}"
-        "function filterPropStarters(){"
-        "var game=document.getElementById('propGameFilter');"
-        "var priced=document.getElementById('propPricedFilter');"
-        "var wanted=game?game.value:'';var pricedOnly=priced&&priced.checked;var visible=[];"
-        "document.querySelectorAll('[data-prop-index]').forEach(function(b){"
-        "var match=(!wanted||b.getAttribute('data-prop-game')===wanted)"
-        "&&(!pricedOnly||b.getAttribute('data-prop-priced')==='true');"
-        "b.hidden=!match;if(match)visible.push(b);});"
-        "var empty=document.getElementById('propsFilterEmpty');if(empty)empty.hidden=visible.length>0;"
-        "if(!visible.length){document.querySelectorAll('[data-prop-detail]').forEach(function(p){p.hidden=true;});return;}"
-        "var active=visible.find(function(b){return b.classList.contains('active');})||visible[0];"
-        "switchPropPitcher(active.getAttribute('data-prop-index'));}"
         "function togglePitcherCard(i){const c=document.getElementById('prop-card-'+i);"
         "if(c){c.classList.toggle('on');const b=c.querySelector('.pitcher-prop-head');"
         "if(b)b.setAttribute('aria-expanded',c.classList.contains('on')?'true':'false');}}"
@@ -128,5 +122,6 @@ def shell_js() -> str:
         "var p=btns[(i-1+btns.length)%btns.length];if(p)p.click();}});"
         "var boot=(location.hash||'').replace(/^#/,'');"
         "if(boot&&document.getElementById('v-'+boot))show(boot);"
+        + BOARD_JS
         + TABLE_UI_JS
     )

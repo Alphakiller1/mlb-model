@@ -1,60 +1,38 @@
-/* MLB Model — Terminal Desk mockup system */
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
-
+/* MLB Model — Terminal Desk layout on the Chase Analytics identity.
+ *
+ * chase_tokens.css is loaded BEFORE this file and owns every colour and typeface. This
+ * block only maps the desk's local names onto those tokens, so the structural rules below
+ * need no rewrite while the palette stays identical to wnba-edge-model, nfl-model and
+ * chase-analytics.com. Never redefine a chase token here — that is what silently forked
+ * this product onto its own graphite palette and broke the brand.
+ */
 :root {
-  /* Graphite desk — high-contrast text. Violet = accent chrome only, never body copy. */
-  --bg: #0A0A0B;
-  --bg-raised: #111113;
-  --panel: #161618;
-  --panel-2: #1E1E22;
-  --line: #2C2C33;
-  --line-strong: #454552;
-  --ink: #F5F5F7;
-  --ink-2: #D2D2DA;
-  --mut: #B0B0BA;
-  --signal: #2EE59D;
-  --watch: #F5C14A;
-  --cut: #FF4D5E;
-  --mute: #9494A0;
-  --brand: #B794FF;
-  --brand-deep: #9B6DFF;
-  --brand-light: #E8DEFF;
-  --v-grad: linear-gradient(135deg, #D0BAFF 0%, #B794FF 45%, #9B6DFF 100%);
-  --gold: #F0C75E;
-  --radius: 6px;
-  --font-ui: "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --font-display: "Barlow Condensed", "IBM Plex Sans", sans-serif;
+  --bg-raised: var(--bg-2);
+  --panel: var(--card);
+  --panel-2: var(--card-2);
+  --line: var(--border);
+  --line-strong: var(--border-2);
+  --ink: var(--text);
+  --ink-2: var(--text-2);
+  --ink2: var(--text-2);
+  --mut: var(--text-3);
+  --mute: var(--text-4);
+  --muted: var(--text-3);
+  --muted-2: var(--text-4);
+  --signal: var(--ca-green);
+  --watch: var(--ca-amber);
+  --cut: var(--ca-red);
+  --brand: var(--ca-purple);
+  --brand-deep: var(--ca-purple-dark);
+  --brand-light: var(--ca-purple-light);
+  --accent: var(--ca-purple);
+  --brand-soft: var(--ca-brand-dim);
+  --brand-glow: var(--ca-brand-border);
+  --radius: 10px;
+  --font-ui: var(--font-primary);
+  --font-mono: var(--font-display);
   --sidebar: 220px;
-  --shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-  --brand-soft: rgba(183, 148, 255, 0.16);
-  --brand-glow: rgba(183, 148, 255, 0.4);
-  /* Compat aliases used by matchup/_CSS builders */
-  --text: var(--ink);
-  --text-2: var(--ink-2);
-  --text-3: var(--mut);
-  --text-4: var(--mute);
-  --ink2: var(--ink-2);
-  --muted: var(--mut);
-  --muted-2: var(--mute);
-  --side: var(--ink);
-  --accent: var(--brand);
-  --v-light: var(--ink-2);
-  --v-deep: var(--brand-deep);
-  --ca-brand: var(--brand);
-  --ca-purple: var(--brand);
-  --ca-purple-light: var(--ink-2);
-  --ca-purple-dark: var(--brand-deep);
-  --green: var(--signal);
-  --red: var(--cut);
-  --teal: var(--signal);
-  --border: var(--line);
-  --border-2: var(--line);
-  --border-soft: var(--line);
-  --border-violet: var(--line-strong);
-  --raised: var(--panel-2);
-  --card: var(--panel);
-  --bg-2: var(--bg-raised);
+  --shadow: var(--ca-card-shadow);
 }
 
 *, *::before, *::after { box-sizing: border-box; }

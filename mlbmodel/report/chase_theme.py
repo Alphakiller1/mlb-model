@@ -36,6 +36,20 @@ def _strip_font_imports(css: str) -> str:
 
 
 @lru_cache(maxsize=1)
+def brand_css() -> str:
+    """Fonts + design tokens — the identity layer every entry point loads FIRST.
+
+    This is the whole brand contract in one call: DM Sans / Roboto Condensed / Oswald and
+    the deep-navy + violet palette. wnba-edge-model and nfl-model vendor the same
+    chase_tokens.css, so loading this is what makes the three products one brand. Anything
+    loaded after it may map its own local names onto these tokens, but must never redefine
+    a token to a different literal value.
+    """
+    tokens = _strip_font_imports((_STATIC / "chase_tokens.css").read_text(encoding="utf-8"))
+    return _FONT_IMPORT + tokens
+
+
+@lru_cache(maxsize=1)
 def theme_css() -> str:
     """The full production Chase Analytics stylesheet, inlined and self-contained.
 
