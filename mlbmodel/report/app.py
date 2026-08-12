@@ -321,7 +321,9 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "today": _today(slate, sd, sharp_by_pk, sync),
         "matchups": matchups,
         "trends": _trends(slate_reports, slate=slate),
-        "markets": _markets(slate, sharp_by_pk, model_by_pk, decision_thresholds),
+        "markets": _markets(
+            slate, sharp_by_pk, model_by_pk, decision_thresholds, promotion_status
+        ),
         "props": _props(
             pitchers, prop_prices, pp_board, ud_board, sl_board,
             pickem_snapshots=pickem_snapshots, slate_date=str(sd or "")[:10] or None,

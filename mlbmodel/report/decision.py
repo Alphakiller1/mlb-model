@@ -256,9 +256,25 @@ def markets_html(
     sharp_by_pk,
     model_by_pk=None,
     thresholds: DecisionThresholds | None = None,
+    promotion_status: str = "HOLD/ABSTAIN",
 ) -> str:
     thresholds = thresholds or DEFAULT_THRESHOLDS
-    plays = collect_market_plays(slate, sharp_by_pk, model_by_pk or {}, thresholds)
+    raw_plays = collect_market_plays(slate, sharp_by_pk, model_by_pk or {}, thresholds)
+    # Until the promotion gate clears, the board is research only: executable verdicts are
+    # downgraded to fair value and every stake is zeroed. Dropping this wiring is what put
+    # BET labels and unit exposure on the live site while the gate read HOLD/ABSTAIN.
+    gate_open = str(promotion_status).upper() == "PROMOTE"
+    plays = []
+    for candidate in raw_plays:
+        play = dict(candidate)
+        if not gate_open:
+            executable = play["verdict"] in {"STRONG", "BET", "LEAN"} or bool(play["stake"])
+            if play["verdict"] in {"STRONG", "BET"}:
+                play["verdict"] = "MODEL"
+            play["stake"] = 0.0
+            if executable:
+                play["gate_limited"] = True
+        plays.append(play)
 
     def row(play):
         mkt = MKT_LABEL.get(play["mkt_type"], play["mkt_type"].title())
@@ -300,10 +316,14 @@ def markets_html(
             f'<b class="{_VERDICT_CLASS[play["verdict"]]}">{play["stake"]:.1f}u</b>'
             if play["stake"] else '<span class=mut>—</span>'
         )
+        gate_note = (
+            '<div class="mut meta-sub">validation gate locked execution</div>'
+            if play.get("gate_limited") else ""
+        )
         return (
             f'<tr><td><button class=gamepick onclick="openGame(\'{e(play["game"])}\')">{e(play["game"])}</button></td>'
             f'<td>{bet}</td><td>{sharp}</td><td>{model}</td>'
-            f'<td title="{e(_VERDICT[play["verdict"]][4])}">{verdict_badge(play["verdict"])}</td>'
+            f'<td title="{e(_VERDICT[play["verdict"]][4])}">{verdict_badge(play["verdict"])}{gate_note}</td>'
             f'<td class=num>{stake}</td></tr>'
         )
 
@@ -326,7 +346,7 @@ def markets_html(
     )
     return f"""{desk_pagehead("Markets", sub="Sharp vs model decision board · stake only when gate clears")}
  <div class=cards>
-   <div class=card><div class=k>Top play</div><div class="v v-sm">{e(top_txt)}</div>
+   <div class=card><div class=k>{"Top play" if gate_open else "Top research signal"}</div><div class="v v-sm">{e(top_txt)}</div>
      <div class="mut mut-sm">{e(top_sub)}</div></div>
    <div class=card><div class=k>Bets</div><div class=v>{n_bet}</div></div>
    <div class=card><div class=k>Leans</div><div class=v>{n_lean}</div></div>

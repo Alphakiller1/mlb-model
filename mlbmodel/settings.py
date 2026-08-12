@@ -86,14 +86,31 @@ MLBMA_HUB_KEY = (
     or "sb_publishable_o5EJOhmdxbUPLMHZGKpv1g_Jk8by5v2"
 )
 
-LEAGUE_RUNS_PER_TEAM = 4.58
-LEAGUE_FIP = 4.20
-HOME_BASE_WINP = 0.540
-AWAY_BASE_WINP = 0.460
-TOTAL_RUNS_SD = 4.79
-TEAM_RUNS_SD = 3.33
-MARGIN_SD = 4.40
-HFA_RUNS = 0.15
+# ── Season anchors — CALIBRATED, not assumed ────────────────────────────────
+# Measured 2026-08-12 from 1,597 completed games in BettingBrain.game_outcomes.
+# Prior values (2025 carry-over) shown for audit; re-run the calibration query in
+# docs/CALIBRATION.md at season end rather than hand-editing these.
+#
+#   constant              prior    measured 2026
+#   LEAGUE_RUNS_PER_TEAM   4.58       4.5297
+#   HOME_BASE_WINP         0.540      0.5335
+#   TOTAL_RUNS_SD          4.79       4.7549
+#   TEAM_RUNS_SD           3.33       3.3066
+#   MARGIN_SD              4.40       4.5969   <-- understated by 0.20
+#   HFA_RUNS               0.15       0.1703
+#
+# MARGIN_SD was the material miss. It divides the expected margin when converting
+# to a win probability, so understating it pushed every probability too far from
+# 0.5 — i.e. the model was systematically OVERCONFIDENT, and manufactured edge
+# against the market on exactly the games where it was most sure.
+LEAGUE_RUNS_PER_TEAM = 4.5297
+LEAGUE_FIP = 4.20          # NOT recalibrated — needs a pitcher-weighted aggregate
+HOME_BASE_WINP = 0.5335
+AWAY_BASE_WINP = 0.4665
+TOTAL_RUNS_SD = 4.7549
+TEAM_RUNS_SD = 3.3066
+MARGIN_SD = 4.5969
+HFA_RUNS = 0.1703
 OSI_RUN_SENSITIVITY = MODEL_SENSITIVITIES["osi_run"]
 SP_FIP_WEIGHT = MODEL_SENSITIVITIES["sp_fip_weight"]
 REGRESSION_TO_MEAN = MODEL_SENSITIVITIES["regression_to_mean"]
