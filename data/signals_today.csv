@@ -1,0 +1,301 @@
+away,home,side,fired,game_id,bet_angle,direction,magnitude,signal_name,verdict_text
+BAL,MIN,away,TRUE,,Over offense / team total,lineup,4.33,K% vs OBR,Soft K% arm (18.5%) vs elite floor (OBR 69.3) -- contact & baserunners likely.
+BAL,MIN,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+BAL,MIN,away,TRUE,,Over HR / power,lineup,1.57,HR/9 vs RCV,Barrel lane open: HR/9 1.78 vs RCV 73.6 -- damage upside vs flyball risk arm.
+BAL,MIN,away,FALSE,,Fade weak pitching / back strong offense,lineup,9.84,OSI vs Pitching Score,OSI-Pitch gap +9.8 within noise.
+BAL,MIN,away,FALSE,,Buy-low offense / process catching up,lineup,-41.93,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+BAL,MIN,away,FALSE,,Process > production,process,-41.93,PP-Gap,PP-Gap not elevated.
+BAL,MIN,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+BAL,MIN,away,FALSE,,Target RHP hitters vs RHP,lineup,5.74,ABQ split gap + handedness,ABQ gap 5.7 or handedness mismatch vs RHP.
+BAL,MIN,away,TRUE,,Power Leverage,profile,1,RCV archetype,Power Leverage (High/Mid) -- Big damage output with average table-setting -- slug-first lineup shape.
+BAL,MIN,away,FALSE,,Adjust expectations vs season norm,cold,2.42,Schedule context,Opponent offensive context in line with season baseline.
+BAL,MIN,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+BAL,MIN,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+BAL,MIN,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+BAL,MIN,home,FALSE,,Back pitching / fade offense,pitching,3.23,OSI vs Pitching Score,OSI-Pitch gap -3.2 within noise.
+BAL,MIN,home,FALSE,,Buy-low offense / process catching up,lineup,-27.92,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+BAL,MIN,home,FALSE,,Process > production,process,-27.92,PP-Gap,PP-Gap not elevated.
+BAL,MIN,home,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+BAL,MIN,home,FALSE,,Target LHP hitters vs RHP,lineup,3.83,ABQ split gap + handedness,ABQ gap 3.8 or handedness mismatch vs RHP.
+BAL,MIN,home,TRUE,,Contact Floor,profile,1,RCV archetype,Contact Floor (Mid/Low) -- Modest contact quality with weak on-base -- limited run-scoring paths.
+BAL,MIN,home,TRUE,,Adjust expectations vs season norm,hot,7.74,Schedule context,Opponent OOR 67.6 vs HvP baseline 59.9 (Δ+7.7) -- hotter than season profile.
+PHI,STL,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+PHI,STL,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+PHI,STL,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+PHI,STL,away,TRUE,,Back pitching / fade offense,pitching,19.56,OSI vs Pitching Score,OSI 33.4 vs opp Pitch 52.9 (gap -19.6) -- pitching edge.
+PHI,STL,away,FALSE,,Buy-low offense / process catching up,lineup,-5.23,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+PHI,STL,away,FALSE,,Process > production,process,-5.23,PP-Gap,PP-Gap not elevated.
+PHI,STL,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+PHI,STL,away,FALSE,,Target LHP hitters vs RHP,lineup,3.98,ABQ split gap + handedness,ABQ gap 4.0 or handedness mismatch vs RHP.
+PHI,STL,away,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+PHI,STL,away,FALSE,,Adjust expectations vs season norm,cold,3.08,Schedule context,Opponent offensive context in line with season baseline.
+PHI,STL,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+PHI,STL,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+PHI,STL,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+PHI,STL,home,TRUE,,Back pitching / fade offense,pitching,28.57,OSI vs Pitching Score,OSI 42.1 vs opp Pitch 70.6 (gap -28.6) -- pitching edge.
+PHI,STL,home,FALSE,,Buy-low offense / process catching up,lineup,-3.68,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+PHI,STL,home,FALSE,,Process > production,process,-3.68,PP-Gap,PP-Gap not elevated.
+PHI,STL,home,TRUE,,Under / pitcher control,low,14.6,OBR + BB%,Stall risk: OBR 40.4 + SP BB% 5.8% -- limited free passes.
+PHI,STL,home,FALSE,,Target LHP hitters vs RHP,lineup,9.68,ABQ split gap + handedness,ABQ gap 9.7 or handedness mismatch vs RHP.
+PHI,STL,home,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+PHI,STL,home,TRUE,,Adjust expectations vs season norm,cold,10.83,Schedule context,Opponent OOR 25.1 vs HvP baseline 36.0 (Δ-10.8) -- cooler than season profile.
+TBR,ATH,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+TBR,ATH,away,TRUE,,Over / walks,high,7.85,BB% vs ABQ,Walk game: SP BB% 8.8% with lineup ABQ 77.8 -- patience tax on pitcher.
+TBR,ATH,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+TBR,ATH,away,TRUE,,Fade weak pitching / back strong offense,lineup,31.39,OSI vs Pitching Score,OSI 51.2 vs opp Pitch 19.8 (gap +31.4) -- offensive edge.
+TBR,ATH,away,FALSE,,Buy-low offense / process catching up,lineup,26.9,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+TBR,ATH,away,TRUE,,Process > production,process,26.9,PP-Gap,PP-Gap +26.9 (ABQ ahead of RCV) -- buy-low process signal.
+TBR,ATH,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+TBR,ATH,away,FALSE,,Target RHP hitters vs RHP,lineup,5.23,ABQ split gap + handedness,ABQ gap 5.2 or handedness mismatch vs RHP.
+TBR,ATH,away,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+TBR,ATH,away,FALSE,,Adjust expectations vs season norm,cold,3.78,Schedule context,Opponent offensive context in line with season baseline.
+TBR,ATH,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+TBR,ATH,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+TBR,ATH,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+TBR,ATH,home,TRUE,,Back pitching / fade offense,pitching,27.2,OSI vs Pitching Score,OSI 48.1 vs opp Pitch 75.3 (gap -27.2) -- pitching edge.
+TBR,ATH,home,FALSE,,Buy-low offense / process catching up,lineup,-22.43,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+TBR,ATH,home,FALSE,,Process > production,process,-22.43,PP-Gap,PP-Gap not elevated.
+TBR,ATH,home,TRUE,,Under / pitcher control,low,17.69,OBR + BB%,Stall risk: OBR 37.3 + SP BB% 4.3% -- limited free passes.
+TBR,ATH,home,TRUE,,Target RHP hitters vs RHP,lineup,13.51,ABQ split gap + handedness,Platoon edge: ABQ gap 13.5 (RHP side) vs RHP -- handedness aligned.
+TBR,ATH,home,TRUE,,Contact Floor,profile,1,RCV archetype,Contact Floor (Mid/Low) -- Modest contact quality with weak on-base -- limited run-scoring paths.
+TBR,ATH,home,FALSE,,Adjust expectations vs season norm,cold,1.99,Schedule context,Opponent offensive context in line with season baseline.
+COL,ARI,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+COL,ARI,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+COL,ARI,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+COL,ARI,away,TRUE,,Back pitching / fade offense,pitching,21.26,OSI vs Pitching Score,OSI 26.1 vs opp Pitch 47.3 (gap -21.3) -- pitching edge.
+COL,ARI,away,FALSE,,Buy-low offense / process catching up,lineup,20.91,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+COL,ARI,away,TRUE,,Process > production,process,20.91,PP-Gap,PP-Gap +20.9 (ABQ ahead of RCV) -- buy-low process signal.
+COL,ARI,away,TRUE,,Under / pitcher control,low,23.19,OBR + BB%,Stall risk: OBR 31.8 + SP BB% 0.0% -- limited free passes.
+COL,ARI,away,TRUE,,Target RHP hitters vs RHP,lineup,11.15,ABQ split gap + handedness,Platoon edge: ABQ gap 11.2 (RHP side) vs RHP -- handedness aligned.
+COL,ARI,away,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+COL,ARI,away,FALSE,,Adjust expectations vs season norm,cold,3.93,Schedule context,Opponent offensive context in line with season baseline.
+COL,ARI,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+COL,ARI,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+COL,ARI,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+COL,ARI,home,TRUE,,Fade weak pitching / back strong offense,lineup,24.25,OSI vs Pitching Score,OSI 40.5 vs opp Pitch 16.2 (gap +24.3) -- offensive edge.
+COL,ARI,home,FALSE,,Buy-low offense / process catching up,lineup,20.42,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+COL,ARI,home,TRUE,,Process > production,process,20.42,PP-Gap,PP-Gap +20.4 (ABQ ahead of RCV) -- buy-low process signal.
+COL,ARI,home,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+COL,ARI,home,FALSE,,Target LHP hitters vs RHP,lineup,2.34,ABQ split gap + handedness,ABQ gap 2.3 or handedness mismatch vs RHP.
+COL,ARI,home,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+COL,ARI,home,TRUE,,Adjust expectations vs season norm,cold,20.62,Schedule context,Opponent OOR 0.0 vs HvP baseline 20.6 (Δ-20.6) -- cooler than season profile.
+HOU,SFG,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+HOU,SFG,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+HOU,SFG,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+HOU,SFG,away,FALSE,,Fade weak pitching / back strong offense,lineup,4.06,OSI vs Pitching Score,OSI-Pitch gap +4.1 within noise.
+HOU,SFG,away,FALSE,,Buy-low offense / process catching up,lineup,-21.74,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+HOU,SFG,away,FALSE,,Process > production,process,-21.74,PP-Gap,PP-Gap not elevated.
+HOU,SFG,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+HOU,SFG,away,FALSE,,Target RHP hitters vs RHP,lineup,2.99,ABQ split gap + handedness,ABQ gap 3.0 or handedness mismatch vs RHP.
+HOU,SFG,away,TRUE,,Contact Floor,profile,1,RCV archetype,Contact Floor (Mid/Low) -- Modest contact quality with weak on-base -- limited run-scoring paths.
+HOU,SFG,away,TRUE,,Adjust expectations vs season norm,cold,10.46,Schedule context,Opponent OOR 24.4 vs HvP baseline 34.9 (Δ-10.5) -- cooler than season profile.
+HOU,SFG,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+HOU,SFG,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+HOU,SFG,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+HOU,SFG,home,FALSE,,Fade weak pitching / back strong offense,lineup,3.54,OSI vs Pitching Score,OSI-Pitch gap +3.5 within noise.
+HOU,SFG,home,FALSE,,Buy-low offense / process catching up,lineup,-29.34,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+HOU,SFG,home,FALSE,,Process > production,process,-29.34,PP-Gap,PP-Gap not elevated.
+HOU,SFG,home,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+HOU,SFG,home,FALSE,,Target RHP hitters vs RHP,lineup,6.68,ABQ split gap + handedness,ABQ gap 6.7 or handedness mismatch vs RHP.
+HOU,SFG,home,TRUE,,Contact Floor,profile,1,RCV archetype,Contact Floor (Mid/Low) -- Modest contact quality with weak on-base -- limited run-scoring paths.
+HOU,SFG,home,FALSE,,Adjust expectations vs season norm,cold,2.28,Schedule context,Opponent offensive context in line with season baseline.
+MIL,SDP,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+MIL,SDP,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+MIL,SDP,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+MIL,SDP,away,TRUE,,Fade weak pitching / back strong offense,lineup,15.12,OSI vs Pitching Score,OSI 66.3 vs opp Pitch 51.2 (gap +15.1) -- offensive edge.
+MIL,SDP,away,TRUE,,Buy-low offense / process catching up,lineup,12.12,PALS + projOSI,"OSI≈PALS (Δ0.3) with PP-Gap +12.1 -- stable profile, process ahead of box score."
+MIL,SDP,away,TRUE,,Process > production,process,12.12,PP-Gap,PP-Gap +12.1 (ABQ ahead of RCV) -- buy-low process signal.
+MIL,SDP,away,TRUE,,Over / baserunners,high,7.26,OBR + BB%,Run environment: OBR 75.3 + SP BB% 11.4% -- table-setters & traffic.
+MIL,SDP,away,FALSE,,Target RHP hitters vs RHP,lineup,0.33,ABQ split gap + handedness,ABQ gap 0.3 or handedness mismatch vs RHP.
+MIL,SDP,away,TRUE,,OBP First,profile,1,RCV archetype,OBP First (Low/High) -- Gets on base without big damage -- small-ball and walk-heavy lean.
+MIL,SDP,away,FALSE,,Adjust expectations vs season norm,cold,0.02,Schedule context,Opponent offensive context in line with season baseline.
+MIL,SDP,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+MIL,SDP,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+MIL,SDP,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+MIL,SDP,home,TRUE,,Back pitching / fade offense,pitching,38.44,OSI vs Pitching Score,OSI 53.2 vs opp Pitch 91.7 (gap -38.4) -- pitching edge.
+MIL,SDP,home,FALSE,,Buy-low offense / process catching up,lineup,-22.87,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+MIL,SDP,home,FALSE,,Process > production,process,-22.87,PP-Gap,PP-Gap not elevated.
+MIL,SDP,home,TRUE,,Under / pitcher control,low,2.63,OBR + BB%,Stall risk: OBR 52.4 + SP BB% 5.6% -- limited free passes.
+MIL,SDP,home,FALSE,,Target RHP hitters vs RHP,lineup,5.26,ABQ split gap + handedness,ABQ gap 5.3 or handedness mismatch vs RHP.
+MIL,SDP,home,TRUE,,Contact Floor,profile,1,RCV archetype,Contact Floor (Mid/Low) -- Modest contact quality with weak on-base -- limited run-scoring paths.
+MIL,SDP,home,TRUE,,Adjust expectations vs season norm,hot,10.4,Schedule context,Opponent OOR 73.4 vs HvP baseline 63.0 (Δ+10.4) -- hotter than season profile.
+CLE,DET,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+CLE,DET,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+CLE,DET,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+CLE,DET,away,TRUE,,Back pitching / fade offense,pitching,28.93,OSI vs Pitching Score,OSI 42.8 vs opp Pitch 71.7 (gap -28.9) -- pitching edge.
+CLE,DET,away,TRUE,,Buy-low offense / process catching up,lineup,5.63,PALS + projOSI,"OSI≈PALS (Δ3.8) with PP-Gap +5.6 -- stable profile, process ahead of box score."
+CLE,DET,away,TRUE,,Process > production,process,5.63,PP-Gap,PP-Gap +5.6 (ABQ ahead of RCV) -- buy-low process signal.
+CLE,DET,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+CLE,DET,away,FALSE,,Target LHP hitters vs RHP,lineup,3.18,ABQ split gap + handedness,ABQ gap 3.2 or handedness mismatch vs RHP.
+CLE,DET,away,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+CLE,DET,away,FALSE,,Adjust expectations vs season norm,hot,1.17,Schedule context,Opponent offensive context in line with season baseline.
+CLE,DET,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+CLE,DET,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+CLE,DET,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+CLE,DET,home,TRUE,,Back pitching / fade offense,pitching,18.18,OSI vs Pitching Score,OSI 49.7 vs opp Pitch 67.9 (gap -18.2) -- pitching edge.
+CLE,DET,home,FALSE,,Buy-low offense / process catching up,lineup,-19.22,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+CLE,DET,home,FALSE,,Process > production,process,-19.22,PP-Gap,PP-Gap not elevated.
+CLE,DET,home,TRUE,,Under / pitcher control,low,12.46,OBR + BB%,Stall risk: OBR 42.5 + SP BB% 5.6% -- limited free passes.
+CLE,DET,home,FALSE,,Target LHP hitters vs RHP,lineup,8.11,ABQ split gap + handedness,ABQ gap 8.1 or handedness mismatch vs RHP.
+CLE,DET,home,TRUE,,Contact Floor,profile,1,RCV archetype,Contact Floor (Mid/Low) -- Modest contact quality with weak on-base -- limited run-scoring paths.
+CLE,DET,home,FALSE,,Adjust expectations vs season norm,cold,4.47,Schedule context,Opponent offensive context in line with season baseline.
+PIT,MIA,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+PIT,MIA,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+PIT,MIA,away,TRUE,,Over HR / power,lineup,12.22,HR/9 vs RCV,Barrel lane open: HR/9 1.34 vs RCV 84.2 -- damage upside vs flyball risk arm.
+PIT,MIA,away,FALSE,,Back pitching / fade offense,pitching,3.21,OSI vs Pitching Score,OSI-Pitch gap -3.2 within noise.
+PIT,MIA,away,FALSE,,Buy-low offense / process catching up,lineup,-50.75,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+PIT,MIA,away,FALSE,,Process > production,process,-50.75,PP-Gap,PP-Gap not elevated.
+PIT,MIA,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+PIT,MIA,away,TRUE,,Target RHP hitters vs RHP,lineup,10.12,ABQ split gap + handedness,Platoon edge: ABQ gap 10.1 (RHP side) vs RHP -- handedness aligned.
+PIT,MIA,away,TRUE,,Power Leverage,profile,1,RCV archetype,Power Leverage (High/Mid) -- Big damage output with average table-setting -- slug-first lineup shape.
+PIT,MIA,away,FALSE,,Adjust expectations vs season norm,cold,2.14,Schedule context,Opponent offensive context in line with season baseline.
+PIT,MIA,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+PIT,MIA,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+PIT,MIA,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+PIT,MIA,home,TRUE,,Back pitching / fade offense,pitching,17.45,OSI vs Pitching Score,OSI 48.6 vs opp Pitch 66.1 (gap -17.5) -- pitching edge.
+PIT,MIA,home,FALSE,,Buy-low offense / process catching up,lineup,-25.21,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+PIT,MIA,home,FALSE,,Process > production,process,-25.21,PP-Gap,PP-Gap not elevated.
+PIT,MIA,home,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+PIT,MIA,home,FALSE,,Target RHP hitters vs RHP,lineup,6.96,ABQ split gap + handedness,ABQ gap 7.0 or handedness mismatch vs RHP.
+PIT,MIA,home,TRUE,,Contact Floor,profile,1,RCV archetype,Contact Floor (Mid/Low) -- Modest contact quality with weak on-base -- limited run-scoring paths.
+PIT,MIA,home,FALSE,,Adjust expectations vs season norm,hot,4.71,Schedule context,Opponent offensive context in line with season baseline.
+CHC,WSN,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+CHC,WSN,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+CHC,WSN,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+CHC,WSN,away,TRUE,,Fade weak pitching / back strong offense,lineup,32.52,OSI vs Pitching Score,OSI 69.2 vs opp Pitch 36.7 (gap +32.5) -- offensive edge.
+CHC,WSN,away,FALSE,,Buy-low offense / process catching up,lineup,4.52,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+CHC,WSN,away,TRUE,,Process > production,process,4.52,PP-Gap,PP-Gap +4.5 (ABQ ahead of RCV) -- buy-low process signal.
+CHC,WSN,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+CHC,WSN,away,FALSE,,Target RHP hitters vs RHP,lineup,1.62,ABQ split gap + handedness,ABQ gap 1.6 or handedness mismatch vs RHP.
+CHC,WSN,away,TRUE,,Table Setter Plus,profile,1,RCV archetype,Table Setter Plus (Mid/High) -- Strong on-base process with moderate power -- grind-and-advance profile.
+CHC,WSN,away,TRUE,,Adjust expectations vs season norm,hot,14.78,Schedule context,Opponent OOR 85.4 vs HvP baseline 70.6 (Δ+14.8) -- hotter than season profile.
+CHC,WSN,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+CHC,WSN,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+CHC,WSN,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+CHC,WSN,home,TRUE,,Fade weak pitching / back strong offense,lineup,20.92,OSI vs Pitching Score,OSI 67.7 vs opp Pitch 46.7 (gap +20.9) -- offensive edge.
+CHC,WSN,home,FALSE,,Buy-low offense / process catching up,lineup,-41.86,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+CHC,WSN,home,FALSE,,Process > production,process,-41.86,PP-Gap,PP-Gap not elevated.
+CHC,WSN,home,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+CHC,WSN,home,FALSE,,Target RHP hitters vs RHP,lineup,3.32,ABQ split gap + handedness,ABQ gap 3.3 or handedness mismatch vs RHP.
+CHC,WSN,home,TRUE,,Power Leverage,profile,1,RCV archetype,Power Leverage (High/Mid) -- Big damage output with average table-setting -- slug-first lineup shape.
+CHC,WSN,home,TRUE,,Adjust expectations vs season norm,hot,15.44,Schedule context,Opponent OOR 86.7 vs HvP baseline 71.2 (Δ+15.4) -- hotter than season profile.
+SEA,NYY,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+SEA,NYY,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+SEA,NYY,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+SEA,NYY,away,TRUE,,Back pitching / fade offense,pitching,30.22,OSI vs Pitching Score,OSI 49.2 vs opp Pitch 79.4 (gap -30.2) -- pitching edge.
+SEA,NYY,away,FALSE,,Buy-low offense / process catching up,lineup,-14.59,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+SEA,NYY,away,FALSE,,Process > production,process,-14.59,PP-Gap,PP-Gap not elevated.
+SEA,NYY,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+SEA,NYY,away,FALSE,,Target RHP hitters vs RHP,lineup,1.36,ABQ split gap + handedness,ABQ gap 1.4 or handedness mismatch vs RHP.
+SEA,NYY,away,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+SEA,NYY,away,TRUE,,Adjust expectations vs season norm,hot,10.9,Schedule context,Opponent OOR 74.8 vs HvP baseline 63.9 (Δ+10.9) -- hotter than season profile.
+SEA,NYY,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+SEA,NYY,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+SEA,NYY,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+SEA,NYY,home,TRUE,,Back pitching / fade offense,pitching,15.55,OSI vs Pitching Score,OSI 66.4 vs opp Pitch 81.9 (gap -15.6) -- pitching edge.
+SEA,NYY,home,FALSE,,Buy-low offense / process catching up,lineup,-37.18,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+SEA,NYY,home,FALSE,,Process > production,process,-37.18,PP-Gap,PP-Gap not elevated.
+SEA,NYY,home,TRUE,,Over / baserunners,high,7.1,OBR + BB%,Run environment: OBR 75.1 + SP BB% 16.2% -- table-setters & traffic.
+SEA,NYY,home,FALSE,,Target RHP hitters vs RHP,lineup,5.45,ABQ split gap + handedness,ABQ gap 5.4 or handedness mismatch vs RHP.
+SEA,NYY,home,TRUE,,Elite Engine,profile,1,RCV archetype,Elite Engine (High/High) -- Top-tier run creation with a strong on-base floor -- complete offensive profile.
+SEA,NYY,home,FALSE,,Adjust expectations vs season norm,cold,1.48,Schedule context,Opponent offensive context in line with season baseline.
+BOS,TOR,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+BOS,TOR,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+BOS,TOR,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+BOS,TOR,away,TRUE,,Back pitching / fade offense,pitching,33.89,OSI vs Pitching Score,OSI 32.9 vs opp Pitch 66.8 (gap -33.9) -- pitching edge.
+BOS,TOR,away,TRUE,,Buy-low offense / process catching up,lineup,27.03,PALS + projOSI,"OSI≈PALS (Δ0.2) with PP-Gap +27.0 -- stable profile, process ahead of box score."
+BOS,TOR,away,TRUE,,Process > production,process,27.03,PP-Gap,PP-Gap +27.0 (ABQ ahead of RCV) -- buy-low process signal.
+BOS,TOR,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+BOS,TOR,away,FALSE,,Target LHP hitters vs RHP,lineup,8.19,ABQ split gap + handedness,ABQ gap 8.2 or handedness mismatch vs RHP.
+BOS,TOR,away,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+BOS,TOR,away,TRUE,,Adjust expectations vs season norm,cold,14.44,Schedule context,Opponent OOR 16.3 vs HvP baseline 30.8 (Δ-14.4) -- cooler than season profile.
+BOS,TOR,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+BOS,TOR,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+BOS,TOR,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+BOS,TOR,home,TRUE,,Back pitching / fade offense,pitching,44.64,OSI vs Pitching Score,OSI 29.4 vs opp Pitch 74.1 (gap -44.6) -- pitching edge.
+BOS,TOR,home,FALSE,,Buy-low offense / process catching up,lineup,18.29,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+BOS,TOR,home,TRUE,,Process > production,process,18.29,PP-Gap,PP-Gap +18.3 (ABQ ahead of RCV) -- buy-low process signal.
+BOS,TOR,home,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+BOS,TOR,home,FALSE,,Target RHP hitters vs RHP,lineup,0.3,ABQ split gap + handedness,ABQ gap 0.3 or handedness mismatch vs RHP.
+BOS,TOR,home,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+BOS,TOR,home,TRUE,,Adjust expectations vs season norm,cold,6.93,Schedule context,Opponent OOR 36.4 vs HvP baseline 43.3 (Δ-6.9) -- cooler than season profile.
+NYM,ATL,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+NYM,ATL,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+NYM,ATL,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+NYM,ATL,away,TRUE,,Back pitching / fade offense,pitching,18.06,OSI vs Pitching Score,OSI 42.5 vs opp Pitch 60.5 (gap -18.1) -- pitching edge.
+NYM,ATL,away,FALSE,,Buy-low offense / process catching up,lineup,-23.2,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+NYM,ATL,away,FALSE,,Process > production,process,-23.2,PP-Gap,PP-Gap not elevated.
+NYM,ATL,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+NYM,ATL,away,FALSE,,Target RHP hitters vs RHP,lineup,0.09,ABQ split gap + handedness,ABQ gap 0.1 or handedness mismatch vs RHP.
+NYM,ATL,away,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+NYM,ATL,away,FALSE,,Adjust expectations vs season norm,hot,4.27,Schedule context,Opponent offensive context in line with season baseline.
+NYM,ATL,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+NYM,ATL,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+NYM,ATL,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+NYM,ATL,home,FALSE,,Back pitching / fade offense,pitching,5.46,OSI vs Pitching Score,OSI-Pitch gap -5.5 within noise.
+NYM,ATL,home,FALSE,,Buy-low offense / process catching up,lineup,-16.75,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+NYM,ATL,home,FALSE,,Process > production,process,-16.75,PP-Gap,PP-Gap not elevated.
+NYM,ATL,home,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+NYM,ATL,home,FALSE,,Target RHP hitters vs RHP,lineup,5.85,ABQ split gap + handedness,ABQ gap 5.9 or handedness mismatch vs RHP.
+NYM,ATL,home,TRUE,,Contact Floor,profile,1,RCV archetype,Contact Floor (Mid/Low) -- Modest contact quality with weak on-base -- limited run-scoring paths.
+NYM,ATL,home,FALSE,,Adjust expectations vs season norm,cold,4.12,Schedule context,Opponent offensive context in line with season baseline.
+CIN,CHW,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+CIN,CHW,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+CIN,CHW,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+CIN,CHW,away,TRUE,,Back pitching / fade offense,pitching,18.57,OSI vs Pitching Score,OSI 35.4 vs opp Pitch 53.9 (gap -18.6) -- pitching edge.
+CIN,CHW,away,FALSE,,Buy-low offense / process catching up,lineup,1.65,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+CIN,CHW,away,FALSE,,Process > production,process,1.65,PP-Gap,PP-Gap not elevated.
+CIN,CHW,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+CIN,CHW,away,FALSE,,Target LHP hitters vs RHP,lineup,10.43,ABQ split gap + handedness,ABQ gap 10.4 or handedness mismatch vs RHP.
+CIN,CHW,away,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+CIN,CHW,away,FALSE,,Adjust expectations vs season norm,hot,2.41,Schedule context,Opponent offensive context in line with season baseline.
+CIN,CHW,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+CIN,CHW,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+CIN,CHW,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+CIN,CHW,home,TRUE,,Fade weak pitching / back strong offense,lineup,26.57,OSI vs Pitching Score,OSI 54.2 vs opp Pitch 27.7 (gap +26.6) -- offensive edge.
+CIN,CHW,home,FALSE,,Buy-low offense / process catching up,lineup,-47.35,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+CIN,CHW,home,FALSE,,Process > production,process,-47.35,PP-Gap,PP-Gap not elevated.
+CIN,CHW,home,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+CIN,CHW,home,FALSE,,Target RHP hitters vs RHP,lineup,4,ABQ split gap + handedness,ABQ gap 4.0 or handedness mismatch vs RHP.
+CIN,CHW,home,TRUE,,Boom-or-Bust,profile,1,RCV archetype,Boom-or-Bust (High/Low) -- High damage ceiling but thin on-base support -- volatile run-scoring bursts.
+CIN,CHW,home,TRUE,,Adjust expectations vs season norm,cold,5.21,Schedule context,Opponent OOR 40.4 vs HvP baseline 45.6 (Δ-5.2) -- cooler than season profile.
+KCR,LAD,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+KCR,LAD,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+KCR,LAD,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+KCR,LAD,away,TRUE,,Back pitching / fade offense,pitching,31.54,OSI vs Pitching Score,OSI 50.8 vs opp Pitch 82.4 (gap -31.5) -- pitching edge.
+KCR,LAD,away,FALSE,,Buy-low offense / process catching up,lineup,1.44,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+KCR,LAD,away,FALSE,,Process > production,process,1.44,PP-Gap,PP-Gap not elevated.
+KCR,LAD,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+KCR,LAD,away,FALSE,,Target RHP hitters vs RHP,lineup,5.22,ABQ split gap + handedness,ABQ gap 5.2 or handedness mismatch vs RHP.
+KCR,LAD,away,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+KCR,LAD,away,TRUE,,Adjust expectations vs season norm,hot,21.85,Schedule context,Opponent OOR 99.9 vs HvP baseline 78.0 (Δ+21.8) -- hotter than season profile.
+KCR,LAD,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+KCR,LAD,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+KCR,LAD,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+KCR,LAD,home,TRUE,,Fade weak pitching / back strong offense,lineup,55.17,OSI vs Pitching Score,OSI 82.8 vs opp Pitch 27.6 (gap +55.2) -- offensive edge.
+KCR,LAD,home,FALSE,,Buy-low offense / process catching up,lineup,-9.93,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+KCR,LAD,home,FALSE,,Process > production,process,-9.93,PP-Gap,PP-Gap not elevated.
+KCR,LAD,home,TRUE,,Over / baserunners,high,27.71,OBR + BB%,Run environment: OBR 95.7 + SP BB% 9.1% -- table-setters & traffic.
+KCR,LAD,home,FALSE,,Target RHP hitters vs RHP,lineup,5.24,ABQ split gap + handedness,ABQ gap 5.2 or handedness mismatch vs RHP.
+KCR,LAD,home,TRUE,,Elite Engine,profile,1,RCV archetype,Elite Engine (High/High) -- Top-tier run creation with a strong on-base floor -- complete offensive profile.
+KCR,LAD,home,FALSE,,Adjust expectations vs season norm,cold,0.62,Schedule context,Opponent offensive context in line with season baseline.
+TEX,LAA,away,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+TEX,LAA,away,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+TEX,LAA,away,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+TEX,LAA,away,TRUE,,Back pitching / fade offense,pitching,12.33,OSI vs Pitching Score,OSI 36.4 vs opp Pitch 48.7 (gap -12.3) -- pitching edge.
+TEX,LAA,away,FALSE,,Buy-low offense / process catching up,lineup,-10.23,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+TEX,LAA,away,FALSE,,Process > production,process,-10.23,PP-Gap,PP-Gap not elevated.
+TEX,LAA,away,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+TEX,LAA,away,FALSE,,Target RHP hitters vs RHP,lineup,6.31,ABQ split gap + handedness,ABQ gap 6.3 or handedness mismatch vs RHP.
+TEX,LAA,away,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+TEX,LAA,away,TRUE,,Adjust expectations vs season norm,cold,14.43,Schedule context,Opponent OOR 17.1 vs HvP baseline 31.5 (Δ-14.4) -- cooler than season profile.
+TEX,LAA,home,FALSE,,Over offense / team total,lineup,0,K% vs OBR,No K%/OBR mismatch.
+TEX,LAA,home,FALSE,,--,neutral,0,BB% vs ABQ,BB%/ABQ neutral.
+TEX,LAA,home,FALSE,,Over HR / power,lineup,0,HR/9 vs RCV,HR/9 vs RCV not aligned.
+TEX,LAA,home,TRUE,,Back pitching / fade offense,pitching,36.48,OSI vs Pitching Score,OSI 27.4 vs opp Pitch 63.9 (gap -36.5) -- pitching edge.
+TEX,LAA,home,FALSE,,Buy-low offense / process catching up,lineup,-24.54,PALS + projOSI,PALS/projOSI/PP-Gap not converging.
+TEX,LAA,home,FALSE,,Process > production,process,-24.54,PP-Gap,PP-Gap not elevated.
+TEX,LAA,home,FALSE,,--,neutral,0,OBR + BB%,OBR/BB% neutral.
+TEX,LAA,home,FALSE,,Target LHP hitters vs RHP,lineup,2.82,ABQ split gap + handedness,ABQ gap 2.8 or handedness mismatch vs RHP.
+TEX,LAA,home,TRUE,,Cold Profile,profile,1,RCV archetype,Cold Profile (Low/Low) -- Weak damage and weak on-base -- lowest offensive ceiling archetype.
+TEX,LAA,home,TRUE,,Adjust expectations vs season norm,cold,8.96,Schedule context,Opponent OOR 29.3 vs HvP baseline 38.3 (Δ-9.0) -- cooler than season profile.

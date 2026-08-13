@@ -128,6 +128,69 @@ def _expected_runs(total, margin) -> tuple[str, str]:
     return f"{away:.1f}", f"{home:.1f}"
 
 
+def _drivers_group(report: dict | None) -> Group | None:
+    """Lineup and bullpen state — the adjustments that silently do nothing when their feed
+    is missing.
+
+    Both are wired into the run model (`staff_factor` blends the pen in on a workload
+    factor; `lineup_features` scales team runs off the posted order), but each falls back to
+    a neutral 1.0 whenever the order is unposted or fewer than six batters match a profile.
+    A neutral factor is indistinguishable from "not modelled" unless the card says which, so
+    this shelf states it per side. Unpriced by construction — it explains the projection, it
+    is not a market.
+    """
+    gd = (report or {}).get("gd")
+    if gd is None:
+        return None
+
+    tiles: list[Tile] = []
+    for side in ("away", "home"):
+        lineup = getattr(gd, f"{side}_lineup_features", None) or {}
+        team = str(getattr(gd, side, side)).upper()
+        factor = float(lineup.get("factor") or 1.0)
+        matched = int(lineup.get("matched_batters") or 0)
+        status = str(lineup.get("status") or "unavailable")
+        active = abs(factor - 1.0) > 1e-6
+        tiles.append(Tile(
+            label=f"{team} lineup",
+            value=f"{(factor - 1.0) * 100:+.1f}%" if active else "flat",
+            state=(f"{status} · {matched} matched" if active
+                   else f"{status} · no adjustment"),
+            tone="side" if active else "mut",
+            note=(
+                "Order posted and matched to batter profiles; team runs scaled by it."
+                if active else
+                "Fewer than six batters matched a profile, or no order posted — the lineup "
+                "adjustment is inert for this game."
+            ),
+        ))
+
+    for side in ("away", "home"):
+        pen = getattr(gd, f"{side}_bullpen_features", None) or {}
+        team = str(getattr(gd, side, side)).upper()
+        workload = float(pen.get("workload_factor") or 1.0)
+        tired = workload > 1.0
+        tiles.append(Tile(
+            label=f"{team} bullpen",
+            value=f"+{(workload - 1.0) * 100:.1f}%" if tired else "rested",
+            state="recent workload" if tired else "no recent load",
+            tone="warnc" if tired else "mut",
+            note=(
+                "Pitches thrown in the previous two days raise this pen's expected runs "
+                "allowed." if tired else
+                "No qualifying appearances in the previous two days, so no workload penalty."
+            ),
+        ))
+
+    return Group(
+        label="Why this projection",
+        tiles=tuple(tiles),
+        tag="",
+        state="Model inputs",
+        market=False,
+    )
+
+
 def _principals(game: dict, report: dict | None) -> tuple[Principal, ...]:
     extras = (report or {}).get("extras") or {}
 
@@ -183,6 +246,7 @@ def build_card(game: dict, report: dict | None, sharp_count: int = 0) -> Card:
         for group in (
             _group("Full game", "fullgame", _FULL_GAME, best),
             _group("First 5 innings", "f5", _FIRST_FIVE, best),
+            _drivers_group(report),
         )
         if group is not None
     )

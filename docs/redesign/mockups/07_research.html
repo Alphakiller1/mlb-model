@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research — MLB Model Desk</title>
+  <link rel="stylesheet" href="desk.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand__mark">Chase <span>Analytics</span></div>
+        <div class="brand__sub">MLB Model</div>
+      </div>
+      <nav class="nav">
+        <a href="01_today.html">Today</a>
+        <a href="02_matchup.html">Matchups</a>
+        <a href="06_trends.html">Trends</a>
+        <a href="03_markets.html">Markets</a>
+        <a href="04_props.html">Props</a>
+        <a href="05_results.html">Results</a>
+        <a class="on" href="07_research.html">Research</a>
+      </nav>
+      <div class="nav__meta">
+        Gate <b>HOLD</b><br>
+        Model <b>v1-expected-runs</b><br>
+        Sync <b>Exact</b>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="pagehead">
+        <div>
+          <div class="pagehead__eyebrow">Chase Analytics · MLB Model</div>
+          <h1>Research</h1>
+          <p class="pagehead__sub">Promotion gate · F5 board · Kalshi calibration — model health, not picks.</p>
+        </div>
+        <div class="fresh">
+          <div><span class="dot"></span>Gate <b>HOLD</b></div>
+          <div>Sample <b>n = 214</b></div>
+        </div>
+      </header>
+
+      <section class="panel mb">
+        <div class="panel__head">
+          <h2 class="panel__title">Promotion gate</h2>
+          <span class="panel__note">Ship readiness</span>
+        </div>
+        <div class="vbar mut">
+          <b>HOLD</b>
+          <span>CLV sample thin · Brier within band · schema drift on model_leans</span>
+        </div>
+      </section>
+
+      <div class="kpis">
+        <div class="kpi"><div class="k">F5 edges</div><div class="v">3</div><div class="s">On slate</div></div>
+        <div class="kpi"><div class="k">Kalshi gap</div><div class="v sm">−0.04</div><div class="s">Avg bucket gap</div></div>
+        <div class="kpi"><div class="k">Sync</div><div class="v sm pos">Exact</div><div class="s">MLBMA feed</div></div>
+        <div class="kpi"><div class="k">Version</div><div class="v sm">v1</div><div class="s">expected-runs</div></div>
+      </div>
+
+      <section class="panel">
+        <div class="panel__head">
+          <h2 class="panel__title">First 5 (F5) edges</h2>
+          <span class="panel__note">Ranked by model edge</span>
+        </div>
+        <div class="table-wrap">
+          <table class="desk">
+            <thead>
+              <tr><th>Game</th><th>Market</th><th>Side</th><th>Model%</th><th>Price</th><th>Edge</th><th>State</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="game">NYY @ BOS</span></td>
+                <td>F5 Total</td>
+                <td><b>Under</b></td>
+                <td class="mono">58.2%</td>
+                <td class="mono">−110</td>
+                <td class="mono pos">+4.1pt</td>
+                <td><span class="pill monitor">Monitor</span></td>
+              </tr>
+              <tr>
+                <td><span class="game">LAD @ SF</span></td>
+                <td>F5 ML</td>
+                <td><b>LAD</b></td>
+                <td class="mono">54.0%</td>
+                <td class="mono">+105</td>
+                <td class="mono pos">+3.2pt</td>
+                <td><span class="pill bet">Bet</span></td>
+              </tr>
+              <tr>
+                <td><span class="game">ATL @ PHI</span></td>
+                <td>F5 Run line</td>
+                <td><b>PHI +0.5</b></td>
+                <td class="mono">51.1%</td>
+                <td class="mono">−118</td>
+                <td class="mono" style="color:var(--mut)">+0.8pt</td>
+                <td><span class="pill none">No-edge</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel mt">
+        <div class="panel__head">
+          <h2 class="panel__title">Kalshi price calibration</h2>
+          <span class="panel__note">Honest empty when under-sampled</span>
+        </div>
+        <div class="table-wrap">
+          <table class="desk">
+            <thead>
+              <tr><th>Bucket</th><th>n</th><th>Avg price</th><th>Actual win%</th><th>Gap</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">0.40–0.50</td><td>42</td><td class="mono">0.46</td><td class="mono">0.48</td><td class="mono pos">+0.02</td></tr>
+              <tr><td class="mono">0.50–0.60</td><td>61</td><td class="mono">0.55</td><td class="mono">0.51</td><td class="mono neg">−0.04</td></tr>
+              <tr><td class="mono">0.60–0.70</td><td>28</td><td class="mono">0.64</td><td class="mono">0.61</td><td class="mono neg">−0.03</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

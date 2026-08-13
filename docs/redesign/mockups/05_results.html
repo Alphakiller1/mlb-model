@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Results — MLB Model Desk</title>
+  <link rel="stylesheet" href="desk.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand__mark">Chase <span>Analytics</span></div>
+        <div class="brand__sub">MLB Model</div>
+      </div>
+      <nav class="nav">
+        <a href="01_today.html">Today</a>
+        <a href="02_matchup.html">Matchups</a>
+        <a href="06_trends.html">Trends</a>
+        <a href="03_markets.html">Markets</a>
+        <a href="04_props.html">Props</a>
+        <a class="on" href="05_results.html">Results</a>
+        <a href="07_research.html">Research</a>
+      </nav>
+      <div class="nav__meta">
+        Graded <b>142</b><br>
+        Pending <b>6</b><br>
+        Window <b>L30</b>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="pagehead">
+        <div>
+          <div class="pagehead__eyebrow">Settlement · CLV · Calibration</div>
+          <h1>Results</h1>
+          <p class="pagehead__sub">Paper track record only. No ROI headlines without sample + uncertainty.</p>
+        </div>
+        <div class="fresh">
+          <div><span class="dot"></span>Settled through <b>Jul 22</b></div>
+          <div>CLV source <b>warehouse</b></div>
+        </div>
+      </header>
+
+      <div class="kpis">
+        <div class="kpi"><div class="k">Record (L30)</div><div class="v sm">38–41–4</div><div class="s">BET + MONITOR graded</div></div>
+        <div class="kpi"><div class="k">CLV / u</div><div class="v pos">+0.018</div><div class="s">n = 79 priced</div></div>
+        <div class="kpi"><div class="k">Brier (open)</div><div class="v sm">0.248</div><div class="s">Uncalibrated prior</div></div>
+        <div class="kpi"><div class="k">Pending</div><div class="v">6</div><div class="s">Await finals</div></div>
+      </div>
+
+      <div class="cols">
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">Recent settles</h2>
+            <span class="panel__note">Newest first</span>
+          </div>
+          <div class="table-wrap">
+            <table class="desk">
+              <thead>
+                <tr>
+                  <th>Date</th><th>Game</th><th>Pick</th><th>State</th><th>Result</th><th>CLV</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="mono">07-22</td>
+                  <td><span class="game">TOR @ BAL</span></td>
+                  <td class="mono">Under 9.0</td>
+                  <td><span class="pill monitor">Mon</span></td>
+                  <td class="pos">Win</td>
+                  <td class="mono pos">+0.04</td>
+                </tr>
+                <tr>
+                  <td class="mono">07-22</td>
+                  <td><span class="game">CLE @ DET</span></td>
+                  <td class="mono">DET ML</td>
+                  <td><span class="pill none">No-e</span></td>
+                  <td style="color:var(--mut)">Skip</td>
+                  <td class="mono" style="color:var(--mut)">—</td>
+                </tr>
+                <tr>
+                  <td class="mono">07-21</td>
+                  <td><span class="game">NYY @ BOS</span></td>
+                  <td class="mono">Over 8.5</td>
+                  <td><span class="pill monitor">Mon</span></td>
+                  <td class="neg">Loss</td>
+                  <td class="mono neg">−0.02</td>
+                </tr>
+                <tr>
+                  <td class="mono">07-21</td>
+                  <td><span class="game">CHC @ MIL</span></td>
+                  <td class="mono">MIL −1.5</td>
+                  <td><span class="pill bet">Bet</span></td>
+                  <td class="pos">Win</td>
+                  <td class="mono pos">+0.06</td>
+                </tr>
+                <tr>
+                  <td class="mono">07-20</td>
+                  <td><span class="game">LAD @ ARI</span></td>
+                  <td class="mono">Under 8.5</td>
+                  <td><span class="pill avoid">Avd</span></td>
+                  <td style="color:var(--mut)">Skip</td>
+                  <td class="mono" style="color:var(--mut)">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="stack">
+          <div class="panel">
+            <div class="panel__head">
+              <h2 class="panel__title">By market</h2>
+            </div>
+            <div class="factor-row"><span class="k">Totals</span><span class="who">21–19</span><span class="mkt pos">CLV +0.03</span></div>
+            <div class="factor-row"><span class="k">Moneyline</span><span class="who">12–16</span><span class="mkt neg">CLV −0.01</span></div>
+            <div class="factor-row"><span class="k">Runline</span><span class="who">5–6</span><span class="mkt">CLV +0.00</span></div>
+            <div class="factor-row"><span class="k">F5</span><span class="who">—</span><span class="mkt" style="color:var(--mut)">n &lt; 30</span></div>
+          </div>
+          <div class="panel" style="padding:14px;font-size:12px;color:var(--mut);line-height:1.55">
+            <strong style="color:var(--ink-2)">Calibration note</strong><br>
+            Model self-labels uncalibrated. Brier and CLV are diagnostic — not proof of edge.
+            Segments under n=30 stay unlabeled.
+          </div>
+        </section>
+      </div>
+
+      <div class="footer-note">Results view grades paper decisions only. Prefer CLV + sample over win% headlines.</div>
+    </main>
+  </div>
+</body>
+</html>

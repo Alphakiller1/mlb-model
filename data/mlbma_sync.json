@@ -1,0 +1,56 @@
+{
+  "sync_id": "c29fc87fb458f014",
+  "status": "fallback",
+  "source": "mlb_live_schedule_fallback",
+  "message": "MLBMA pipeline slate is 2026-08-12; using Chase Analytics' live MLB schedule fallback for 2026-08-13.",
+  "slate_date": "2026-08-13",
+  "game_count": 9,
+  "matchup_keys": [
+    "CLE@DET",
+    "PIT@MIA",
+    "SEA@NYY",
+    "CIN@CHW",
+    "BOS@TOR",
+    "CHC@WSN",
+    "PHI@MIN",
+    "TEX@LAA",
+    "MIL@LAD"
+  ],
+  "pipeline_slate_date": "2026-08-12",
+  "pipeline_updated_at": "2026-08-12T21:28:08-04:00",
+  "hub_updated_at": {
+    "Team_Profiles": "2026-08-13T03:24:22.562023+00:00",
+    "SP_Profiles": "2026-08-13T03:24:25.522436+00:00",
+    "SP_L14": "2026-08-13T03:24:34.129523+00:00",
+    "SP_Game_Log": "2026-08-13T03:24:32.580585+00:00",
+    "SP_Metric_Splits": "2026-08-13T03:24:29.080098+00:00",
+    "Batter_Profiles": "2026-08-13T03:25:06.664105+00:00",
+    "Batter_Splits_RHP": "2026-08-13T03:25:08.833522+00:00",
+    "Batter_Splits_LHP": "2026-08-13T03:25:09.58533+00:00",
+    "Bullpen_Unit": "2026-08-13T03:24:50.156276+00:00",
+    "Reliever_Log": "2026-08-13T03:25:00.815483+00:00",
+    "Player_Registry": "2026-08-13T03:25:05.469514+00:00",
+    "Pitch_Mix_Pitcher": "2026-08-13T03:24:36.703403+00:00",
+    "Pitch_Mix_Pitcher_L14": "2026-08-13T03:24:38.767588+00:00",
+    "Pitch_Mix_Batter": "2026-08-13T03:24:42.490032+00:00",
+    "Pitch_Mix_Batter_L14": "2026-08-13T03:24:45.553543+00:00",
+    "Pitch_Mix_Team_Batting": "2026-08-13T03:24:48.366937+00:00",
+    "Pitch_Mix_Team_Batting_L14": "2026-08-13T03:24:49.074185+00:00",
+    "Team_L10_SP_Hand": "2026-08-13T03:25:14.712111+00:00",
+    "Signals_Today": "2026-08-13T03:25:16.080645+00:00",
+    "Signals_Convergence": "2026-08-13T03:25:16.581476+00:00"
+  },
+  "live_context_fetched_at": "2026-08-13T05:15:12+00:00",
+  "live_context_games": 9,
+  "live_context_lineups": {
+    "status": {
+      "projected": 14,
+      "unavailable": 4
+    },
+    "source": {
+      "Rotowire (projected)": 14
+    }
+  },
+  "live_context_error": null,
+  "fetched_at": "2026-08-13T05:15:00+00:00"
+}

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Today — MLB Model Desk</title>
+  <link rel="stylesheet" href="desk.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand__mark">Chase <span>Analytics</span></div>
+        <div class="brand__sub">MLB Model</div>
+      </div>
+      <nav class="nav">
+        <a class="on" href="01_today.html">Today</a>
+        <a href="02_matchup.html">Matchups</a>
+        <a href="06_trends.html">Trends</a>
+        <a href="03_markets.html">Markets</a>
+        <a href="04_props.html">Props</a>
+        <a href="05_results.html">Results</a>
+        <a href="07_research.html">Research</a>
+      </nav>
+      <div class="nav__meta">
+        Slate <b>2026-07-23</b><br>
+        Model <b>v1-expected-runs</b><br>
+        Sync <b>Exact</b>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="pagehead">
+        <div>
+          <div class="pagehead__eyebrow">Chase Analytics · MLB Model</div>
+          <h1>Today</h1>
+          <p class="pagehead__sub">Discover the slate, then open a matchup. Model live; market prices load per game.</p>
+        </div>
+        <div class="fresh">
+          <div><span class="dot"></span>Model <b>live</b></div>
+          <div>Markets <b>as of 11:42 ET</b></div>
+          <div>Lineups <b>partial</b></div>
+        </div>
+      </header>
+
+      <div class="kpis">
+        <div class="kpi"><div class="k">Games</div><div class="v">15</div><div class="s">Full slate</div></div>
+        <div class="kpi"><div class="k">Slate</div><div class="v sm">Jul 23</div><div class="s">2026-07-23 ET</div></div>
+        <div class="kpi"><div class="k">Sharp signals</div><div class="v">3</div><div class="s">Across 2 games</div></div>
+        <div class="kpi"><div class="k">Lineups</div><div class="v sm warn">TBD</div><div class="s">8 confirmed · 7 pending</div></div>
+      </div>
+
+      <div class="cols">
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">Slate</h2>
+            <span class="panel__note">Click a game → Matchups</span>
+          </div>
+          <div class="table-wrap">
+            <table class="desk">
+              <thead>
+                <tr>
+                  <th>Game</th><th>Time</th><th>Win%(H)</th><th>Proj Tot</th><th>Margin</th><th>Lean</th><th>SP</th><th>Sharp</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="clickable" onclick="location.href='02_matchup.html'">
+                  <td><span class="game"><span class="logo">NYY</span> NYY <span class="vs">@</span> <span class="logo">BOS</span> BOS</span></td>
+                  <td class="mono">7:10 PM</td>
+                  <td class="mono">53%</td>
+                  <td class="mono">8.9</td>
+                  <td class="mono pos">+0.4</td>
+                  <td class="side">BOS</td>
+                  <td class="mono">Warren / Tolle</td>
+                  <td><span class="pill monitor">1</span></td>
+                </tr>
+                <tr class="clickable">
+                  <td><span class="game"><span class="logo">PHI</span> PHI <span class="vs">@</span> <span class="logo">NYM</span> NYM</span></td>
+                  <td class="mono">7:10 PM</td>
+                  <td class="mono">48%</td>
+                  <td class="mono">8.4</td>
+                  <td class="mono neg">−0.6</td>
+                  <td class="side">PHI</td>
+                  <td class="mono">Wheeler / Senga</td>
+                  <td class="mono" style="color:var(--mut)">—</td>
+                </tr>
+                <tr class="clickable">
+                  <td><span class="game"><span class="logo">CHC</span> CHC <span class="vs">@</span> <span class="logo">MIL</span> MIL</span></td>
+                  <td class="mono">7:40 PM</td>
+                  <td class="mono">62%</td>
+                  <td class="mono">9.1</td>
+                  <td class="mono pos">+1.6</td>
+                  <td class="side">MIL</td>
+                  <td class="mono">Imanaga / Peralta</td>
+                  <td><span class="pill bet">2</span></td>
+                </tr>
+                <tr class="clickable">
+                  <td><span class="game"><span class="logo">LAD</span> LAD <span class="vs">@</span> <span class="logo">SFG</span> SFG</span></td>
+                  <td class="mono">9:45 PM</td>
+                  <td class="mono">44%</td>
+                  <td class="mono">7.8</td>
+                  <td class="mono neg">−1.1</td>
+                  <td class="side">LAD</td>
+                  <td class="mono">Yamamoto / Webb</td>
+                  <td class="mono" style="color:var(--mut)">—</td>
+                </tr>
+                <tr class="clickable">
+                  <td><span class="game"><span class="logo">HOU</span> HOU <span class="vs">@</span> <span class="logo">SEA</span> SEA</span></td>
+                  <td class="mono">9:40 PM</td>
+                  <td class="mono">51%</td>
+                  <td class="mono">8.2</td>
+                  <td class="mono pos">+0.2</td>
+                  <td class="side">SEA</td>
+                  <td class="mono">Valdez / Castillo</td>
+                  <td class="mono" style="color:var(--mut)">—</td>
+                </tr>
+                <tr class="clickable">
+                  <td><span class="game"><span class="logo">ATL</span> ATL <span class="vs">@</span> <span class="logo">MIA</span> MIA</span></td>
+                  <td class="mono">6:40 PM</td>
+                  <td class="mono">41%</td>
+                  <td class="mono">8.6</td>
+                  <td class="mono neg">−1.3</td>
+                  <td class="side">ATL</td>
+                  <td class="mono">Sale / Cabrera</td>
+                  <td class="mono" style="color:var(--mut)">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">Biggest leans</h2>
+            <span class="panel__note">By proj margin</span>
+          </div>
+          <ul class="lean-list">
+            <li>
+              <span class="rank">01</span>
+              <div><div class="name">MIL</div><div class="sub">CHC @ MIL</div></div>
+              <div class="stat"><b>+1.6 R</b>62% · 9.1 tot</div>
+            </li>
+            <li>
+              <span class="rank">02</span>
+              <div><div class="name">ATL</div><div class="sub">ATL @ MIA</div></div>
+              <div class="stat"><b>+1.3 R</b>59% · 8.6 tot</div>
+            </li>
+            <li>
+              <span class="rank">03</span>
+              <div><div class="name">LAD</div><div class="sub">LAD @ SFG</div></div>
+              <div class="stat"><b>+1.1 R</b>56% · 7.8 tot</div>
+            </li>
+            <li>
+              <span class="rank">04</span>
+              <div><div class="name">PHI</div><div class="sub">PHI @ NYM</div></div>
+              <div class="stat"><b>+0.6 R</b>52% · 8.4 tot</div>
+            </li>
+            <li>
+              <span class="rank">05</span>
+              <div><div class="name">BOS</div><div class="sub">NYY @ BOS</div></div>
+              <div class="stat"><b>+0.4 R</b>53% · 8.9 tot</div>
+            </li>
+          </ul>
+          <div class="panel__head" style="border-top:1px solid var(--line);border-bottom:0">
+            <span class="panel__note">Open in Matchups for fair vs market edge. Margin ≠ bet advice.</span>
+          </div>
+        </section>
+      </div>
+
+      <div class="footer-note">
+        Mockup · Terminal Desk. Production data from slate builder + model_probabilities. Sharp column uses warehouse signals when present; shows em dash when none.
+      </div>
+    </main>
+  </div>
+</body>
+</html>

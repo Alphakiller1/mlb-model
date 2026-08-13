@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Matchup — MLB Model Desk</title>
+  <link rel="stylesheet" href="desk.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand__mark">Chase <span>Analytics</span></div>
+        <div class="brand__sub">MLB Model</div>
+      </div>
+      <nav class="nav">
+        <a href="01_today.html">Today</a>
+        <a class="on" href="02_matchup.html">Matchups</a>
+        <a href="06_trends.html">Trends</a>
+        <a href="03_markets.html">Markets</a>
+        <a href="04_props.html">Props</a>
+        <a href="05_results.html">Results</a>
+        <a href="07_research.html">Research</a>
+      </nav>
+      <div class="nav__meta">
+        Game <b>NYY @ BOS</b><br>
+        Model <b>v1-expected-runs</b><br>
+        Odds <b>11:42 ET</b>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="pagehead">
+        <div>
+          <div class="pagehead__eyebrow">Matchups · Symmetric breakdown</div>
+          <h1>Inspect</h1>
+          <p class="pagehead__sub">Mirrored away / home columns. Verdict first. Markets below.</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+          <select class="select" aria-label="Select game">
+            <option>NYY @ BOS · 7:10 PM</option>
+            <option>CHC @ MIL · 7:40 PM</option>
+            <option>PHI @ NYM · 7:10 PM</option>
+          </select>
+          <div class="fresh"><span class="dot"></span><span class="pill live">Live model</span></div>
+        </div>
+      </header>
+
+      <!-- Symmetric matchup board: Away | Axis | Home -->
+      <section class="sym-board" aria-label="Matchup breakdown">
+        <div class="sym-hero">
+          <div class="sym-side away">
+            <div class="sym-side__tag">Away</div>
+            <div class="sym-side__row">
+              <div class="sym-side__logo">NYY</div>
+              <div>
+                <div class="sym-side__name">NYY</div>
+                <div class="sym-side__sp"><b>Will Warren</b> · RHP<br><span class="mono">FIP 4.12 · K% 22.1</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="sym-axis">
+            <div class="sym-axis__vs">VS</div>
+            <div class="sym-axis__meta">
+              7:10 PM ET<br>
+              Fenway · 1.12<br>
+              Wx TBD
+            </div>
+          </div>
+          <div class="sym-side home">
+            <div class="sym-side__tag">Home</div>
+            <div class="sym-side__row">
+              <div class="sym-side__logo">BOS</div>
+              <div>
+                <div class="sym-side__name">BOS</div>
+                <div class="sym-side__sp"><b>Payton Tolle</b> · LHP<br><span class="mono">FIP 3.88 · K% 24.0</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sym-rows">
+          <div class="sym-row">
+            <div class="sym-cell away lose">47%</div>
+            <div class="sym-label">Win %</div>
+            <div class="sym-cell home win">53%</div>
+          </div>
+          <div class="sym-bar" aria-hidden="true">
+            <div class="sym-bar__track away"><div class="fill" style="width:47%"></div></div>
+            <div class="sym-label" style="border:0;background:transparent;padding:0">Balance</div>
+            <div class="sym-bar__track home"><div class="fill" style="width:53%"></div></div>
+          </div>
+          <div class="sym-row">
+            <div class="sym-cell away">4.2</div>
+            <div class="sym-label">Proj R</div>
+            <div class="sym-cell home">4.7</div>
+          </div>
+          <div class="sym-row">
+            <div class="sym-cell away">+112</div>
+            <div class="sym-label">Fair ML</div>
+            <div class="sym-cell home">+111</div>
+          </div>
+          <div class="sym-row">
+            <div class="sym-cell away lose">4.12</div>
+            <div class="sym-label">SP FIP</div>
+            <div class="sym-cell home win">3.88</div>
+          </div>
+          <div class="sym-row">
+            <div class="sym-cell away">22.1%</div>
+            <div class="sym-label">SP K%</div>
+            <div class="sym-cell home win">24.0%</div>
+          </div>
+          <div class="sym-row">
+            <div class="sym-cell away win">.338</div>
+            <div class="sym-label">OSI vs SP</div>
+            <div class="sym-cell home">.312</div>
+          </div>
+          <div class="sym-row">
+            <div class="sym-cell away win">.328</div>
+            <div class="sym-label">wOBA</div>
+            <div class="sym-cell home">.311</div>
+          </div>
+          <div class="sym-row">
+            <div class="sym-cell away">8.9 tot</div>
+            <div class="sym-label">Model / Mkt</div>
+            <div class="sym-cell home">8.5 tot</div>
+          </div>
+        </div>
+
+        <div class="sym-factors">
+          <div>
+            <div class="sym-factors__title">NYY edges</div>
+            <ul>
+              <li><b>Platoon OSI</b> vs LHP</li>
+              <li><b>Baserunning</b> OBR</li>
+              <li><b>Lineup wOBA</b></li>
+            </ul>
+          </div>
+          <div>
+            <div class="sym-factors__title">BOS edges</div>
+            <ul>
+              <li><b>SP FIP</b> advantage</li>
+              <li><b>Park</b> 1.12 home</li>
+              <li><b>Bullpen</b> unit form</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <div class="verdict monitor">
+        <div class="verdict__state">
+          <div class="verdict__label">MONITOR</div>
+          <div class="verdict__mkt">Over 8.5 · best available</div>
+        </div>
+        <div class="verdict__stats">
+          <div><div class="k">Edge</div><div class="v pos">+0.7 pt</div></div>
+          <div><div class="k">EV / u</div><div class="v pos">+0.012</div></div>
+          <div><div class="k">Max</div><div class="v">−116</div></div>
+          <div><div class="k">Conf</div><div class="v warn">Med</div></div>
+        </div>
+        <div class="verdict__meta">
+          Incomplete lineups · weather open<br>
+          Gate: not promoted to BET
+        </div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi"><div class="k">Proj tot</div><div class="v">8.9</div><div class="s">Model</div></div>
+        <div class="kpi"><div class="k">Mkt tot</div><div class="v">8.5</div><div class="s">Consensus</div></div>
+        <div class="kpi"><div class="k">Margin</div><div class="v sm">BOS +0.5</div><div class="s">Proj</div></div>
+        <div class="kpi"><div class="k">F5 Over</div><div class="v">48%</div><div class="s">Model</div></div>
+        <div class="kpi"><div class="k">Best edge</div><div class="v pos">+0.7</div><div class="s">O 8.5</div></div>
+        <div class="kpi"><div class="k">Sharp</div><div class="v sm">1</div><div class="s">Steam watch</div></div>
+        <div class="kpi"><div class="k">Lineups</div><div class="v sm warn">TBD</div><div class="s">Both</div></div>
+        <div class="kpi"><div class="k">Conf</div><div class="v sm warn">Med</div><div class="s">Gate</div></div>
+      </div>
+
+      <div class="cols mb">
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">Shared risks</h2>
+            <span class="panel__note">Applies to both sides</span>
+          </div>
+          <div class="factor-row"><span class="k">Lineups</span><span class="who warn">Incomplete</span><span class="mkt">Blocks BET</span></div>
+          <div class="factor-row"><span class="k">Weather</span><span class="who warn">Open</span><span class="mkt">Totals variance</span></div>
+          <div class="factor-row"><span class="k">Variance</span><span class="who" style="color:var(--mut)">League BS rate</span><span class="mkt">Not priced</span></div>
+        </section>
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">Context</h2>
+            <span class="panel__note">Non-mirrored meta</span>
+          </div>
+          <div class="factor-row"><span class="k">Park</span><span class="who">Fenway</span><span class="mkt">1.12</span></div>
+          <div class="factor-row"><span class="k">Trend</span><span class="who">NYY offense ↑</span><span class="mkt">Signal only</span></div>
+          <div class="factor-row"><span class="k">Model</span><span class="who">v1-expected-runs</span><span class="mkt">Live</span></div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="tabs" role="tablist">
+          <button class="on" type="button">Markets</button>
+          <button type="button">Charts</button>
+          <button type="button">Matchup</button>
+          <button type="button">Drivers</button>
+          <button type="button">Sharp</button>
+        </div>
+        <div class="table-wrap">
+          <table class="desk">
+            <thead>
+              <tr>
+                <th>Market</th><th>Mkt</th><th>Fair</th><th>Impl</th><th>Model</th><th>Edge</th><th>EV/u</th><th>Max</th><th>State</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Over 8.5</b></td>
+                <td class="mono">−110</td>
+                <td class="mono">−116</td>
+                <td class="mono">52.4%</td>
+                <td class="mono">54.1%</td>
+                <td class="mono pos">+0.7</td>
+                <td class="mono pos">+0.012</td>
+                <td class="mono">−116</td>
+                <td><span class="pill monitor">Monitor</span></td>
+              </tr>
+              <tr>
+                <td>BOS ML</td>
+                <td class="mono">−120</td>
+                <td class="mono">+111</td>
+                <td class="mono">54.5%</td>
+                <td class="mono">53.0%</td>
+                <td class="mono neg">−1.5</td>
+                <td class="mono neg">−0.028</td>
+                <td class="mono">+111</td>
+                <td><span class="pill avoid">Avoid</span></td>
+              </tr>
+              <tr>
+                <td>NYY ML</td>
+                <td class="mono">+100</td>
+                <td class="mono">+112</td>
+                <td class="mono">50.0%</td>
+                <td class="mono">47.0%</td>
+                <td class="mono neg">−3.0</td>
+                <td class="mono neg">−0.041</td>
+                <td class="mono">+112</td>
+                <td><span class="pill avoid">Avoid</span></td>
+              </tr>
+              <tr>
+                <td>Under 8.5</td>
+                <td class="mono">−110</td>
+                <td class="mono">+105</td>
+                <td class="mono">52.4%</td>
+                <td class="mono">45.9%</td>
+                <td class="mono neg">−6.5</td>
+                <td class="mono neg">−0.09</td>
+                <td class="mono">+105</td>
+                <td><span class="pill avoid">Avoid</span></td>
+              </tr>
+              <tr>
+                <td>NYY −1.5</td>
+                <td class="mono">+150</td>
+                <td class="mono">+158</td>
+                <td class="mono">40.0%</td>
+                <td class="mono">39.2%</td>
+                <td class="mono">−0.8</td>
+                <td class="mono">−0.01</td>
+                <td class="mono">+158</td>
+                <td><span class="pill none">No-edge</span></td>
+              </tr>
+              <tr>
+                <td>F5 Over 5.0</td>
+                <td class="mono">−105</td>
+                <td class="mono">−102</td>
+                <td class="mono">51.2%</td>
+                <td class="mono">48.0%</td>
+                <td class="mono neg">−3.2</td>
+                <td class="mono neg">−0.04</td>
+                <td class="mono">−102</td>
+                <td><span class="pill none">No-edge</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <details class="panel mt" style="padding:12px 14px">
+        <summary style="cursor:pointer;font-family:var(--font-display);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:13px">Methodology</summary>
+        <p style="margin:10px 0 0;font-size:12px;color:var(--mut);line-height:1.55;max-width:640px">
+          Expected-runs prior from offense × pitching × park, regressed to league mean. Fair odds de-vigged.
+          Uncalibrated heuristic — MONITOR when inputs incomplete. No profit guarantee.
+        </p>
+      </details>
+
+      <div class="footer-note">Symmetric board is the canonical matchup breakdown: every comparable metric is Away | label | Home.</div>
+    </main>
+  </div>
+</body>
+</html>

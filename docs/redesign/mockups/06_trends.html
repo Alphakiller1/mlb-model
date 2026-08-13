@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trends — MLB Model Desk</title>
+  <link rel="stylesheet" href="desk.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand__mark">Chase <span>Analytics</span></div>
+        <div class="brand__sub">MLB Model</div>
+      </div>
+      <nav class="nav">
+        <a href="01_today.html">Today</a>
+        <a href="02_matchup.html">Matchups</a>
+        <a class="on" href="06_trends.html">Trends</a>
+        <a href="03_markets.html">Markets</a>
+        <a href="04_props.html">Props</a>
+        <a href="05_results.html">Results</a>
+        <a href="07_research.html">Research</a>
+      </nav>
+      <div class="nav__meta">
+        Signals <b>12</b><br>
+        Games <b>15</b><br>
+        Mode <b>By matchup</b>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="pagehead">
+        <div>
+          <div class="pagehead__eyebrow">Chase Analytics · MLB Model</div>
+          <h1>Trends</h1>
+          <p class="pagehead__sub">Form signals by matchup — open a game for the full symmetric report.</p>
+        </div>
+        <select aria-label="Matchup">
+          <option selected>NYY @ BOS</option>
+          <option>LAD @ SF</option>
+          <option>ATL @ PHI</option>
+        </select>
+      </header>
+
+      <div class="kpis">
+        <div class="kpi"><div class="k">Active signals</div><div class="v">4</div><div class="s">This matchup</div></div>
+        <div class="kpi"><div class="k">Offense form</div><div class="v sm warn">Hot A</div><div class="s">NYY L10 vs RHP</div></div>
+        <div class="kpi"><div class="k">SP trend</div><div class="v sm">Stable</div><div class="s">Cole L3 starts</div></div>
+        <div class="kpi"><div class="k">Pen load</div><div class="v sm neg">Elevated</div><div class="s">BOS 1d pitches</div></div>
+      </div>
+
+      <div class="cols">
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">Away · NYY</h2>
+            <span class="panel__note">Signals</span>
+          </div>
+          <ul class="list">
+            <li><span class="pill bet">Hot</span> Lineup wOBA vs RHP · L14 +28 pts vs season</li>
+            <li><span class="pill monitor">Watch</span> Chase% rising · contact quality flat</li>
+            <li><span class="pill none">Mute</span> No bullpen red flag overnight</li>
+          </ul>
+        </section>
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">Home · BOS</h2>
+            <span class="panel__note">Signals</span>
+          </div>
+          <ul class="list">
+            <li><span class="pill avoid">Soft</span> Season offense vs LHP below avg</li>
+            <li><span class="pill monitor">Watch</span> Pen pitches 1d elevated</li>
+            <li><span class="pill bet">Edge</span> Park factor favors contact profile</li>
+          </ul>
+        </section>
+      </div>
+
+      <section class="sym-board mt" aria-label="Trends snapshot">
+        <div class="sym-hero">
+          <div class="sym-side away">
+            <div class="sym-side__row"><div class="sym-side__name">NYY</div></div>
+            <div class="sym-side__tag">Away signals</div>
+          </div>
+          <div class="sym-axis"><div class="sym-axis__vs">VS</div></div>
+          <div class="sym-side home">
+            <div class="sym-side__row"><div class="sym-side__name">BOS</div></div>
+            <div class="sym-side__tag">Home signals</div>
+          </div>
+        </div>
+        <div class="sym-rows">
+          <div class="sym-row">
+            <div class="sym-cell away win">.342</div>
+            <div class="sym-label">L10 wOBA</div>
+            <div class="sym-cell home lose">.298</div>
+          </div>
+          <div class="sym-row">
+            <div class="sym-cell away win">112</div>
+            <div class="sym-label">RCV</div>
+            <div class="sym-cell home lose">94</div>
+          </div>
+          <div class="sym-row">
+            <div class="sym-cell away">1.02</div>
+            <div class="sym-label">Pen factor</div>
+            <div class="sym-cell home win">0.98</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

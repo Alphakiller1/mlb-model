@@ -114,7 +114,21 @@ HFA_RUNS = 0.1703
 OSI_RUN_SENSITIVITY = MODEL_SENSITIVITIES["osi_run"]
 SP_FIP_WEIGHT = MODEL_SENSITIVITIES["sp_fip_weight"]
 REGRESSION_TO_MEAN = MODEL_SENSITIVITIES["regression_to_mean"]
-LEAGUE_BULLPEN_ERA = 4.05
+# Measured 2026-08-13 across all 30 bullpens (7,934 appearances), appearance-weighted.
+#
+# This is NOT a league ERA — it is the mean of the exact composite the model builds from
+# each pen (0.55*overall_FIP + 0.25*high_leverage_FIP + 0.20*venue_FIP), and it serves as
+# BOTH the regression target in `bullpen_features` and the divisor in `staff_factor`. Those
+# two must agree or the factor is biased by construction.
+#
+#   prior 4.05  ->  measured 3.5495
+#
+# At 4.05 every bullpen in the league graded ~12% better than "average", so `staff_factor`
+# suppressed runs on every game: modelled totals averaged 7.79 against a market mean of
+# 8.52. The starter anchor below was checked the same way and is sound (starts-weighted
+# mean season_skill = 4.2235 across 306 starters, vs LEAGUE_FIP 4.20), so the bullpen
+# denominator was the whole of the gap. Re-measure at season end; do not hand-edit.
+LEAGUE_BULLPEN_ERA = 3.5495
 BULLPEN_IR_SENSITIVITY = MODEL_SENSITIVITIES["bullpen_ir"]
 OFF_FACTOR_CLIP = (0.55, 1.60)
 PITCH_FACTOR_CLIP = (0.60, 1.70)

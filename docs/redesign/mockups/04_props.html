@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Props — MLB Model Desk</title>
+  <link rel="stylesheet" href="desk.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand__mark">Chase <span>Analytics</span></div>
+        <div class="brand__sub">MLB Model</div>
+      </div>
+      <nav class="nav">
+        <a href="01_today.html">Today</a>
+        <a href="02_matchup.html">Matchups</a>
+        <a href="06_trends.html">Trends</a>
+        <a href="03_markets.html">Markets</a>
+        <a class="on" href="04_props.html">Props</a>
+        <a href="05_results.html">Results</a>
+        <a href="07_research.html">Research</a>
+      </nav>
+      <div class="nav__meta">
+        Channels <b>3</b><br>
+        Lines <b>as of 11:40 ET</b>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="pagehead">
+        <div>
+          <div class="pagehead__eyebrow">Player markets</div>
+          <h1>Props</h1>
+          <p class="pagehead__sub">Pitcher and hitter lines with model vs market. Empty channels stay empty.</p>
+        </div>
+        <div class="fresh">
+          <div>PrizePicks <b class="warn">403</b></div>
+          <div>Underdog <b>ok</b></div>
+          <div>Sleeper <b>ok</b></div>
+        </div>
+      </header>
+
+      <div class="kpis">
+        <div class="kpi"><div class="k">Pitcher props</div><div class="v">18</div><div class="s">K · Outs · ER</div></div>
+        <div class="kpi"><div class="k">Hitter props</div><div class="v">24</div><div class="s">Hits · TB · HR</div></div>
+        <div class="kpi"><div class="k">Clearable</div><div class="v">2</div><div class="s">Gate pending</div></div>
+        <div class="kpi"><div class="k">No feed</div><div class="v sm warn">PP</div><div class="s">Shown honest</div></div>
+      </div>
+
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="pill bet" type="button" style="border:0;cursor:default">All</button>
+        <button class="pill none" type="button">Pitcher</button>
+        <button class="pill none" type="button">Hitter</button>
+        <button class="pill none" type="button">Underdog</button>
+        <button class="pill none" type="button">Sleeper</button>
+      </div>
+
+      <div class="stack">
+        <article class="panel" style="padding:0;overflow:hidden">
+          <button type="button" style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;background:transparent;border:0;color:inherit;text-align:left">
+            <span class="logo" style="width:36px;height:36px;font-size:11px">NYY</span>
+            <div style="flex:1">
+              <div style="font-weight:700">Will Warren · Ks</div>
+              <div style="font-size:11px;color:var(--mut);margin-top:2px">NYY @ BOS · Underdog · Line 5.5</div>
+            </div>
+            <div style="text-align:right;font-family:var(--font-mono);font-size:12px">
+              <div>Model <b style="color:var(--ink)">5.9</b></div>
+              <div style="color:var(--mut)">Edge +0.4</div>
+            </div>
+            <span class="pill monitor">Monitor</span>
+          </button>
+          <div class="table-wrap" style="border-top:1px solid var(--line)">
+            <table class="desk">
+              <thead><tr><th>Channel</th><th>Line</th><th>Side</th><th>Impl</th><th>Model</th><th>EV/u</th><th>State</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>Underdog</td>
+                  <td class="mono">5.5</td>
+                  <td class="side">Over</td>
+                  <td class="mono">48%</td>
+                  <td class="mono">54%</td>
+                  <td class="mono pos">+0.04</td>
+                  <td><span class="pill monitor">Monitor</span></td>
+                </tr>
+                <tr>
+                  <td>Sleeper</td>
+                  <td class="mono">5.5</td>
+                  <td class="side">Over</td>
+                  <td class="mono">50%</td>
+                  <td class="mono">54%</td>
+                  <td class="mono pos">+0.02</td>
+                  <td><span class="pill none">No-edge</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel" style="padding:0;overflow:hidden">
+          <button type="button" style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;background:transparent;border:0;color:inherit;text-align:left">
+            <span class="logo" style="width:36px;height:36px;font-size:11px">BOS</span>
+            <div style="flex:1">
+              <div style="font-weight:700">Rafael Devers · Hits</div>
+              <div style="font-size:11px;color:var(--mut);margin-top:2px">NYY @ BOS · Sleeper · Line 1.5</div>
+            </div>
+            <div style="text-align:right;font-family:var(--font-mono);font-size:12px">
+              <div>Model <b style="color:var(--ink)">1.3</b></div>
+              <div style="color:var(--mut)">Edge −0.2</div>
+            </div>
+            <span class="pill avoid">Avoid</span>
+          </button>
+        </article>
+
+        <div class="panel empty" style="padding:16px;border-style:dashed;color:var(--mut);font-size:13px">
+          PrizePicks feed unavailable (HTTP 403). No fabricated lines shown.
+        </div>
+      </div>
+
+      <div class="footer-note">Props remain structured; production wires projection-market when feeds allow. Mockup shows loaded + honest-empty chrome.</div>
+    </main>
+  </div>
+</body>
+</html>
