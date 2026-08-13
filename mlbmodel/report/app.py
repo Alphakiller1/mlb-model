@@ -1,8 +1,8 @@
 """
 mlbmodel.report.app — the unified MLB Model product shell.
 
-ONE coherent application (not separate dashboards) with a 7-section information architecture:
-Today · Matchups · Markets · Props · Results · Research. Workflow:
+ONE coherent application (not separate dashboards) with a 6-section information architecture:
+Matchups · Trends · Markets · Props · Results · Research. Workflow:
 discover -> inspect -> evaluate -> compare -> decide -> track -> review. Each section follows the
 page hierarchy: context -> conclusion -> price/opportunity -> evidence -> risks -> action ->
 methodology. The user never sees which repo a number came from — it reads as one platform.
@@ -54,14 +54,13 @@ from mlbmodel.report.shell import (
     desk_sidebar_html,
     shell_css,
     shell_js,
-    slate_view_label,
 )
 from mlbmodel.report.views import (
     props as _props,
     research as _research,
     results as _results,
     slate as _slate,
-    today as _today,
+    slate_board as _slate_board,
     trends as _trends,
 )
 from mlbmodel.storage.supabase import SupabaseReader
@@ -216,16 +215,27 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             f'{e(game_option_label(game, slate))}</option>'
         )
     options = "".join(option_rows)
+    # One section, not two. The slate board and the per-game breakdown answered the same
+    # question at two depths, so a separate "Today" view was a second front door onto the
+    # same slate — and it went stale-looking the moment the board rolled to tomorrow.
+    # The board IS the matchup picker now: a card carries the projection, and opening it
+    # scrolls to that game's full report below.
     matchups = (
         desk_pagehead(
             "Matchups",
-            sub=f"Process: Decision → Model → Markets → Why → Splits → Sharp → Risks · {e(sd or 'Slate pending')}",
+            sub=(
+                "Every game, its projected score and its priced markets — "
+                f"open a card for the full breakdown · {e(sd or 'Slate pending')}"
+            ),
             trailing=(
                 f'<select id=gameSelect aria-label="Matchup" '
                 f'onchange="switchGame(this.value)">{options}</select>'
             ),
         )
+        + _slate_board(slate, sd, sharp_by_pk, sync, reports_by_key)
+        + '<div class="matchup-detail" id="matchupDetail">'
         + "".join(matchup_reports)
+        + "</div>"
     )
 
     pkmap = {g["pk"]: g["key"] for g in slate if "pk" in g and g.get("key")}
@@ -322,7 +332,6 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             log.warning("closing-odds refresh failed: %s", exc)
 
     views = {
-        "today": _today(slate, sd, sharp_by_pk, sync, reports_by_key),
         "matchups": matchups,
         "trends": _trends(slate_reports, slate=slate),
         "markets": _markets(
@@ -335,12 +344,9 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
         "results": _results(reader),
         "research": _research(reader, gate, f5_board, clv_summary),
     }
-    nav_items = [
-        (k, slate_view_label(sd) if k == "today" else lbl, f"show('{k}')")
-        for k, lbl in _NAV
-    ]
+    nav_items = [(k, lbl, f"show('{k}')") for k, lbl in _NAV]
     sections = "".join(
-        f'<section class="view{" on" if k == "today" else ""}" id="v-{k}">{html_}</section>'
+        f'<section class="view{" on" if k == "matchups" else ""}" id="v-{k}">{html_}</section>'
         for k, html_ in views.items()
     )
     deployment_notice = os.getenv("MLB_MODEL_DEPLOYMENT_NOTICE", "").strip()
@@ -352,7 +358,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     )
     sidebar = desk_sidebar_html(
         nav_items,
-        active="today",
+        active="matchups",
         slate_date=str(sd or ""),
         meta_lines=[
             f'Slate <b>{e(sd or "—")}</b>',

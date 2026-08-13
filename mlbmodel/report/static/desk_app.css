@@ -1332,6 +1332,113 @@ body.desk-app .chase-header { display: none !important; }
 #main .pitcher-prop-body { display: none; padding: 0 14px 14px; border-top: 1px solid var(--line); }
 #main .pitcher-prop-card.on .pitcher-prop-body { display: block; }
 
+#main .pitcher-prop-id { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+#main .pitcher-prop-id b { display: block; font-size: var(--mm-text-base); }
+#main .pitcher-prop-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: var(--mm-text-2xs);
+  color: var(--text-3);
+}
+#main .pitcher-prop-summary { margin-left: auto; text-align: right; }
+#main .pitcher-prop-chevron { color: var(--text-3); transition: transform .15s ease; }
+#main .pitcher-prop-card.on .pitcher-prop-chevron { transform: rotate(90deg); }
+
+/* Section headings inside a prop card. These lived only in model_ui.css, which the desk
+   shell never loads, so every subhead on the Props page rendered as unstyled body text. */
+#main .ca-subhead {
+  font-family: var(--font-display);
+  font-size: var(--mm-text-2xs);
+  font-weight: 700;
+  letter-spacing: var(--ca-editorial-caps);
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 16px 0 4px;
+}
+#main .prop-engine-section:first-child .ca-subhead { margin-top: 10px; }
+
+/* The line that names what the numbers below are measured against. This is the whole point
+   of the section, so it is readable prose rather than a footnote. */
+#main .prop-basis {
+  font-size: var(--mm-text-xs);
+  color: var(--text-2);
+  margin: 0 0 9px;
+  max-width: 78ch;
+  line-height: 1.5;
+}
+
+#main .prop-engine-empty {
+  padding: 12px 14px;
+  border: 1px dashed var(--border-2);
+  border-radius: 9px;
+  color: var(--text-3);
+  font-size: var(--mm-text-xs);
+  line-height: 1.5;
+  background: rgba(255, 255, 255, .012);
+}
+
+/* Projection strip: label + value + spread, each a discrete cell. Previously the cells had
+   no separation at all and ran together as "K6.0BB1.8ER2.1". */
+#main .prop-proj-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 11px 0 3px;
+}
+#main .prop-proj__label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: var(--ca-editorial-caps);
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-right: 2px;
+}
+#main .prop-proj__cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: var(--bg-3);
+  white-space: nowrap;
+}
+#main .prop-proj__k {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+#main .prop-proj__v {
+  font-family: var(--font-display);
+  font-size: var(--mm-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+#main .prop-proj__sd {
+  font-style: normal;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-4);
+}
+
+#main .prop-context {
+  font-size: var(--mm-text-2xs);
+  color: var(--text-3);
+  padding: 7px 0 2px;
+  line-height: 1.8;
+}
+#main .prop-context b { color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+#main .prop-primary-lean { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+#main .prop-play { display: inline-flex; align-items: baseline; gap: 5px; flex-wrap: wrap; }
+#main .prop-play__line { font-variant-numeric: tabular-nums; }
+
 /* Matchup report chrome */
 .matchup-report { margin-top: 4px; }
 .matchup-report[hidden] { display: none !important; }

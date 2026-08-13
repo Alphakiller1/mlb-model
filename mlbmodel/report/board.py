@@ -135,7 +135,12 @@ class Card:
 
     @property
     def tags(self) -> tuple[str, ...]:
-        tags = {group.tag for group in self.groups if group.tag and group.priced}
+        # Tagged on the market family being OFFERED, not on it being priced. Gating these
+        # on a price meant that on a slate with no matched book lines every card carried no
+        # tags at all, so every filter but "All" emptied the board and read as a dead button.
+        # "Does this game offer a First 5 market" is the question the filter answers; whether
+        # a price is attached is what the Gems filter and the Picks counter are for.
+        tags = {group.tag for group in self.groups if group.tag and group.tiles}
         if self.gems:
             tags.add("gems")
         return tuple(sorted(tags))
@@ -321,12 +326,27 @@ def board_html(board: Board) -> str:
         for counter in counters
     )
 
+    # Each filter carries its own match count and is disabled at zero. A filter that silently
+    # empties the board is indistinguishable from a broken button; a greyed "First 5 · 0"
+    # answers the question before it is clicked.
     filters = board.filters or [("all", "All"), ("gems", "◆ Gems")]
-    filter_html = "".join(
-        f'<button type="button" class="bd-filter{" on" if tag == "all" else ""}" '
-        f'data-filter="{e(tag)}" onclick="boardFilter(this,\'{e(tag)}\')">{e(label)}</button>'
-        for tag, label in filters
-    )
+    filter_parts = []
+    for tag, label in filters:
+        if tag == "all":
+            hits = len(board.cards)
+        elif tag == "gems":
+            hits = sum(1 for card in board.cards if card.gems)
+        else:
+            hits = sum(1 for card in board.cards if tag in card.tags)
+        dead = " is-empty" if not hits else ""
+        disabled = " disabled" if not hits else ""
+        filter_parts.append(
+            f'<button type="button" class="bd-filter{" on" if tag == "all" else ""}{dead}"'
+            f' data-filter="{e(tag)}" data-hits="{hits}"{disabled}'
+            f' onclick="boardFilter(this,\'{e(tag)}\')">'
+            f'{e(label)} <span class="bd-filter__n">{hits}</span></button>'
+        )
+    filter_html = "".join(filter_parts)
 
     sorts = board.sorts or [("start", "Start time")]
     sort_html = "".join(
@@ -364,9 +384,13 @@ BOARD_JS = (
     "var grid=document.getElementById('bdGrid');"
     "if(grid){var vis=grid.querySelectorAll('.bd-card:not([hidden])').length;"
     "var msg=document.getElementById('bdFilterEmpty');"
-    "if(!vis&&!msg){msg=document.createElement('div');msg.id='bdFilterEmpty';"
-    "msg.className='bd-empty bd-empty--board';msg.textContent='No games match this filter.';"
-    "grid.appendChild(msg);}else if(msg){msg.remove();}}}"
+    # Keep the notice while a filter matches nothing. The old `else if` removed it on the
+    # second consecutive empty filter, leaving a blank grid with no explanation.
+    "if(!vis){if(!msg){msg=document.createElement('div');msg.id='bdFilterEmpty';"
+    "msg.className='bd-empty bd-empty--board';grid.appendChild(msg);}"
+    "msg.textContent='No games on this slate offer '+tag.replace('f5','a First 5')"
+    ".replace('fullgame','a full-game').replace('gems','a gem-grade')+' market.';}"
+    "else if(msg){msg.remove();}}}"
     "function boardSort(key){var grid=document.getElementById('bdGrid');if(!grid)return;"
     "var cards=Array.prototype.slice.call(grid.querySelectorAll('.bd-card'));"
     "cards.sort(function(a,b){"

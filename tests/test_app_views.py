@@ -33,8 +33,12 @@ def test_props_view_one_toggle_card_per_pitcher_with_clear_play():
 
     assert "pitcher-prop-deck" in rendered
     assert "pitcher-prop-card" in rendered
-    assert "Book &amp; prediction market" in rendered
-    assert "Fantasy" in rendered
+    # The two channels are named for what their numbers are measured against, and each
+    # states its basis, so a pick'em figure can never be read as an edge against a price.
+    assert "Priced markets" in rendered
+    assert "Pick&#x27;em" in rendered or "Pick'em" in rendered
+    assert "de-vigged" in rendered
+    assert "breakeven" in rendered
     assert "prop-engine-section" in rendered
     assert "prop-primary-lean" in rendered
     assert "OVER" in rendered

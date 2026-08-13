@@ -41,7 +41,7 @@ def test_build_app_renders_all_views():
         assert f'id="v-{key}"' in html
     assert "desk-frame" in html
     assert "sidebar" in html
-    assert 'data-v="today"' in html
+    assert 'data-v="matchups"' in html
     assert "sortable" in html
     assert "function show(k)" in html
     assert "location.hash" in html
@@ -50,7 +50,10 @@ def test_build_app_renders_all_views():
     # Edge command strip removed from Today
     assert "edge-command" not in html
     assert "Where we have edge today" not in html
-    assert "model_ui.css" not in html  # inlined in shell
+    # No external stylesheet links: the page must be self-contained for Pages. Asserted on
+    # the link tag rather than the bare filename, so a CSS comment naming a file cannot
+    # fail this.
+    assert "<link" not in html.lower() or 'rel="stylesheet"' not in html.lower()
     assert "sym-metric-board" in html
     assert "matchup-process" in html
     assert "desk-process" in html

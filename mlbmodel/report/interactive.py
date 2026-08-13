@@ -59,8 +59,33 @@ TABLE_UI_JS = r"""
       });
     });
   }
-  window.MLBTableUI={initTable:initTable,initFilter:initFilter};
+  // Numeric columns are right-aligned per cell (td.num) but the matching <th> was almost
+  // never tagged, so every table rendered right-aligned figures under a left-aligned
+  // heading. Rather than tag ~40 headers by hand across 8 modules and rely on nobody
+  // forgetting on the next table, derive it: a column whose body cells are numeric gets
+  // its header aligned to match. Applies to every table, including ones added later.
+  function alignHeaders(table){
+    if(!table||table.dataset.uiAligned)return;
+    table.dataset.uiAligned='1';
+    var head=table.tHead?table.tHead.rows[0]:(table.rows[0]||null);
+    if(!head)return;
+    var body=table.tBodies[0];
+    var rows=body?body.rows:table.rows;
+    if(!rows||!rows.length)return;
+    for(var col=0;col<head.cells.length;col++){
+      var numeric=0,seen=0;
+      for(var r=0;r<rows.length;r++){
+        var cell=rows[r].cells[col];
+        if(!cell||cell===head.cells[col])continue;
+        seen++;
+        if(cell.classList.contains('num'))numeric++;
+      }
+      if(seen&&numeric/seen>=0.5)head.cells[col].classList.add('num');
+    }
+  }
+  window.MLBTableUI={initTable:initTable,initFilter:initFilter,alignHeaders:alignHeaders};
   document.addEventListener('DOMContentLoaded',function(){
+    document.querySelectorAll('table').forEach(alignHeaders);
     document.querySelectorAll('table.sortable').forEach(initTable);
     document.querySelectorAll('input.table-filter').forEach(initFilter);
   });

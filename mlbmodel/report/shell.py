@@ -15,7 +15,6 @@ _ET = ZoneInfo("America/New_York")
 e = html.escape
 
 NAV = [
-    ("today", "Today"),
     ("matchups", "Matchups"),
     ("trends", "Trends"),
     ("markets", "Markets"),
@@ -96,7 +95,11 @@ def shell_js() -> str:
         "if(body&&tpl&&body.querySelector('.matchup-summary'))body.innerHTML=tpl.innerHTML;}"
         "});const s=document.getElementById('gameSelect');"
         "if(s)s.value=g;}"
-        "function openGame(g){switchGame(g);show('matchups');}"
+        # The board and the breakdown now live in one section, so opening a game swaps the
+        # detail panel and scrolls to it rather than switching views out from under the board.
+        "function openGame(g){show('matchups');switchGame(g);"
+        "var d=document.getElementById('matchupDetail');"
+        "if(d)d.scrollIntoView({behavior:'smooth',block:'start'});}"
         "function switchPropPitcher(i){document.querySelectorAll('[data-prop-detail]').forEach(function(p){"
         "if(p.getAttribute('data-prop-detail')===String(i)){p.removeAttribute('hidden');}else{p.setAttribute('hidden','');}});"
         "document.querySelectorAll('[data-prop-index]').forEach(function(b){"

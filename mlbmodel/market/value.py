@@ -45,15 +45,24 @@ def assess_value(
         else "PASS"
     )
 
-    if promotion_status != "PROMOTE":
+    # Implausibility is checked BEFORE the promotion gate. It used to be checked after, so
+    # while the gate read HOLD/ABSTAIN — which is every day so far — a 38-point "edge" from a
+    # broken projection was presented as MONITOR with a positive EV, indistinguishable from a
+    # 3-point edge that was real. An edge that large is evidence the inputs are wrong, and
+    # that verdict does not depend on whether the strategy is promoted.
+    if implausible:
+        action = "REVIEW"
+        reason = (
+            f"Apparent edge of {edge * 100:.1f}pt exceeds the "
+            f"{settings.IMPLAUSIBLE_EDGE * 100:.0f}pt plausibility limit — treat as a "
+            f"projection or line-mapping error, not an opportunity"
+        )
+    elif promotion_status != "PROMOTE":
         action = "MONITOR" if edge > 0 and ev > 0 else "AVOID"
         reason = "Research signal only; the strategy has not passed its promotion gate"
     elif raw_state == "PLAY":
         action = "BET"
         reason = "Positive executable EV and the governing strategy is promoted"
-    elif raw_state == "REVIEW":
-        action = "REVIEW"
-        reason = "The apparent edge is too large to trust without checking inputs"
     else:
         action = "AVOID"
         reason = "No positive executable edge"

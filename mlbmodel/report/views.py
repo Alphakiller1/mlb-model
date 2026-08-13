@@ -26,8 +26,11 @@ from mlbmodel.report.html_fmt import display as _display, edge_grade as _edge_gr
 from mlbmodel.report.html_fmt import pct_chip_html
 from mlbmodel.report.board import board_html
 from mlbmodel.report.board_mlb import build_board
-from mlbmodel.report.shell import slate_view_label
-from mlbmodel.report.props_ui import pitcher_prop_deck, prop_channel_counts
+from mlbmodel.report.props_ui import (
+    actionable_counts,
+    pitcher_prop_deck,
+    prop_channel_counts,
+)
 from mlbmodel.report.game_keys import assign_slate_keys, parse_game_key
 from mlbmodel.report.trends_ui import trends_section_html
 
@@ -69,20 +72,15 @@ def slate(repo, pitcher_rows=None):
 
 
 # ── sections (each = context -> conclusion -> evidence; honest empty states) ──
-def today(slate, sd, sharp_by_pk, sync=None, reports_by_key=None):
+def slate_board(slate, sd, sharp_by_pk, sync=None, reports_by_key=None):
     """The slate board — one card per game, each carrying its own priced markets.
 
-    Replaces the old eight-column table: a table could not show *which* markets were priced
-    per game, which is the thing a slate view exists to answer. Card anatomy is the shared
+    Renders inside the Matchups section, which supplies the page head; this returns the
+    board alone so there is exactly one heading over the slate. Card anatomy is the shared
     Board kernel, so MLB, WNBA and NFL read identically.
     """
     board = build_board(slate, sd, reports_by_key or {}, sharp_by_pk, sync)
-    nsharp = sum(len(v) for v in sharp_by_pk.values())
-    return f"""{desk_pagehead(
-        slate_view_label(sd),
-        sub=f'Every game, its expected runs and its priced markets · sharp {nsharp} · open a card to price it',
-    )}
- {board_html(board)}"""
+    return board_html(board)
 
 
 def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
@@ -119,12 +117,23 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
             )
 
     book_n, fantasy_n = prop_channel_counts(pitchers, pickem_sources)
+    edges_n, clears_n = actionable_counts(pitchers, pickem_sources)
     deck = pitcher_prop_deck(pitchers, pickem_sources)
-    return f"""{desk_pagehead("Props", sub="Pitcher markets · book vs fantasy · honest empty feeds")}
+    return f"""{desk_pagehead(
+        "Props",
+        sub=(
+            "Two channels, two different questions. A priced market can carry an edge "
+            "against its de-vigged price; a pick'em leg can only clear its payout's "
+            "breakeven. Starters are ranked by what is actionable."
+        ),
+    )}
  <div class=cards>
+   <div class=card><div class=k>Priced edges</div><div class=v>{edges_n}</div>
+     <div class="mut mut-sm">model beats the de-vigged price</div></div>
+   <div class=card><div class=k>Pick'em clears</div><div class=v>{clears_n}</div>
+     <div class="mut mut-sm">above ~57.7% power-play breakeven</div></div>
    <div class=card><div class=k>Starters</div><div class=v>{len(pitchers)}</div></div>
-   <div class=card><div class=k>Book lines</div><div class=v>{book_n}</div></div>
-   <div class=card><div class=k>Fantasy lines</div><div class=v>{fantasy_n}</div></div>
+   <div class=card><div class=k>Lines seen</div><div class="v v-sm">{book_n} book / {fantasy_n} pick'em</div></div>
  </div>
  {freshness}
  {deck}"""
