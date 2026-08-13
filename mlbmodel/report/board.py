@@ -72,12 +72,19 @@ class Tile:
 
 @dataclass(frozen=True)
 class Group:
-    """A market family — "Full Game", "First 5 Innings", "First Half"."""
+    """A shelf of tiles on a card.
+
+    Usually a market family — "Full Game", "First 5 Innings". Set ``market=False`` for an
+    explanatory shelf (model inputs, matchup drivers): those tiles are never prices, so the
+    card must not label them "no price", which reads as a missing market rather than as
+    context.
+    """
 
     label: str
     tiles: tuple[Tile, ...] = ()
     state: str = ""
     tag: str = ""  # filter tag, e.g. "fullgame" / "f5"
+    market: bool = True
 
     @property
     def priced(self) -> int:
@@ -198,14 +205,22 @@ def _group_html(group: Group) -> str:
     if not group.tiles:
         return ""
     priced = group.priced
-    count = f'{priced} market{"" if priced == 1 else "s"}' if priced else "no price"
+    # Only a market family gets a market count. An explanatory group (the WNBA "Why this
+    # projection" inputs, say) is not a market, so labelling it "no price" reads as a
+    # missing feed rather than as context. Driven by the explicit `market` flag rather than
+    # by whether a filter tag happens to be set — those are different questions.
+    if group.market:
+        count = f'{priced} market{"" if priced == 1 else "s"}' if priced else "no price"
+        count_html = f'<span class="bd-group__count">{e(count)}</span>'
+    else:
+        count_html = ""
     state = f'<span class="bd-group__state">{e(group.state)}</span>' if group.state else ""
     tiles = "".join(_tile_html(tile) for tile in group.tiles)
     return (
         f'<div class="bd-group">'
         f'<div class="bd-group__head">'
         f'<span class="bd-group__label">{e(group.label)}</span>{state}'
-        f'<span class="bd-group__count">{e(count)}</span>'
+        f"{count_html}"
         f"</div>"
         f'<div class="bd-group__tiles">{tiles}</div>'
         f"</div>"
