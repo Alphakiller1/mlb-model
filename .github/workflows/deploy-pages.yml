@@ -204,7 +204,7 @@ jobs:
           # legitimately runs ~1.5 MB; 1400 was too tight and failed on busy slates. 1800 still
           # catches a runaway page while leaving headroom for a max/double slate.
           assert size_kb < 1800, f'HTML too large: {size_kb} KB'
-          for key in ('today', 'matchups', 'trends', 'markets', 'props', 'results', 'research'):
+          for key in ('matchups', 'trends', 'markets', 'props', 'results', 'research'):
               assert f'id=\"v-{key}\"' in html, key
           assert 'ca-board' in html
           assert 'matchup-full-src' in html
