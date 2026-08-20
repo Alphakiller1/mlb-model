@@ -740,6 +740,7 @@ def _f5_market_rows(gd, pitcher_rows, board, promotion, fallback_f5):
             return []
         over = f5["over"]
         under = round(100 - float(over), 1)
+        under_fair = fair_price(under / 100)
         base = {
             "line": f5["line"], "fair": f5["fair"], "mkt": None, "impl": None,
             "mkt_fair": None, "hold": None, "edge": None, "ev": None,
@@ -750,7 +751,7 @@ def _f5_market_rows(gd, pitcher_rows, board, promotion, fallback_f5):
             {**base, "label": f"F5 Total Over {f5['line']:g} (≈)", "market": "f5_total",
              "side": "over", "model": over},
             {**base, "label": f"F5 Total Under {f5['line']:g} (≈)", "market": "f5_total",
-             "side": "under", "model": under},
+             "side": "under", "model": under, "fair": under_fair, "max": under_fair},
         ]
     total_mean, total_sd = proj["total_mean"], proj["total_sd"]
     posted = [q.line for q in board.game_quotes(gd.away, gd.home)

@@ -60,9 +60,9 @@ def main() -> int:
         print("ERROR: warehouse read credentials missing — cannot verify lean tracking")
         return 1
 
-    result = reader.get(
+    result = reader.get_all(
         f"model_leans?slate_date=eq.{slate}&select=lean_id,lean,source,market,settled"
-        "&order=recorded_at.desc&limit=1000"
+        "&order=recorded_at.desc"
     )
     if result.error:
         print(f"ERROR: lean warehouse read failed: {result.error}")
