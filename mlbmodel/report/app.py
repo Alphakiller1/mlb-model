@@ -298,21 +298,35 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 pkmap=pkmap,
                 fresh_pickem_books=fresh_books,
             )
-            written = record_leans(lean_rows)
-            if written:
-                sources = {}
-                for row in lean_rows:
-                    sources[row["source"]] = sources.get(row["source"], 0) + 1
-                log.info(
-                    "recorded %s model leans for %s (%s)",
-                    written,
-                    sd,
-                    ", ".join(f"{k}={v}" for k, v in sorted(sources.items())),
-                )
-            elif lean_rows and os.getenv("SUPABASE_URL"):
+            snapshot = cache_dir / "model_leans_latest.json"
+            written = record_leans(lean_rows, snapshot_path=snapshot)
+            sources: dict[str, int] = {}
+            markets: dict[str, int] = {}
+            for row in lean_rows:
+                sources[row["source"]] = sources.get(row["source"], 0) + 1
+                markets[row["market"]] = markets.get(row["market"], 0) + 1
+            source_txt = ", ".join(f"{k}={v}" for k, v in sorted(sources.items()))
+            market_txt = ", ".join(f"{k}={v}" for k, v in sorted(markets.items()))
+            log.info(
+                "collected %s model leans for %s warehouse=%s snapshot=%s (%s) markets=%s",
+                len(lean_rows),
+                sd,
+                written,
+                snapshot,
+                source_txt,
+                market_txt,
+            )
+            print(
+                f"model leans: collected {len(lean_rows)} "
+                f"warehouse={written} snapshot={snapshot} ({source_txt})",
+                flush=True,
+            )
+            if written == 0 and lean_rows and os.getenv("SUPABASE_URL"):
                 log.error(
-                    "model lean record wrote 0 rows (%s candidates); check SUPABASE_KEY and migrations",
+                    "model lean warehouse wrote 0 rows (%s candidates); "
+                    "check SUPABASE_KEY and migrations — local snapshot still at %s",
                     len(lean_rows),
+                    snapshot,
                 )
         except Exception as exc:
             log.error("model lean record failed: %s", exc)

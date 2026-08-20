@@ -1,3 +1,5 @@
+import json
+
 from mlbmodel.leans.calibration import (
     calibration_buckets,
     hit_rate_by_lean_tag,
@@ -176,10 +178,10 @@ def test_collect_leans_records_watch_props():
     )
     assert len(rows) == 1
     assert rows[0]["source"] == "prop"
-    assert rows[0]["lean"] == "WATCH"
+    assert rows[0]["lean"] == "PROJECTION"
 
 
-def test_collect_leans_skips_matchup_without_edge():
+def test_collect_leans_records_matchup_without_edge():
     rows = collect_leans(
         slate_date="2026-07-06",
         market_plays=[],
@@ -189,7 +191,95 @@ def test_collect_leans_skips_matchup_without_edge():
             1: [{"market": "total", "side": "over", "line": 8.5, "model": 50.0, "edge": None, "state": "NO EDGE"}],
         },
     )
-    assert rows == []
+    assert len(rows) == 1
+    assert rows[0]["source"] == "matchup"
+    assert rows[0]["market"] == "total"
+    assert rows[0]["lean"] == "PROJECTION"
+    assert rows[0]["model_prob"] == 0.5
+
+
+def test_collect_leans_records_all_game_markets_both_sides():
+    rows = collect_leans(
+        slate_date="2026-07-06",
+        market_plays=[],
+        pickem_rows=[],
+        prop_reports=[],
+        matchup_markets_by_pk={
+            1: [
+                {"market": "ml", "side": "NYY", "line": None, "model": 54.0, "edge": 2.0, "state": "MONITOR", "mkt": -120},
+                {"market": "ml", "side": "BOS", "line": None, "model": 46.0, "edge": -2.0, "state": "AVOID", "mkt": 110},
+                {"market": "total", "side": "over", "line": 8.5, "model": 52.0, "edge": 1.5, "state": "MONITOR", "mkt": -105},
+                {"market": "total", "side": "under", "line": 8.5, "model": 48.0, "edge": -1.5, "state": "AVOID", "mkt": -105},
+                {"market": "spread", "side": "NYY", "line": -1.5, "model": 41.0, "edge": 0.8, "state": "MONITOR", "mkt": 150},
+                {"market": "runline", "side": "BOS", "line": 1.5, "model": 59.0, "edge": -0.8, "state": "AVOID", "mkt": -170},
+            ],
+        },
+    )
+    assert len(rows) == 6
+    assert {r["market"] for r in rows} == {"ml", "total", "runline"}
+    assert {r["selection"] for r in rows if r["market"] == "ml"} == {"NYY", "BOS"}
+    dog = next(r for r in rows if r["market"] == "runline" and r["selection"] == "BOS")
+    assert dog["line"] == 1.5
+    assert dog["lean"] == "AVOID"
+
+
+def test_collect_leans_records_every_pitcher_prop_projection():
+    pitchers = [{
+        "pitcher": "Gerrit Cole",
+        "game_pk": 1,
+        "projection_trust": "trusted",
+        "projections": {
+            "K": {"mean": 6.2},
+            "BB": {"mean": 1.8},
+            "ER": {"mean": 2.1},
+            "Outs": {"mean": 17.4},
+            "H": {"mean": 5.1},
+            "Fantasy": {"mean": 28.0},
+            "PP_Fantasy": {"mean": 36.5},
+            "F5_ER": {"mean": 1.4},
+        },
+    }]
+    rows = collect_leans(
+        slate_date="2026-07-06",
+        market_plays=[],
+        pickem_rows=[],
+        prop_reports=[],
+        pitchers=pitchers,
+    )
+    assert len(rows) == 8
+    assert {r["market"] for r in rows} == {
+        "k", "bb", "er", "outs", "h", "fantasy", "fantasy_score", "f5_er",
+    }
+
+
+def test_write_lean_snapshot_round_trip(tmp_path):
+    from mlbmodel.leans.record import write_lean_snapshot
+
+    rows = collect_leans(
+        slate_date="2026-07-06",
+        market_plays=[],
+        pickem_rows=[],
+        prop_reports=[{
+            "prop": "K",
+            "side": "over",
+            "line": 5.5,
+            "edge": 0.04,
+            "state": "MONITOR",
+            "model_mean": 6.0,
+            "game_pk": 1,
+            "pitcher": "Gerrit Cole",
+        }],
+        matchup_markets_by_pk={
+            1: [{"market": "ml", "side": "NYY", "model": 55.0, "edge": None, "state": "NO EDGE"}],
+        },
+    )
+    path = write_lean_snapshot(rows, tmp_path / "model_leans_latest.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["count"] == 2
+    assert payload["by_source"]["matchup"] == 1
+    assert payload["by_source"]["prop"] == 1
+    assert payload["by_market"]["ml"] == 1
+    assert payload["by_market"]["k"] == 1
 
 
 def test_edge_points_normalizes_fraction_and_points():
@@ -201,6 +291,15 @@ def test_grade_lean_runline_uses_stored_line():
     won, push = grade_lean(
         {"market": "runline", "selection": "NYY", "line": -1.5},
         outcome={"margin_home": -2, "home_team": "BOS", "away_team": "NYY"},
+    )
+    assert won is True
+    assert push is False
+
+
+def test_grade_lean_runline_dog_plus_one_five():
+    won, push = grade_lean(
+        {"market": "runline", "selection": "BOS", "line": 1.5},
+        outcome={"margin_home": 1, "home_team": "BOS", "away_team": "NYY"},
     )
     assert won is True
     assert push is False
@@ -219,7 +318,7 @@ def test_record_leans_skips_without_credentials(monkeypatch):
         model_prob=52.0,
         edge=2.0,
         lean="BET",
-    )]) == 0
+    )], snapshot_path=False) == 0
 
 
 def test_grade_lean_total_over_win():
@@ -267,11 +366,15 @@ def test_is_bettable_lean_excludes_projections_and_no_line_props():
         {"settled": True, "source": "sharp", "lean": "BET", "won": True, "model_prob": 55},
         {"settled": True, "source": "prop", "lean": "OVER", "won": False, "line": 5.5},
         {"settled": True, "source": "prizepicks", "lean": "OVER", "won": True, "line": None},
+        {"settled": True, "source": "matchup", "lean": "AVOID", "won": False, "market": "ml"},
+        {"settled": True, "source": "matchup", "lean": "REVIEW", "won": True, "market": "total"},
     ]
     assert is_bettable_lean(rows[0]) is False
     assert is_bettable_lean(rows[1]) is True
     assert is_bettable_lean(rows[2]) is True
     assert is_bettable_lean(rows[3]) is False
+    assert is_bettable_lean(rows[4]) is False
+    assert is_bettable_lean(rows[5]) is False
     summary = summarize_record(rows)
     assert summary["wins"] == 1
     assert summary["losses"] == 1
