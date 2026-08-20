@@ -103,7 +103,7 @@ def shell_js() -> str:
         "var lab=document.getElementById('matchupDetailLabel');"
         "if(lab)lab.textContent=String(g||'').replace('@',' @ ');}"
         "function closeMatchup(){var v=document.getElementById('v-matchups');"
-        "if(v)v.classList.remove('is-drilled');}"
+        "if(v)v.classList.remove('is-drilled');window.scrollTo(0,0);}"
         "function openMatchup(){var v=document.getElementById('v-matchups');"
         "if(v)v.classList.add('is-drilled');window.scrollTo(0,0);}"
         # Opening a card used to call show('matchups'), which always window.scrollTo(0,0)
