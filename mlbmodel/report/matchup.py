@@ -79,11 +79,15 @@ def _logo(abbr, cls="tlogo"):
 
 
 def _headshot(pid):
-    if not pid:
+    try:
+        n = int(float(pid))
+    except (TypeError, ValueError):
+        n = 0
+    if n <= 0:
         return '<span class="phead phead-na"></span>'
     return (f'<img class=phead loading="lazy" alt="" '
             f'src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/'
-            f'w_120,q_auto:best/v1/people/{int(pid)}/headshot/67/current" '
+            f'w_120,q_auto:best/v1/people/{n}/headshot/67/current" '
             f'onerror="this.classList.add(&quot;phead-na&quot;)">')
 
 

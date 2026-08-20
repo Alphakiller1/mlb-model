@@ -219,7 +219,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
     # question at two depths, so a separate "Today" view was a second front door onto the
     # same slate — and it went stale-looking the moment the board rolled to tomorrow.
     # The board IS the matchup picker now: a card carries the projection, and opening it
-    # scrolls to that game's full report below.
+    # drills into that game's full report (board hides, report takes the page).
     matchups = (
         desk_pagehead(
             "Matchups",
@@ -229,11 +229,16 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             ),
             trailing=(
                 f'<select id=gameSelect aria-label="Matchup" '
-                f'onchange="switchGame(this.value)">{options}</select>'
+                f'onchange="openGame(this.value)">{options}</select>'
             ),
         )
         + _slate_board(slate, sd, sharp_by_pk, sync, reports_by_key)
         + '<div class="matchup-detail" id="matchupDetail">'
+        + '<div class="matchup-detail__bar">'
+        + '<button type="button" class="matchup-back" onclick="closeMatchup()">'
+        + "← All matchups</button>"
+        + '<span class="matchup-detail__game" id="matchupDetailLabel"></span>'
+        + "</div>"
         + "".join(matchup_reports)
         + "</div>"
     )
