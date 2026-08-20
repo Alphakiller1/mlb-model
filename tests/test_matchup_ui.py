@@ -95,10 +95,10 @@ def test_matchup_breakdown_symmetric_columns():
     assert "matchup-breakdown-sym" in panel
     assert panel.count("matchup-breakdown__lane--away") >= 6
     assert panel.count("matchup-breakdown__lane--home") >= 6
-    assert panel.count("matchup-breakdown__spine") >= 6
+    assert panel.count("matchup-breakdown__spine--label") >= 5
+    assert "Pitcher R/L" in panel
     assert "vs BOS" in panel
     assert "vs NYY" in panel
-    assert "Pitcher R/L splits" not in panel
 
 
 def test_matchup_banner_symmetric_no_duplicate_fg():

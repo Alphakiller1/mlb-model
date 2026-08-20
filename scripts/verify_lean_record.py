@@ -52,32 +52,53 @@ def main() -> int:
 
     reader = SupabaseReader()
     if not reader.url or not reader.key:
+        snapshot = data_dir / "model_leans_latest.json"
+        if snapshot.exists():
+            payload = json.loads(snapshot.read_text(encoding="utf-8"))
+            rows = payload.get("rows") or []
+            return _verify_rows(slate, rows, origin=str(snapshot))
         print("ERROR: warehouse read credentials missing — cannot verify lean tracking")
         return 1
 
-    result = reader.get(
-        f"model_leans?slate_date=eq.{slate}&select=lean_id,lean,source,settled"
-        "&order=recorded_at.desc&limit=1000"
+    result = reader.get_all(
+        f"model_leans?slate_date=eq.{slate}&select=lean_id,lean,source,market,settled"
+        "&order=recorded_at.desc"
     )
     if result.error:
         print(f"ERROR: lean warehouse read failed: {result.error}")
         return 1
 
-    rows = result.rows
+    return _verify_rows(slate, result.rows, origin="warehouse")
+
+
+def _verify_rows(slate: str, rows: list[dict], *, origin: str) -> int:
     actionable_tags = {"BET", "MONITOR", "STRONG", "LEAN", "OVER", "UNDER", "EDGE"}
     actionable = [row for row in rows if str(row.get("lean") or "").upper() in actionable_tags]
     prop_sources = {"prop", "projection", "prizepicks", "underdog", "sleeper", "pickem"}
     prop_rows = [row for row in rows if str(row.get("source") or "").lower() in prop_sources]
+    game_markets = {"ml", "total", "runline"}
+    matchup_rows = [
+        row for row in rows
+        if str(row.get("source") or "").lower() == "matchup"
+        and str(row.get("market") or "").lower() in game_markets
+    ]
     min_actionable = int(os.getenv("LEAN_VERIFY_MIN_ACTIONABLE", "5"))
     min_props = int(os.getenv("LEAN_VERIFY_MIN_PROPS", "30"))
+    min_matchup = int(os.getenv("LEAN_VERIFY_MIN_MATCHUP", "6"))
 
     if not rows:
-        print(f"ERROR: no model_leans rows for slate {slate}")
+        print(f"ERROR: no model_leans rows for slate {slate} ({origin})")
         return 1
     if len(prop_rows) < min_props:
         print(
             f"ERROR: only {len(prop_rows)} prop/projection leans for {slate} "
             f"(need >= {min_props})"
+        )
+        return 1
+    if len(matchup_rows) < min_matchup:
+        print(
+            f"ERROR: only {len(matchup_rows)} moneyline/total/runline leans for {slate} "
+            f"(need >= {min_matchup})"
         )
         return 1
     if len(actionable) < min_actionable:
@@ -88,8 +109,9 @@ def main() -> int:
         return 1
 
     print(
-        f"OK: {len(rows)} leans on {slate} "
-        f"({len(prop_rows)} props/projections, {len(actionable)} actionable market, "
+        f"OK: {len(rows)} leans on {slate} via {origin} "
+        f"({len(prop_rows)} props/projections, {len(matchup_rows)} ml/total/runline, "
+        f"{len(actionable)} actionable market, "
         f"{sum(1 for r in rows if r.get('settled'))} settled)"
     )
     return 0

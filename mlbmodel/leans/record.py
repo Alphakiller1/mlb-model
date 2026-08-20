@@ -1,9 +1,12 @@
 """Persist model leans from a report build (idempotent upsert)."""
 from __future__ import annotations
 
+import json
 import logging
 import uuid
+from collections import Counter
 from datetime import datetime, timezone
+from pathlib import Path
 
 from mlbmodel import settings
 from mlbmodel.storage.supabase import SupabaseWriter
@@ -17,6 +20,18 @@ MIN_EDGE_PTS = 0.5
 PICKEM_LEAN_PTS = 8.0
 
 _PROJECTION_PROPS = ("K", "BB", "ER", "Outs", "H", "Fantasy", "F5_ER", "PP_Fantasy")
+_PRESERVED_STATES = {"BET", "MONITOR", "STRONG", "LEAN", "REVIEW", "AVOID"}
+_MARKET_ALIASES = {
+    "moneyline": "ml",
+    "h2h": "ml",
+    "ml": "ml",
+    "total": "total",
+    "totals": "total",
+    "spread": "runline",
+    "spreads": "runline",
+    "run_line": "runline",
+    "runline": "runline",
+}
 
 
 def _pitcher_key(pitcher: dict) -> str:
@@ -104,12 +119,22 @@ def _entry_odds(play: dict) -> float | None:
         return None
 
 
+def _canonical_market(market: str) -> str:
+    key = str(market or "market").strip().lower()
+    if key.startswith("f5_"):
+        suffix = _MARKET_ALIASES.get(key[3:], key[3:])
+        return f"f5_{suffix}"
+    return _MARKET_ALIASES.get(key, key)
+
+
 def _lean_label(state: str, edge_pts: float | None) -> str:
-    state = str(state or "").upper()
+    state = str(state or "").upper().replace("-", " ")
     if state == "PROJECTION":
         return "PROJECTION"
-    if state in {"BET", "MONITOR", "STRONG", "LEAN"}:
+    if state in _PRESERVED_STATES:
         return state
+    if state in {"NO EDGE", "NO PRICE"} and edge_pts is None:
+        return "PROJECTION"
     if edge_pts is not None and edge_pts >= 2.0:
         return "LEAN"
     if edge_pts is not None and edge_pts >= MIN_EDGE_PTS:
@@ -149,20 +174,18 @@ def _collect_matchup_markets(
     slate_date: str,
     matchup_markets_by_pk: dict[int, list[dict]],
 ) -> list[dict]:
-    """Model-graded game and F5 markets with a positive edge or actionable state."""
+    """Record every model-graded game and F5 market (ML, total, runline), priced or not."""
     rows: list[dict] = []
     for pk, markets in (matchup_markets_by_pk or {}).items():
         game_pk = int(pk) if pk is not None else None
         for market in markets or []:
+            model_pct = market.get("model")
+            if model_pct is None:
+                continue
             state = str(market.get("state") or "")
             edge_pts = edge_points(market.get("edge"))
-            actionable = state in {"BET", "MONITOR"}
-            has_edge = edge_pts is not None and edge_pts >= MIN_EDGE_PTS
-            if not actionable and not has_edge:
-                continue
-            market_type = str(market.get("market") or "market").lower()
+            market_type = _canonical_market(str(market.get("market") or "market"))
             source = "f5" if market_type.startswith("f5_") else "matchup"
-            model_pct = market.get("model")
             rows.append(
                 _row(
                     slate_date=slate_date,
@@ -172,10 +195,7 @@ def _collect_matchup_markets(
                     selection=str(market.get("side") or ""),
                     line=float(market["line"]) if market.get("line") is not None else None,
                     model_value=model_pct,
-                    model_prob=(
-                        float(model_pct) / 100
-                        if model_pct is not None else None
-                    ),
+                    model_prob=float(model_pct) / 100,
                     edge=edge_pts,
                     lean=_lean_label(state, edge_pts),
                     entry_odds=(
@@ -281,7 +301,8 @@ def _collect_pitcher_projections(slate_date: str, pitchers: list[dict]) -> list[
             continue
         lean_tag = _projection_lean_tag(pitcher.get("projection_trust"))
         pitcher_key = _pitcher_key(pitcher)
-        for prop, dist in projections.items():
+        for prop in _PROJECTION_PROPS:
+            dist = projections.get(prop)
             if not dist or dist.get("mean") is None:
                 continue
             market = str(prop).lower()
@@ -331,10 +352,41 @@ def collect_leans(
     return rows
 
 
-def record_leans(rows: list[dict], *, writer: SupabaseWriter | None = None) -> int:
-    """Upsert leans; returns count written. Skips gracefully without credentials."""
+def write_lean_snapshot(rows: list[dict], path: Path | None = None) -> Path:
+    """Persist the collected ledger locally so a run still records without warehouse creds."""
+    dest = path or (settings.CACHE_DIR / "model_leans_latest.json")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    by_source = Counter(str(row.get("source") or "") for row in rows)
+    by_market = Counter(str(row.get("market") or "") for row in rows)
+    payload = {
+        "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "count": len(rows),
+        "by_source": dict(sorted(by_source.items())),
+        "by_market": dict(sorted(by_market.items())),
+        "rows": rows,
+    }
+    dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return dest
+
+
+def record_leans(
+    rows: list[dict],
+    *,
+    writer: SupabaseWriter | None = None,
+    snapshot_path: Path | None | bool = None,
+) -> int:
+    """Upsert leans; returns warehouse count written. Always writes a local snapshot.
+
+    ``snapshot_path=False`` skips the local file (tests). ``None`` uses CACHE_DIR.
+    """
     if not rows:
         return 0
+    if snapshot_path is not False:
+        try:
+            dest = snapshot_path if isinstance(snapshot_path, Path) else None
+            write_lean_snapshot(rows, dest)
+        except OSError as exc:
+            log.warning("lean snapshot write failed: %s", exc)
     writer = writer or SupabaseWriter()
     if not writer.url or not writer.key:
         return 0

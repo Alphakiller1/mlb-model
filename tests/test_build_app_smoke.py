@@ -57,9 +57,10 @@ def test_build_app_renders_all_views():
     assert "sym-metric-board" in html
     assert "matchup-process" in html
     assert "desk-process" in html
-    assert 'id="m-decision"' in html
-    assert 'id="m-splits"' in html
-    assert 'id="m-risks"' in html
+    assert 'data-step="m-decision"' in html
+    assert 'data-step="m-splits"' in html
+    assert 'data-step="m-risks"' in html
+    assert "jumpMatchupStep" in html
     assert "desk-verdict" in html
 
 

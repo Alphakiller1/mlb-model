@@ -16,4 +16,5 @@ def test_build_app_structure_markers():
     assert 'id="v-trends"' in html
     assert "sortable" in html
     assert "function switchGame" in html
+    assert "function jumpMatchupStep" in html
     assert "matchup-full-src" in html

@@ -38,7 +38,7 @@ def is_bettable_lean(row: dict) -> bool:
     if source == "projection":
         return False
     lean = str(row.get("lean") or "").upper()
-    if lean in {"PROJECTION", "PROJECTION_THIN", "STALE_LINE"}:
+    if lean in {"PROJECTION", "PROJECTION_THIN", "STALE_LINE", "AVOID", "REVIEW"}:
         return False
     if row.get("push"):
         return True

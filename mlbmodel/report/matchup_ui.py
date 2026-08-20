@@ -618,9 +618,8 @@ def _breakdown_team_head(team: str, sp_name: str, side: str, esc) -> str:
 
 def _breakdown_section_row(label: str, away_body: str, home_body: str) -> str:
     return f"""<div class="matchup-breakdown__row matchup-breakdown__row--section">
-  <div class=matchup-breakdown__section-label>{label}</div>
   <div class="matchup-breakdown__lane matchup-breakdown__lane--away"><div class=matchup-breakdown__block>{away_body}</div></div>
-  <div class=matchup-breakdown__spine aria-hidden=true></div>
+  <div class="matchup-breakdown__spine matchup-breakdown__spine--label" aria-hidden=true><span>{label}</span></div>
   <div class="matchup-breakdown__lane matchup-breakdown__lane--home"><div class=matchup-breakdown__block>{home_body}</div></div>
 </div>"""
 

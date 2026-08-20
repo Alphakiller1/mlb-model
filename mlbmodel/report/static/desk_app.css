@@ -1528,7 +1528,7 @@ body.desk-app .chase-header { display: none !important; }
 }
 .sym-metric-board__head {
   display: grid;
-  grid-template-columns: 1fr minmax(100px, 140px) 1fr;
+  grid-template-columns: minmax(0, 1fr) 128px minmax(0, 1fr);
   align-items: center;
   padding: 16px 18px;
   border-bottom: 1px solid var(--line);
@@ -1568,7 +1568,7 @@ body.desk-app .chase-header { display: none !important; }
 }
 .sym-metric-row, .sym-metric-bar {
   display: grid;
-  grid-template-columns: 1fr minmax(110px, 150px) 1fr;
+  grid-template-columns: minmax(0, 1fr) 128px minmax(0, 1fr);
   align-items: center;
   min-height: 44px;
   border-top: 1px solid var(--line);
