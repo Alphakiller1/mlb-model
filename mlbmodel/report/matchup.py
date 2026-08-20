@@ -450,12 +450,18 @@ def build_report(
         _market_row("total", "under", tline, None, gd, probs, anchors,
                     board.quote(away, home, "total", "under", tline), promotion),
     ]
-    runline_team = gd.home if probs.exp_margin > 0 else gd.away
-    runline = -1.5
+    fav = gd.home if probs.exp_margin >= 0 else gd.away
+    dog = gd.away if fav == gd.home else gd.home
     markets.append(
         _market_row(
-            "runline", runline_team, runline, None, gd, probs, anchors,
-            board.quote(away, home, "runline", runline_team, runline), promotion,
+            "runline", fav, -1.5, None, gd, probs, anchors,
+            board.quote(away, home, "runline", fav, -1.5), promotion,
+        )
+    )
+    markets.append(
+        _market_row(
+            "runline", dog, 1.5, None, gd, probs, anchors,
+            board.quote(away, home, "runline", dog, 1.5), promotion,
         )
     )
     ex = _extras(away, home, gd, probs, anchors, repo)
@@ -722,29 +728,36 @@ def _f5_projection(pitcher_rows, away, home):
 
 
 def _f5_market_rows(gd, pitcher_rows, board, promotion, fallback_f5):
-    """Graded F5 market rows (total over/under + ML), priced against live F5 odds when present.
+    """Graded F5 market rows (total over/under + both moneylines).
 
     Prices at the book's posted F5 line when available so the quote actually matches; otherwise
-    the model line. Falls back to a single model-only row when no starter F5 sim exists.
+    the model line. Falls back to model-only over/under when no starter F5 sim exists.
     """
     proj = _f5_projection(pitcher_rows, gd.away, gd.home)
     if proj is None:
         f5 = fallback_f5
         if not f5:
             return []
-        return [{"label": f"F5 Total Over {f5['line']:g} (≈)", "market": "f5_total",
-                 "side": "over", "line": f5["line"], "model": f5["over"], "fair": f5["fair"],
-                 "mkt": None, "impl": None, "mkt_fair": None, "hold": None, "edge": None,
-                 "ev": None, "max": f5["fair"], "state": "NO EDGE", "tone": "mut",
-                 "reason": "No starter F5 sim", "book": None, "books": 0, "market_time": None}]
+        over = f5["over"]
+        under = round(100 - float(over), 1)
+        base = {
+            "line": f5["line"], "fair": f5["fair"], "mkt": None, "impl": None,
+            "mkt_fair": None, "hold": None, "edge": None, "ev": None,
+            "max": f5["fair"], "state": "NO EDGE", "tone": "mut",
+            "reason": "No starter F5 sim", "book": None, "books": 0, "market_time": None,
+        }
+        return [
+            {**base, "label": f"F5 Total Over {f5['line']:g} (≈)", "market": "f5_total",
+             "side": "over", "model": over},
+            {**base, "label": f"F5 Total Under {f5['line']:g} (≈)", "market": "f5_total",
+             "side": "under", "model": under},
+        ]
     total_mean, total_sd = proj["total_mean"], proj["total_sd"]
     posted = [q.line for q in board.game_quotes(gd.away, gd.home)
               if q.market == "f5_total" and q.line is not None]
     line = max(set(posted), key=posted.count) if posted else round(total_mean * 2) / 2
     p_over = max(0.02, min(0.98, 1 - normal_cdf((line - total_mean) / total_sd)))
     p_away = proj["p_away_lead"]
-    lead_team = gd.away if p_away >= 0.5 else gd.home
-    lead_p = p_away if p_away >= 0.5 else (1 - p_away)
     return [
         _priced_row("f5_total", "over", line, p_over,
                     board.quote(gd.away, gd.home, "f5_total", "over", line), promotion,
@@ -752,9 +765,12 @@ def _f5_market_rows(gd, pitcher_rows, board, promotion, fallback_f5):
         _priced_row("f5_total", "under", line, 1 - p_over,
                     board.quote(gd.away, gd.home, "f5_total", "under", line), promotion,
                     f"F5 Total Under {line:g}"),
-        _priced_row("f5_ml", lead_team, None, lead_p,
-                    board.quote(gd.away, gd.home, "f5_ml", lead_team), promotion,
-                    f"F5 ML {lead_team}"),
+        _priced_row("f5_ml", gd.away, None, p_away,
+                    board.quote(gd.away, gd.home, "f5_ml", gd.away), promotion,
+                    f"F5 ML {gd.away}"),
+        _priced_row("f5_ml", gd.home, None, 1 - p_away,
+                    board.quote(gd.away, gd.home, "f5_ml", gd.home), promotion,
+                    f"F5 ML {gd.home}"),
     ]
 
 
@@ -1199,10 +1215,11 @@ def matchup_summary_html(report: dict) -> str:
  </div></div></div>"""
 
 
-def _desk_step(num: str, title: str, sub: str, body: str, *, step_id: str) -> str:
+def _desk_step(num: str, title: str, sub: str, body: str, *, step_id: str, game_slug: str = "") -> str:
     """One stage in the matchup breakdown process."""
+    uid = f"{step_id}-{game_slug}" if game_slug else step_id
     return (
-        f'<section class="desk-step" id="{step_id}">'
+        f'<section class="desk-step" id="{uid}" data-step="{step_id}">'
         f'<header class="desk-step__head">'
         f'<span class="desk-step__n">{num}</span>'
         f'<div><h3 class="desk-step__title">{title}</h3>'
@@ -1319,52 +1336,55 @@ def report_body(r):
     )
     splits_body = breakdown or pitcher_deck or '<div class=empty>Splits unavailable.</div>'
 
-    process_nav = """<nav class="desk-process" aria-label="Matchup breakdown process">
-  <a href="#m-decision"><b>01</b> Decision</a>
-  <a href="#m-model"><b>02</b> Model</a>
-  <a href="#m-markets"><b>03</b> Markets</a>
-  <a href="#m-why"><b>04</b> Why</a>
-  <a href="#m-splits"><b>05</b> Splits</a>
-  <a href="#m-sharp"><b>06</b> Sharp</a>
-  <a href="#m-risks"><b>07</b> Risks</a>
+    game_slug = html.escape(
+        f"{gd.away}-{gd.home}".replace(" ", ""), quote=True
+    )
+    process_nav = f"""<nav class="desk-process" aria-label="Matchup breakdown process">
+  <a href="#m-decision-{game_slug}" onclick="return jumpMatchupStep(this,'m-decision')"><b>01</b> Decision</a>
+  <a href="#m-model-{game_slug}" onclick="return jumpMatchupStep(this,'m-model')"><b>02</b> Model</a>
+  <a href="#m-markets-{game_slug}" onclick="return jumpMatchupStep(this,'m-markets')"><b>03</b> Markets</a>
+  <a href="#m-why-{game_slug}" onclick="return jumpMatchupStep(this,'m-why')"><b>04</b> Why</a>
+  <a href="#m-splits-{game_slug}" onclick="return jumpMatchupStep(this,'m-splits')"><b>05</b> Splits</a>
+  <a href="#m-sharp-{game_slug}" onclick="return jumpMatchupStep(this,'m-sharp')"><b>06</b> Sharp</a>
+  <a href="#m-risks-{game_slug}" onclick="return jumpMatchupStep(this,'m-risks')"><b>07</b> Risks</a>
 </nav>"""
 
     steps = "".join([
         _desk_step(
             "01", "Decision",
             "Action first — what the desk would do at the current number",
-            decision, step_id="m-decision",
+            decision, step_id="m-decision", game_slug=game_slug,
         ),
         _desk_step(
             "02", "Model projection",
             "Symmetric Away | label | Home — fair prices before the market",
-            sym_board, step_id="m-model",
+            sym_board, step_id="m-model", game_slug=game_slug,
         ),
         _desk_step(
             "03", "Markets",
             "Best available vs model fair · edge · EV · state — price the bet",
-            markets_body, step_id="m-markets",
+            markets_body, step_id="m-markets", game_slug=game_slug,
         ),
         _desk_step(
             "04", "Why the number moves",
             "Unit advantages and run drivers that built the projection",
-            why_body, step_id="m-why",
+            why_body, step_id="m-why", game_slug=game_slug,
         ),
         _desk_step(
             "05", "Unit breakdown",
             "Pitcher · lineup · bullpen · pitch mix — Away vs Home lanes",
-            splits_body, step_id="m-splits",
+            splits_body, step_id="m-splits", game_slug=game_slug,
         ),
         _desk_step(
             "06", "Sharp confirmation",
             "Does sharp money agree, conflict, or stay quiet?",
             f'<div class=table-scroll><table><tr><th>Market</th><th>Side</th><th>Sharp gap</th><th>Move</th></tr>{sharp_rows}</table></div>',
-            step_id="m-sharp",
+            step_id="m-sharp", game_slug=game_slug,
         ),
         _desk_step(
             "07", "Risks & invalidation",
             "What can break the projection after you have a price",
-            risk_rows, step_id="m-risks",
+            risk_rows, step_id="m-risks", game_slug=game_slug,
         ),
     ])
 

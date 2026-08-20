@@ -188,7 +188,9 @@ def _tile_html(tile: Tile) -> str:
     classes = ["bd-tile", f"is-{_tone(tile.tone)}"]
     if tile.gem:
         classes.append("is-gem")
-    if not tile.is_priced:
+    # Only blank/unoffered tiles fade. A model-only probability is still a reading;
+    # greying it out made the Full Game and Why-this-projection shelves unreadable.
+    if not tile.is_priced and tile.value in {"—", ""}:
         classes.append("is-idle")
     title = f' title="{e(tile.note)}"' if tile.note else ""
     gem = '<span class="bd-tile__gem" aria-hidden="true">◆</span>' if tile.gem else ""
@@ -216,8 +218,10 @@ def _group_html(group: Group) -> str:
         count_html = ""
     state = f'<span class="bd-group__state">{e(group.state)}</span>' if group.state else ""
     tiles = "".join(_tile_html(tile) for tile in group.tiles)
+    kind = "" if group.market else " bd-group--inputs"
+    n = len(group.tiles)
     return (
-        f'<div class="bd-group">'
+        f'<div class="bd-group{kind}" data-tiles="{n}">'
         f'<div class="bd-group__head">'
         f'<span class="bd-group__label">{e(group.label)}</span>{state}'
         f"{count_html}"

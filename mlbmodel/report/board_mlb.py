@@ -4,7 +4,7 @@ MLB adapter for the shared Board kernel (``report/board.py``).
 The kernel owns the card anatomy, filters, counters and empty states. This module owns the
 only baseball-specific decisions:
 
-* **principals** are the two starting pitchers (K/9 + FIP)
+* **principals** are the two starting pitchers (K% + FIP)
 * **groups** are Full Game and First 5 Innings — F5 is a first-class MLB market family
 * **scores** are expected runs, split out of the model's total and margin
 
@@ -113,8 +113,9 @@ def _group(label: str, tag: str, spec, best: dict[str, dict]) -> Group | None:
         # broken section, while its absence reads as "not offered".
         if tag != "fullgame":
             return None
-    priced = sum(1 for tile in tiles if tile.is_priced)
-    return Group(label=label, tiles=tiles, tag=tag, state="Priced" if priced else "No price")
+    # Count badge already says "no price" / "3 markets" — repeating it as the state
+    # doubled the label on unpriced slates.
+    return Group(label=label, tiles=tiles, tag=tag, state="")
 
 
 def _expected_runs(total, margin) -> tuple[str, str]:
@@ -153,7 +154,7 @@ def _drivers_group(report: dict | None) -> Group | None:
         active = abs(factor - 1.0) > 1e-6
         tiles.append(Tile(
             label=f"{team} lineup",
-            value=f"{(factor - 1.0) * 100:+.1f}%" if active else "flat",
+            value=f"{(factor - 1.0) * 100:+.1f}%",
             state=(f"{status} · {matched} matched" if active
                    else f"{status} · no adjustment"),
             tone="side" if active else "mut",
@@ -172,8 +173,8 @@ def _drivers_group(report: dict | None) -> Group | None:
         tired = workload > 1.0
         tiles.append(Tile(
             label=f"{team} bullpen",
-            value=f"+{(workload - 1.0) * 100:.1f}%" if tired else "rested",
-            state="recent workload" if tired else "no recent load",
+            value=f"{(workload - 1.0) * 100:+.1f}%",
+            state="Recent workload" if tired else "No recent load",
             tone="warnc" if tired else "mut",
             note=(
                 "Pitches thrown in the previous two days raise this pen's expected runs "
@@ -198,10 +199,11 @@ def _principals(game: dict, report: dict | None) -> tuple[Principal, ...]:
         name = str(game.get(f"{prefix}sp") or "").strip()
         if not name:
             return Principal(name="TBD", team=game[side], stat="no probable")
+        # `ak`/`hk` are K% (Away_K% / Home_K%), not strikeouts per nine.
         strikeouts, fip = game.get(f"{prefix}k"), game.get(f"{prefix}fip")
         bits = []
         if isinstance(strikeouts, (int, float)):
-            bits.append(f"{strikeouts:.1f} K/9")
+            bits.append(f"{strikeouts:.1f} K%")
         if isinstance(fip, (int, float)):
             bits.append(f"{fip:.2f} FIP")
         return Principal(

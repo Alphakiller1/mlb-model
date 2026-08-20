@@ -175,7 +175,10 @@ def test_starting_pitchers_are_the_principals():
     card = build_card(_game(), {"markets": []})
     assert card.principal_label == "Starting pitchers"
     assert [p.name for p in card.principals] == ["Gerrit Cole", "Brayan Bello"]
+    assert "27.0 K%" in card.principals[0].stat
     assert "3.10 FIP" in card.principals[0].stat
+    assert "K/9" not in card.principals[0].stat
+    assert "19.0 K%" in card.principals[1].stat
 
 
 def test_missing_probable_pitcher_renders_tbd_not_a_crash():
@@ -222,6 +225,39 @@ def test_board_totals_are_the_sum_of_its_cards():
 def test_empty_slate_renders_an_honest_empty_state():
     html = board_html(build_board([], "", {}, {}))
     assert "No games on this slate yet" in html
+
+
+def test_model_only_tile_is_not_faded_idle():
+    html = board_html(build_board(
+        [_game()],
+        "2026-08-12",
+        {"NYY@BOS": {"markets": [_market("ml", "BOS", None, state="NO MARKET")]}},
+        {},
+    ))
+    # Unoffered Total/Run line tiles still idle; the model-only moneyline must not.
+    assert 'bd-tile is-mut" title="No book price matched this market.">' in html
+    assert (
+        '<span class="bd-tile__label">Moneyline</span>'
+        '<span class="bd-tile__value">55%</span>'
+    ) in html
+    assert "model only" in html
+    assert "bd-tile is-mut is-idle" not in html.split("Moneyline")[0]
+
+
+def test_driver_tiles_use_numeric_percentages():
+    gd = type("GD", (), {
+        "away": "NYY",
+        "home": "BOS",
+        "away_lineup_features": {"factor": 1.008, "matched_batters": 8, "status": "confirmed"},
+        "home_lineup_features": {"factor": 1.0, "matched_batters": 9, "status": "confirmed"},
+        "away_bullpen_features": {"workload_factor": 1.0},
+        "home_bullpen_features": {"workload_factor": 1.0},
+    })()
+    card = build_card(_game(), {"markets": [], "gd": gd})
+    why = next(group for group in card.groups if group.label == "Why this projection")
+    assert why.market is False
+    assert all(tile.value.endswith("%") for tile in why.tiles)
+    assert "rested" not in {tile.value.lower() for tile in why.tiles}
 
 
 # ── rendering ───────────────────────────────────────────────────────────────
