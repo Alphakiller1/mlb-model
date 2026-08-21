@@ -83,6 +83,7 @@ jobs:
               | tr -d '\r' | awk -F': ' 'tolower($1)=="x-requests-remaining"{print $2}')
             REMAINING=${REMAINING:-0}
             echo "Odds API credits remaining this month: $REMAINING"
+            echo "ODDS_LIVE_FETCH_SKIPPED=0" >> "$GITHUB_ENV"
 
             # Game-line board (~6 credits) — powers Markets/decision board. Refresh whenever
             # there's any real budget left.
@@ -91,6 +92,8 @@ jobs:
                 || echo "WARNING: game odds fetch failed after retries; sharp board stays empty"
             else
               echo "Skipping game-line fetch — only $REMAINING credits left (preserving budget)."
+              echo "Using committed odds snapshot in _deploy_data; do not fail Pages on missing BET/MONITOR tags."
+              echo "ODDS_LIVE_FETCH_SKIPPED=1" >> "$GITHUB_ENV"
             fi
 
             # Player props (~50 credits) — only when the month's budget is healthy so no single
@@ -193,6 +196,8 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           LEAN_VERIFY_MIN_ACTIONABLE: "5"
           LEAN_VERIFY_MIN_PROPS: "30"
+          # ODDS_LIVE_FETCH_SKIPPED comes from GITHUB_ENV (odds-fetch step). Do not
+          # redeclare it here — a blank ${{ env.* }} would clobber the file value.
         run: python scripts/verify_lean_record.py
       - name: Post-build smoke
         run: |

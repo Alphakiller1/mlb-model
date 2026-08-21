@@ -20,6 +20,15 @@ def _load_env() -> None:
         os.environ.setdefault(key.strip(), value.strip())
 
 
+def _env_flag(name: str) -> bool | None:
+    raw = os.getenv(name, "").strip().lower()
+    if raw in {"1", "true", "yes"}:
+        return True
+    if raw in {"0", "false", "no"}:
+        return False
+    return None
+
+
 def slate_date(data_dir: Path) -> str | None:
     explicit = os.getenv("VERIFY_SLATE_DATE", "").strip()[:10]
     if explicit:
@@ -40,6 +49,33 @@ def slate_date(data_dir: Path) -> str | None:
     return None
 
 
+def priced_event_count(data_dir: Path, slate: str) -> int:
+    """Odds API events in the cached snapshot whose first pitch falls on `slate` (ET)."""
+    try:
+        from mlbmodel.market.quotes import filter_events_for_slate, load_cached_events
+
+        events, _fetched = load_cached_events(data_dir / "odds_latest.json")
+        return len(filter_events_for_slate(events, slate))
+    except Exception:
+        return 0
+
+
+def require_actionable_gate(data_dir: Path, slate: str) -> bool:
+    """BET/MONITOR counts are only meaningful when this slate has priced game lines.
+
+    Scheduled Pages builds skip the live Odds API fetch when the key is near quota.
+    The committed snapshot is then for an earlier slate, so tonight's games have no
+    prices and almost every lean is PROJECTION/WATCH — not a recorder failure.
+    """
+    if _env_flag("LEAN_VERIFY_REQUIRE_PRICED_MARKETS") is False:
+        return False
+    if _env_flag("ODDS_LIVE_FETCH_SKIPPED") is True and priced_event_count(data_dir, slate) == 0:
+        return False
+    if _env_flag("LEAN_VERIFY_REQUIRE_PRICED_MARKETS") is True:
+        return True
+    return priced_event_count(data_dir, slate) > 0
+
+
 def main() -> int:
     _load_env()
     data_dir = Path(os.getenv("MLBMODEL_CACHE_DIR") or os.getenv("MLBMA_DATA_DIR") or ROOT / "data")
@@ -56,7 +92,13 @@ def main() -> int:
         if snapshot.exists():
             payload = json.loads(snapshot.read_text(encoding="utf-8"))
             rows = payload.get("rows") or []
-            return _verify_rows(slate, rows, origin=str(snapshot))
+            return _verify_rows(
+                slate,
+                rows,
+                origin=str(snapshot),
+                require_actionable=require_actionable_gate(data_dir, slate),
+                priced_games=priced_event_count(data_dir, slate),
+            )
         print("ERROR: warehouse read credentials missing — cannot verify lean tracking")
         return 1
 
@@ -68,10 +110,23 @@ def main() -> int:
         print(f"ERROR: lean warehouse read failed: {result.error}")
         return 1
 
-    return _verify_rows(slate, result.rows, origin="warehouse")
+    return _verify_rows(
+        slate,
+        result.rows,
+        origin="warehouse",
+        require_actionable=require_actionable_gate(data_dir, slate),
+        priced_games=priced_event_count(data_dir, slate),
+    )
 
 
-def _verify_rows(slate: str, rows: list[dict], *, origin: str) -> int:
+def _verify_rows(
+    slate: str,
+    rows: list[dict],
+    *,
+    origin: str,
+    require_actionable: bool = True,
+    priced_games: int | None = None,
+) -> int:
     actionable_tags = {"BET", "MONITOR", "STRONG", "LEAN", "OVER", "UNDER", "EDGE"}
     actionable = [row for row in rows if str(row.get("lean") or "").upper() in actionable_tags]
     prop_sources = {"prop", "projection", "prizepicks", "underdog", "sleeper", "pickem"}
@@ -102,16 +157,24 @@ def _verify_rows(slate: str, rows: list[dict], *, origin: str) -> int:
         )
         return 1
     if len(actionable) < min_actionable:
+        priced_note = "" if priced_games is None else f", {priced_games} priced game(s) in odds cache"
+        if require_actionable:
+            print(
+                f"ERROR: only {len(actionable)} actionable market leans for {slate} "
+                f"(need >= {min_actionable}{priced_note})"
+            )
+            return 1
         print(
-            f"ERROR: only {len(actionable)} actionable market leans for {slate} "
-            f"(need >= {min_actionable})"
+            f"WARNING: only {len(actionable)} actionable market leans for {slate} "
+            f"(need >= {min_actionable}{priced_note}); skipping priced-market gate "
+            f"(no live/cached game lines for this slate — Odds API fetch skipped or snapshot stale)"
         )
-        return 1
 
+    priced_txt = "" if priced_games is None else f", {priced_games} priced games"
     print(
         f"OK: {len(rows)} leans on {slate} via {origin} "
         f"({len(prop_rows)} props/projections, {len(matchup_rows)} ml/total/runline, "
-        f"{len(actionable)} actionable market, "
+        f"{len(actionable)} actionable market{priced_txt}, "
         f"{sum(1 for r in rows if r.get('settled'))} settled)"
     )
     return 0
