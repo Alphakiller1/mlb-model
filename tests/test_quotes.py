@@ -1,6 +1,13 @@
 import math
 
-from mlbmodel.market.quotes import build_board, filter_events_for_slate
+import pytest
+
+from mlbmodel import settings
+from mlbmodel.market.quotes import (
+    build_board,
+    filter_events_for_slate,
+    odds_request_params,
+)
 
 
 def _event():
@@ -65,3 +72,30 @@ def test_board_pairs_books_before_devigging():
     )
     assert yankees.sharp_book_count == 1
     assert yankees.soft_book_count == 1
+
+
+def test_odds_request_params_omits_bookmakers_when_unset(monkeypatch):
+    monkeypatch.setattr(settings, "ODDS_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "ODDS_REGIONS", "us,eu")
+    monkeypatch.setattr(settings, "ODDS_BOOKS", "")
+    params = odds_request_params(markets=settings.ODDS_GAME_MARKETS)
+    assert "bookmakers" not in params
+    assert params["regions"] == "us,eu"
+    assert params["markets"] == "h2h,spreads,totals"
+    assert params["oddsFormat"] == "american"
+
+
+def test_odds_request_params_passes_official_bookmakers_filter(monkeypatch):
+    monkeypatch.setattr(settings, "ODDS_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "ODDS_REGIONS", "us")
+    monkeypatch.setattr(settings, "ODDS_BOOKS", "fanatics")
+    params = odds_request_params(markets="h2h,spreads,totals")
+    assert params["bookmakers"] == "fanatics"
+    assert params["regions"] == "us"
+    assert params["markets"] == "h2h,spreads,totals"
+
+
+def test_odds_request_params_requires_api_key(monkeypatch):
+    monkeypatch.setattr(settings, "ODDS_API_KEY", "")
+    with pytest.raises(RuntimeError, match="ODDS_API_KEY"):
+        odds_request_params(markets="h2h")

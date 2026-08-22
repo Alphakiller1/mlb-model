@@ -195,16 +195,25 @@ def build_board(events: list[dict], fetched_at: str | None = None) -> OddsBoard:
     return OddsBoard(quotes)
 
 
-def fetch_events(*, cache_path: Path | None = None) -> tuple[list[dict], str]:
+def odds_request_params(*, markets: str) -> dict[str, str]:
+    """Query params for The Odds API odds endpoints (game lines or F5 add-ons)."""
     if not settings.ODDS_API_KEY:
         raise RuntimeError("ODDS_API_KEY is not configured")
-    params = urllib.parse.urlencode({
+    params = {
         "apiKey": settings.ODDS_API_KEY,
         "regions": settings.ODDS_REGIONS,
-        "markets": settings.ODDS_GAME_MARKETS,
+        "markets": markets,
         "oddsFormat": "american",
         "dateFormat": "iso",
-    })
+    }
+    books = (getattr(settings, "ODDS_BOOKS", "") or "").strip()
+    if books:
+        params["bookmakers"] = books
+    return params
+
+
+def fetch_events(*, cache_path: Path | None = None) -> tuple[list[dict], str]:
+    params = urllib.parse.urlencode(odds_request_params(markets=settings.ODDS_GAME_MARKETS))
     url = f"{settings.ODDS_API_BASE}/sports/{settings.ODDS_SPORT_KEY}/odds?{params}"
     with urllib.request.urlopen(url, timeout=30) as response:
         events = json.loads(response.read().decode())
@@ -235,13 +244,9 @@ def _merge_f5_markets(events: list[dict]) -> None:
         event_id = event.get("id")
         if not event_id:
             continue
-        params = urllib.parse.urlencode({
-            "apiKey": settings.ODDS_API_KEY,
-            "regions": settings.ODDS_REGIONS,
-            "markets": settings.ODDS_F5_MARKETS,
-            "oddsFormat": "american",
-            "dateFormat": "iso",
-        })
+        params = urllib.parse.urlencode(
+            odds_request_params(markets=settings.ODDS_F5_MARKETS)
+        )
         try:
             with urllib.request.urlopen(f"{base}/{event_id}/odds?{params}", timeout=30) as response:
                 payload = json.loads(response.read().decode())

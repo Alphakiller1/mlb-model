@@ -62,6 +62,10 @@ ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
 ODDS_API_BASE = "https://api.the-odds-api.com/v4"
 ODDS_SPORT_KEY = "baseball_mlb"
 ODDS_REGIONS = os.getenv("ODDS_REGIONS", "us,eu")
+# Comma-separated Odds API bookmaker keys. When set, collect passes `bookmakers=` so
+# stored quotes are only those books (official filter; not a client-side trim).
+# Fanatics sportsbook slug is `fanatics` (US region). Empty = all books in ODDS_REGIONS.
+ODDS_BOOKS = os.getenv("ODDS_BOOKS", "").strip()
 ODDS_PROP_REGIONS = os.getenv("ODDS_PROP_REGIONS", "us")
 ODDS_GAME_MARKETS = "h2h,spreads,totals"
 # First-5-innings markets are "additional markets": only the per-event odds endpoint returns
