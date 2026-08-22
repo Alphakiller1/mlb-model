@@ -67,6 +67,106 @@ def test_results_view_handles_warehouse_error():
     assert "Lean warehouse unavailable" in html
 
 
+def test_results_view_falls_back_to_snapshot(tmp_path):
+    from mlbmodel.leans.record import write_lean_snapshot
+
+    snapshot = tmp_path / "model_leans_latest.json"
+    write_lean_snapshot([{
+        "slate_date": "2026-08-01",
+        "game_pk": 1,
+        "source": "matchup",
+        "market": "ml",
+        "selection": "TOR",
+        "line": None,
+        "model_prob": 0.55,
+        "edge": None,
+        "lean": "PROJECTION",
+        "settled": True,
+        "won": True,
+        "push": False,
+        "recorded_at": "2026-08-01T12:00:00Z",
+    }], snapshot)
+    html = results(
+        StaticReader(error="connection refused"),
+        snapshot_path=snapshot,
+    )
+    assert "Lean warehouse unavailable" not in html or "showing the local lean snapshot" in html
+    assert "No leans recorded yet" not in html
+    assert ">W<" in html
+    assert "1-0-0" in html
+    assert "showing the local lean snapshot" in html
+
+
+def test_results_recent_prefers_settled_over_projections():
+    projection_flood = [
+        {
+            "slate_date": "2026-08-22",
+            "game_pk": 9,
+            "source": "projection",
+            "market": "k",
+            "selection": f"model:pitcher_{i}",
+            "lean": "PROJECTION",
+            "settled": False,
+            "recorded_at": f"2026-08-22T20:00:{i:02d}Z",
+        }
+        for i in range(50)
+    ]
+    settled = {
+        "slate_date": "2026-08-01",
+        "game_pk": 1,
+        "source": "matchup",
+        "market": "ml",
+        "selection": "TOR",
+        "lean": "PROJECTION",
+        "settled": True,
+        "won": True,
+        "push": False,
+        "recorded_at": "2026-08-01T12:00:00Z",
+    }
+    html = results(StaticReader([settled, *projection_flood]))
+    table = html.split("id=results-recent-table")[1].split("</table>")[0]
+    assert table.find(">W<") < table.find("projection")
+    assert "No leans recorded yet" not in html
+    assert "1-0-0" in html
+
+
+def test_results_empty_warehouse_with_snapshot_and_finals_shows_wl(tmp_path):
+    from mlbmodel.baseball.repository import canonical_game_pk
+    from mlbmodel.leans.record import write_lean_snapshot
+
+    pk = canonical_game_pk("2026-08-01", "STL", "TOR")
+    snapshot = tmp_path / "model_leans_latest.json"
+    write_lean_snapshot([{
+        "slate_date": "2026-08-01",
+        "game_pk": pk,
+        "source": "matchup",
+        "market": "ml",
+        "selection": "TOR",
+        "line": None,
+        "model_prob": 0.53,
+        "edge": None,
+        "lean": "PROJECTION",
+        "settled": False,
+        "recorded_at": "2026-08-01T12:00:00Z",
+    }], snapshot)
+    finals = tmp_path / "game_results.csv"
+    finals.write_text(
+        "game_date,home_away,team,opp,team_runs,opp_runs,result\n"
+        "2026-08-01,home,TOR,STL,5,1,W\n"
+        "2026-08-01,away,STL,TOR,1,5,L\n",
+        encoding="utf-8",
+    )
+    html = results(
+        StaticReader([]),
+        snapshot_path=snapshot,
+        game_results_path=finals,
+    )
+    assert "No leans recorded yet" not in html
+    assert ">W<" in html
+    assert "1-0-0" in html
+    assert "Tracked record" in html
+
+
 def test_trends_view_empty_slate():
     html = trends([])
     assert "No slate loaded" in html

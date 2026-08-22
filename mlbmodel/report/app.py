@@ -280,8 +280,8 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
 
     clv_result = reader.get(
         "prediction_market_snapshots?settled=eq.true&won=not.is.null"
-        "&entry_prob=not.is.null&implied_probability=not.is.null"
-        "&select=market_type,entry_prob,implied_probability,won&limit=5000"
+        "&implied_probability=not.is.null"
+        "&select=market_type,open_prob,implied_probability,won&limit=5000"
     )
     clv_summary = clv_from_snapshots(clv_result.rows if not clv_result.error else [])
 
@@ -355,7 +355,11 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             pitchers, prop_prices, pp_board, ud_board, sl_board,
             pickem_snapshots=pickem_snapshots, slate_date=str(sd or "")[:10] or None,
         ),
-        "results": _results(reader),
+        "results": _results(
+            reader,
+            snapshot_path=cache_dir / "model_leans_latest.json",
+            game_results_path=cache_dir / "game_results.csv",
+        ),
         "research": _research(reader, gate, f5_board, clv_summary),
     }
     nav_items = [(k, lbl, f"show('{k}')") for k, lbl in _NAV]

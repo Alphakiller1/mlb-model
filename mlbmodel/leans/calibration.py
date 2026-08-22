@@ -32,13 +32,28 @@ def _graded(rows: list[dict]) -> list[dict]:
 
 def is_bettable_lean(row: dict) -> bool:
     """Graded rows that represent a real priced bet (W/L/P), not projection error tracking."""
+    if not is_tracked_lean(row):
+        return False
+    lean = str(row.get("lean") or "").upper()
+    if lean in {"PROJECTION", "PROJECTION_THIN"}:
+        return False
+    return True
+
+
+def is_tracked_lean(row: dict) -> bool:
+    """Settled W/L/P the Results pane should count, including unpriced model markets.
+
+    Pitcher-stat ``source=projection`` rows stay on the error table. AVOID/REVIEW
+    are still excluded. Unpriced matchup/F5/prop markets tagged PROJECTION *do*
+    count — otherwise Results shows 0-0-0 whenever live odds were skipped.
+    """
     if not row.get("settled") or row.get("void"):
         return False
     source = str(row.get("source") or "").lower()
     if source == "projection":
         return False
     lean = str(row.get("lean") or "").upper()
-    if lean in {"PROJECTION", "PROJECTION_THIN", "STALE_LINE", "AVOID", "REVIEW"}:
+    if lean in {"STALE_LINE", "AVOID", "REVIEW"}:
         return False
     if row.get("push"):
         return True
@@ -52,9 +67,10 @@ def is_bettable_lean(row: dict) -> bool:
     return True
 
 
-def record_from_rows(rows: list[dict]) -> dict:
-    """W-L-P and hit rate from bettable leans only."""
-    bettable = [r for r in rows if is_bettable_lean(r)]
+def record_from_rows(rows: list[dict], *, predicate=None) -> dict:
+    """W-L-P and hit rate. Defaults to bettable leans only."""
+    check = predicate or is_bettable_lean
+    bettable = [r for r in rows if check(r)]
     wins = sum(1 for r in bettable if r.get("won"))
     losses = sum(1 for r in bettable if r.get("won") is False and not r.get("push"))
     pushes = sum(1 for r in bettable if r.get("push"))
@@ -148,12 +164,13 @@ def calibration_buckets(rows: list[dict], *, buckets: int = 5, min_n: int = 5) -
     return out
 
 
-def summarize_record(rows: list[dict]) -> dict:
-    bettable = record_from_rows(rows)
+def summarize_record(rows: list[dict], *, predicate=None) -> dict:
+    check = predicate or is_bettable_lean
+    bettable = record_from_rows(rows, predicate=check)
     voids = sum(1 for r in rows if r.get("void"))
     by_source: dict[str, dict] = defaultdict(lambda: {"w": 0, "l": 0, "p": 0})
     for r in rows:
-        if not is_bettable_lean(r):
+        if not check(r):
             continue
         src = str(r.get("source") or "unknown")
         if r.get("push"):
@@ -172,6 +189,11 @@ def summarize_record(rows: list[dict]) -> dict:
         "brier": brier_score(rows),
         "by_source": dict(by_source),
     }
+
+
+def summarize_tracked(rows: list[dict]) -> dict:
+    """Headline Results record: settled game/prop/pickem markets, priced or not."""
+    return summarize_record(rows, predicate=is_tracked_lean)
 
 
 def clv_summary_from_leans(rows: list[dict]) -> dict | None:

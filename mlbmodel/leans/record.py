@@ -353,17 +353,24 @@ def collect_leans(
 
 
 def write_lean_snapshot(rows: list[dict], path: Path | None = None) -> Path:
-    """Persist the collected ledger locally so a run still records without warehouse creds."""
+    """Persist the collected ledger locally so a run still records without warehouse creds.
+
+    Merges into any existing snapshot so a Pages build does not wipe yesterday's
+    tracked leans when it writes today's slate.
+    """
+    from mlbmodel.leans.ledger import load_lean_snapshot, merge_lean_rows, prune_lean_rows
+
     dest = path or (settings.CACHE_DIR / "model_leans_latest.json")
     dest.parent.mkdir(parents=True, exist_ok=True)
-    by_source = Counter(str(row.get("source") or "") for row in rows)
-    by_market = Counter(str(row.get("market") or "") for row in rows)
+    merged = prune_lean_rows(merge_lean_rows(rows, load_lean_snapshot(dest)))
+    by_source = Counter(str(row.get("source") or "") for row in merged)
+    by_market = Counter(str(row.get("market") or "") for row in merged)
     payload = {
         "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "count": len(rows),
+        "count": len(merged),
         "by_source": dict(sorted(by_source.items())),
         "by_market": dict(sorted(by_market.items())),
-        "rows": rows,
+        "rows": merged,
     }
     dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return dest

@@ -28,4 +28,4 @@ mlb_model_run_log.txt
 # local sync scratch (mirrors what CI builds into _deploy_data)
 _live_data/
 _deploy_data/
-model_leans_latest.json
+/model_leans_latest.json
