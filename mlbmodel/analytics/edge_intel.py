@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from mlbmodel.leans.calibration import is_bettable_lean
+from mlbmodel.leans.calibration import is_tracked_lean
 from mlbmodel.leans.record import edge_points
 from mlbmodel.report.decision import MKT_LABEL
 
@@ -226,7 +226,7 @@ def team_prediction_record(
     teams: dict[str, dict] = defaultdict(lambda: {"w": 0, "l": 0, "p": 0})
 
     for row in lean_rows:
-        if not is_bettable_lean(row):
+        if not is_tracked_lean(row):
             continue
         market = str(row.get("market") or "").lower()
         if market not in {"ml", "moneyline", "h2h", "f5_ml"}:
@@ -263,7 +263,7 @@ def market_type_record(lean_rows: list[dict], *, min_samples: int = 2) -> list[d
     groups: dict[tuple[str, str], dict] = defaultdict(lambda: {"w": 0, "l": 0, "p": 0, "edge_sum": 0.0, "n_edge": 0})
 
     for row in lean_rows:
-        if not is_bettable_lean(row):
+        if not is_tracked_lean(row):
             continue
         market = str(row.get("market") or "unknown").lower()
         source = str(row.get("source") or "unknown")

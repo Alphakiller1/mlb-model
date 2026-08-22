@@ -62,6 +62,10 @@ def test_build_app_renders_all_views():
     assert 'data-step="m-risks"' in html
     assert "jumpMatchupStep" in html
     assert "desk-verdict" in html
+    results_html = html.split('id="v-results"')[1].split("</section>")[0]
+    assert "No leans recorded yet" not in results_html
+    assert "results-recent-table" in results_html
+    assert ">W<" in results_html or ">L<" in results_html or ">P<" in results_html
 
 
 def test_build_app_matchup_switch_hybrid_terminals():

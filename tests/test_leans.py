@@ -5,7 +5,9 @@ from mlbmodel.leans.calibration import (
     hit_rate_by_lean_tag,
     hit_rate_by_source,
     is_bettable_lean,
+    is_tracked_lean,
     summarize_record,
+    summarize_tracked,
 )
 from mlbmodel.leans.grade import grade_lean
 from mlbmodel.leans.record import (
@@ -282,6 +284,42 @@ def test_write_lean_snapshot_round_trip(tmp_path):
     assert payload["by_market"]["k"] == 1
 
 
+def test_write_lean_snapshot_keeps_prior_slate(tmp_path):
+    from mlbmodel.leans.record import write_lean_snapshot
+
+    yesterday = [_row(
+        slate_date="2026-08-01",
+        game_pk=1,
+        source="matchup",
+        market="ml",
+        selection="TOR",
+        line=None,
+        model_value=52.0,
+        model_prob=0.52,
+        edge=None,
+        lean="PROJECTION",
+    )]
+    path = tmp_path / "model_leans_latest.json"
+    write_lean_snapshot(yesterday, path)
+    today = [_row(
+        slate_date="2026-08-22",
+        game_pk=2,
+        source="matchup",
+        market="ml",
+        selection="NYY",
+        line=None,
+        model_value=55.0,
+        model_prob=0.55,
+        edge=None,
+        lean="PROJECTION",
+    )]
+    write_lean_snapshot(today, path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    dates = {row["slate_date"] for row in payload["rows"]}
+    assert dates == {"2026-08-01", "2026-08-22"}
+    assert payload["count"] == 2
+
+
 def test_edge_points_normalizes_fraction_and_points():
     assert edge_points(0.04) == 4.0
     assert edge_points(4.0) == 4.0
@@ -382,3 +420,15 @@ def test_is_bettable_lean_excludes_projections_and_no_line_props():
     assert {row["source"] for row in by_source} == {"prop", "sharp"}
     by_lean = hit_rate_by_lean_tag(rows)
     assert {row["lean"] for row in by_lean} == {"BET", "OVER"}
+
+
+def test_is_tracked_lean_includes_unpriced_matchup_projection():
+    row = {
+        "settled": True, "source": "matchup", "lean": "PROJECTION",
+        "market": "ml", "won": True, "push": False,
+    }
+    assert is_bettable_lean(row) is False
+    assert is_tracked_lean(row) is True
+    tracked = summarize_tracked([row])
+    assert tracked["wins"] == 1
+    assert tracked["total"] == 1

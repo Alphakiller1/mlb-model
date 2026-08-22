@@ -9,8 +9,10 @@ from mlbmodel.leans.calibration import (
     clv_summary_from_leans,
     projection_error_summary,
     summarize_record,
+    summarize_tracked,
     ungraded_reason_counts,
 )
+from mlbmodel.leans.ledger import load_tracked_leans, select_recent_leans
 from mlbmodel.analytics.edge_intel import (
     clv_from_snapshots,
     market_type_record,
@@ -139,22 +141,20 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
  {deck}"""
 
 
-def results(reader):
-    result = reader.get(
-        "model_leans?select=lean_id,slate_date,game_pk,source,market,selection,line,"
-        "model_prob,model_value,edge,lean,won,push,settled,entry_odds,recorded_at,"
-        "void,ungraded_reason,closing_odds,clv_pts,realized_value"
-        "&order=recorded_at.desc&limit=2000"
+def results(reader, *, snapshot_path=None, game_results_path=None):
+    rows, warehouse_notice = load_tracked_leans(
+        reader,
+        snapshot_path=snapshot_path,
+        game_results_path=game_results_path,
     )
-    if result.error:
+    if not rows and warehouse_notice:
         return f"""{desk_pagehead("Results", sub="Paper track record · CLV · calibration")}
- <div class=empty>Lean warehouse unavailable: {e(result.error)}</div>"""
+ <div class=empty>Lean warehouse unavailable: {e(warehouse_notice)}</div>"""
 
-    rows = result.rows
     clv_result = reader.get(
         "prediction_market_snapshots?settled=eq.true&won=not.is.null"
-        "&entry_prob=not.is.null&implied_probability=not.is.null"
-        "&select=market_type,entry_prob,implied_probability,won&limit=5000"
+        "&implied_probability=not.is.null"
+        "&select=market_type,open_prob,implied_probability,won&limit=5000"
     )
     clv_summary = clv_from_snapshots(clv_result.rows if not clv_result.error else [])
     lean_clv = clv_summary_from_leans(rows)
@@ -164,12 +164,24 @@ def results(reader):
     void_n = sum(1 for r in rows if r.get("void"))
     teams = team_prediction_record(rows)
     market_perf = market_type_record(rows)
-    summary = summarize_record(rows)
+    summary = summarize_tracked(rows)
+    priced = summarize_record(rows)
     cal = calibration_buckets(rows)
     hit = summary.get("hit_rate")
     hit_txt = f"{hit:.1f}%" if hit is not None else "—"
-    brier = summary.get("brier")
+    brier = priced.get("brier")
     brier_txt = f"{brier:.3f}" if brier is not None else "—"
+    source_notice = ""
+    if warehouse_notice and rows:
+        source_notice = (
+            f'<p class=mut>Warehouse unavailable ({e(warehouse_notice)}); '
+            "showing the local lean snapshot and settled game results.</p>"
+        )
+    elif not rows:
+        source_notice = (
+            '<p class=mut>No leans recorded yet. A Pages build writes '
+            "<code>model_leans_latest.json</code> even without warehouse credentials.</p>"
+        )
 
     cal_rows = "".join(
         f'<tr><td>{e(c["bucket"])}</td><td>{c["n"]}</td><td>{c["predicted"]:.1f}%</td>'
@@ -186,7 +198,7 @@ def results(reader):
     ) or '<tr><td class=mut colspan=5>—</td></tr>'
 
     rows_html = []
-    for r in rows[:40]:
+    for r in select_recent_leans(rows):
         edge_cell = f'{float(r["edge"]):+.1f}pt' if r.get("edge") is not None else "—"
         entry_cell = str(int(r["entry_odds"])) if r.get("entry_odds") is not None else "—"
         clv_cell = f'{float(r["clv_pts"]):+.1f}' if r.get("clv_pts") is not None else "—"
@@ -245,8 +257,9 @@ def results(reader):
     market_panel = market_performance_html(market_perf)
 
     return f"""{desk_pagehead("Results", sub="Paper track record · CLV · calibration · no fake ROI")}
+ {source_notice}
  <div class=cards>
-   <div class=card><div class=k>Record</div><div class=v>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</div></div>
+   <div class=card><div class=k>Tracked record</div><div class=v>{summary["wins"]}-{summary["losses"]}-{summary["pushes"]}</div></div>
    <div class=card><div class=k>Hit rate</div><div class=v>{hit_txt}</div></div>
    <div class=card><div class=k>Brier</div><div class=v>{brier_txt}</div></div>
    <div class=card><div class=k>Lean CLV</div><div class=v>{(f'{lean_clv["clv_pts"]:+.1f}pt' if lean_clv else "—")}</div></div>
@@ -261,7 +274,8 @@ def results(reader):
  </div>
  <div class=cols>
  <div class=ca-board>{section_head("Calibration", icon="results")}<div class=body>
-   <p class=mut>Predicted = mean model probability in bucket; Actual carries a Wilson 95% interval.
+   <p class=mut>Priced-bet calibration only (excludes AVOID/REVIEW and unpriced PROJECTION tags).
+   Predicted = mean model probability in bucket; Actual carries a Wilson 95% interval.
    ✓ = calibrated within CI, — = under-sampled.</p>
    <div class=table-scroll><table class=sortable><tr><th>Bucket</th><th>n</th><th>Predicted</th><th>Actual (95% CI)</th><th>Gap</th><th>OK</th></tr>{cal_rows}</table></div>
  </div></div>
