@@ -59,6 +59,10 @@ jobs:
       - name: Fetch live odds (props + game lines for sharp-money board)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          # Official Odds API bookmakers filter (not a client-side trim). Fanatics
+          # sportsbook slug is `fanatics` in the US region — cheaper than us,eu.
+          ODDS_BOOKS: fanatics
+          ODDS_REGIONS: us
           MLBMODEL_CACHE_DIR: _deploy_data
           # Warehouse creds so market.collect PUBLISHES sharp signals/observations on
           # every scheduled build. Without these, point-in-time observation accrual only
