@@ -1,20 +1,21 @@
 {
-  "sync_id": "c29fc87fb458f014",
+  "sync_id": "c7149a8cfec00468",
   "status": "fallback",
   "source": "mlb_live_schedule_fallback",
-  "message": "MLBMA pipeline slate is 2026-08-12; using Chase Analytics' live MLB schedule fallback for 2026-08-13.",
-  "slate_date": "2026-08-13",
-  "game_count": 9,
+  "message": "MLBMA pipeline slate is 2026-08-12; using Chase Analytics' live MLB schedule fallback for 2026-08-24.",
+  "slate_date": "2026-08-24",
+  "game_count": 10,
   "matchup_keys": [
-    "CLE@DET",
-    "PIT@MIA",
-    "SEA@NYY",
-    "CIN@CHW",
-    "BOS@TOR",
-    "CHC@WSN",
-    "PHI@MIN",
-    "TEX@LAA",
-    "MIL@LAD"
+    "TBR@DET",
+    "BOS@MIA",
+    "COL@WSN",
+    "TEX@CHW",
+    "CLE@LAA",
+    "CHC@ARI",
+    "PIT@SDP",
+    "MIN@ATH",
+    "PHI@SEA",
+    "CIN@SFG"
   ],
   "pipeline_slate_date": "2026-08-12",
   "pipeline_updated_at": "2026-08-12T21:28:08-04:00",
@@ -40,17 +41,16 @@
     "Signals_Today": "2026-08-13T03:25:16.080645+00:00",
     "Signals_Convergence": "2026-08-13T03:25:16.581476+00:00"
   },
-  "live_context_fetched_at": "2026-08-13T05:15:12+00:00",
-  "live_context_games": 9,
+  "live_context_fetched_at": "2026-08-24T18:25:47+00:00",
+  "live_context_games": 10,
   "live_context_lineups": {
     "status": {
-      "projected": 14,
-      "unavailable": 4
+      "projected": 20
     },
     "source": {
-      "Rotowire (projected)": 14
+      "Rotowire (projected)": 20
     }
   },
   "live_context_error": null,
-  "fetched_at": "2026-08-13T05:15:00+00:00"
+  "fetched_at": "2026-08-24T18:25:37+00:00"
 }
