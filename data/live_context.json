@@ -1,6 +1,6 @@
 {
   "slate_date": "2026-08-24",
-  "fetched_at": "2026-08-24T18:25:47+00:00",
+  "fetched_at": "2026-08-24T20:59:50+00:00",
   "sources": {
     "schedule_lineups_injuries_umpires_venues": "MLB Stats API",
     "weather": "Open-Meteo hourly best-match"
@@ -33,140 +33,122 @@
       },
       "lineups": {
         "away": {
-          "status": "projected",
-          "source": "Rotowire (projected)",
+          "status": "confirmed",
+          "source": "MLB live feed",
           "players": [
             {
               "order": 1,
-              "player_id": null,
-              "player": "Yandy Diaz",
-              "position": "DH",
-              "bats": "R"
+              "player_id": 650490,
+              "player": "Yandy D\u00edaz",
+              "position": "DH"
             },
             {
               "order": 2,
-              "player_id": null,
-              "player": "Jonathan Aranda",
-              "position": "1B",
-              "bats": "L"
+              "player_id": 668723,
+              "player": "Ryan Vilade",
+              "position": "RF"
             },
             {
               "order": 3,
-              "player_id": null,
+              "player_id": 691406,
               "player": "Junior Caminero",
-              "position": "3B",
-              "bats": "R"
+              "position": "3B"
             },
             {
               "order": 4,
-              "player_id": null,
-              "player": "Ryan Vilade",
-              "position": "RF",
-              "bats": "R"
+              "player_id": 676356,
+              "player": "Jonny DeLuca",
+              "position": "CF"
             },
             {
               "order": 5,
-              "player_id": null,
-              "player": "Chandler Simpson",
-              "position": "LF",
-              "bats": "L"
+              "player_id": 666018,
+              "player": "Jonathan Aranda",
+              "position": "1B"
             },
             {
               "order": 6,
-              "player_id": null,
-              "player": "Jonny DeLuca",
-              "position": "CF",
-              "bats": "R"
+              "player_id": 622761,
+              "player": "Jorge Mateo",
+              "position": "2B"
             },
             {
               "order": 7,
-              "player_id": null,
-              "player": "Jorge Mateo",
-              "position": "2B",
-              "bats": "R"
+              "player_id": 663743,
+              "player": "Nick Fortes",
+              "position": "C"
             },
             {
               "order": 8,
-              "player_id": null,
-              "player": "Nick Fortes",
-              "position": "C",
-              "bats": "R"
+              "player_id": 802415,
+              "player": "Chandler Simpson",
+              "position": "LF"
             },
             {
               "order": 9,
-              "player_id": null,
+              "player_id": 670764,
               "player": "Taylor Walls",
-              "position": "SS",
-              "bats": "S"
+              "position": "SS"
             }
           ]
         },
         "home": {
-          "status": "projected",
-          "source": "Rotowire (projected)",
+          "status": "confirmed",
+          "source": "MLB live feed",
           "players": [
             {
               "order": 1,
-              "player_id": null,
-              "player": "Kevin McGonigle",
-              "position": "SS",
-              "bats": "L"
+              "player_id": 690993,
+              "player": "Colt Keith",
+              "position": "DH"
             },
             {
               "order": 2,
-              "player_id": null,
-              "player": "Gleyber Torres",
-              "position": "2B",
-              "bats": "R"
+              "player_id": 701678,
+              "player": "Hao-Yu Lee",
+              "position": "2B"
             },
             {
               "order": 3,
-              "player_id": null,
-              "player": "Colt Keith",
-              "position": "DH",
-              "bats": "L"
+              "player_id": 805808,
+              "player": "Kevin McGonigle",
+              "position": "3B"
             },
             {
               "order": 4,
-              "player_id": null,
+              "player_id": 693307,
               "player": "Dillon Dingler",
-              "position": "C",
-              "bats": "R"
+              "position": "C"
             },
             {
               "order": 5,
-              "player_id": null,
-              "player": "Zach McKinstry",
-              "position": "RF",
-              "bats": "L"
+              "player_id": 814430,
+              "player": "Brett Callahan",
+              "position": "LF"
             },
             {
               "order": 6,
-              "player_id": null,
-              "player": "Brett Callahan",
-              "position": "LF",
-              "bats": "R"
+              "player_id": 656716,
+              "player": "Zach McKinstry",
+              "position": "RF"
             },
             {
               "order": 7,
-              "player_id": null,
+              "player_id": 679529,
               "player": "Spencer Torkelson",
-              "position": "1B",
-              "bats": "R"
+              "position": "1B"
             },
             {
               "order": 8,
-              "player_id": null,
+              "player_id": 703601,
               "player": "Max Clark",
-              "position": "CF",
-              "bats": "L"
+              "position": "CF"
             },
             {
               "order": 9,
-              "player_id": null,
-              "player": "Hao-Yu Lee",
-              "position": "3B",
-              "bats": "R"
+              "player_id": 595879,
+              "player": "Javier B\u00e1ez",
+              "position": "SS"
             }
           ]
         }
@@ -176,22 +158,29 @@
         "source": "Open-Meteo hourly best-match",
         "forecast_time": "2026-08-24T23:00:00+00:00",
         "dome": false,
-        "temp_f": 73.2,
-        "temperature_f": 73.2,
-        "humidity_pct": 46.0,
-        "precipitation_probability_pct": 1.0,
+        "temp_f": 73.5,
+        "temperature_f": 73.5,
+        "humidity_pct": 49.0,
+        "precipitation_probability_pct": 0.0,
         "precipitation_in": 0.0,
-        "pressure_hpa": 1015.7,
-        "wind_mph": 6.2,
-        "wind_direction_deg": 308.0,
-        "wind_gust_mph": 11.0,
-        "wind_out_mph": 5.75
+        "pressure_hpa": 1015.9,
+        "wind_mph": 4.7,
+        "wind_direction_deg": 295.0,
+        "wind_gust_mph": 10.3,
+        "wind_out_mph": 3.85
       },
       "umpire": {
-        "status": "unannounced",
-        "umpire_id": null,
-        "umpire": null,
-        "profile": null
+        "status": "announced",
+        "umpire_id": 511890,
+        "umpire": "Quinn Wolcott",
+        "profile": {
+          "umpire_id": 511890,
+          "umpire": "Quinn Wolcott",
+          "games": 20,
+          "raw_runs_per_game": 8.35,
+          "adjusted_runs_per_game": 8.69,
+          "run_factor": 0.9744
+        }
       },
       "injuries": {
         "away": [
@@ -458,140 +447,122 @@
       },
       "lineups": {
         "away": {
-          "status": "projected",
-          "source": "Rotowire (projected)",
+          "status": "confirmed",
+          "source": "MLB live feed",
           "players": [
             {
               "order": 1,
-              "player_id": null,
+              "player_id": 686765,
               "player": "Nick Sogard",
-              "position": "2B",
-              "bats": "S"
+              "position": "SS"
             },
             {
               "order": 2,
-              "player_id": null,
+              "player_id": 678882,
               "player": "Ceddanne Rafaela",
-              "position": "CF",
-              "bats": "R"
+              "position": "CF"
             },
             {
               "order": 3,
-              "player_id": null,
+              "player_id": 677800,
               "player": "Wilyer Abreu",
-              "position": "RF",
-              "bats": "L"
+              "position": "RF"
             },
             {
               "order": 4,
-              "player_id": null,
+              "player_id": 575929,
               "player": "Willson Contreras",
-              "position": "1B",
-              "bats": "R"
+              "position": "1B"
             },
             {
               "order": 5,
-              "player_id": null,
+              "player_id": 668939,
               "player": "Adley Rutschman",
-              "position": "C",
-              "bats": "S"
+              "position": "C"
             },
             {
               "order": 6,
-              "player_id": null,
+              "player_id": 702332,
               "player": "Caleb Durbin",
-              "position": "3B",
-              "bats": "R"
+              "position": "3B"
             },
             {
               "order": 7,
-              "player_id": null,
+              "player_id": 680776,
               "player": "Jarren Duran",
-              "position": "LF",
-              "bats": "L"
+              "position": "LF"
             },
             {
               "order": 8,
-              "player_id": null,
-              "player": "Andruw Monasterio",
-              "position": "SS",
-              "bats": "R"
+              "player_id": 681508,
+              "player": "Mickey Gasper",
+              "position": "DH"
             },
             {
               "order": 9,
-              "player_id": null,
-              "player": "Mickey Gasper",
-              "position": "DH",
-              "bats": "S"
+              "player_id": 678011,
+              "player": "Anthony Seigler",
+              "position": "2B"
             }
           ]
         },
         "home": {
-          "status": "projected",
-          "source": "Rotowire (projected)",
+          "status": "confirmed",
+          "source": "MLB live feed",
           "players": [
             {
               "order": 1,
-              "player_id": null,
-              "player": "Esteury Ruiz",
-              "position": "CF",
-              "bats": "R"
+              "player_id": 672640,
+              "player": "Otto Lopez",
+              "position": "SS"
             },
             {
               "order": 2,
-              "player_id": null,
-              "player": "Heriberto Hernandez",
-              "position": "LF",
-              "bats": "R"
+              "player_id": 681715,
+              "player": "Heriberto Hern\u00e1ndez",
+              "position": "LF"
             },
             {
               "order": 3,
-              "player_id": null,
-              "player": "Xavier Edwards",
-              "position": "2B",
-              "bats": "S"
+              "player_id": 669065,
+              "player": "Kyle Stowers",
+              "position": "1B"
             },
             {
               "order": 4,
-              "player_id": null,
-              "player": "Agustin Ramirez",
-              "position": "DH",
-              "bats": "R"
+              "player_id": 682663,
+              "player": "Agust\u00edn Ram\u00edrez",
+              "position": "DH"
             },
             {
               "order": 5,
-              "player_id": null,
-              "player": "Otto Lopez",
-              "position": "SS",
-              "bats": "R"
+              "player_id": 669364,
+              "player": "Xavier Edwards",
+              "position": "2B"
             },
             {
               "order": 6,
-              "player_id": null,
-              "player": "Kyle Stowers",
-              "position": "1B",
-              "bats": "L"
+              "player_id": 805300,
+              "player": "Jakob Marsee",
+              "position": "CF"
             },
             {
               "order": 7,
-              "player_id": null,
+              "player_id": 691594,
               "player": "Javier Sanoja",
-              "position": "RF",
-              "bats": "R"
+              "position": "3B"
             },
             {
               "order": 8,
-              "player_id": null,
-              "player": "Leo Jimenez",
-              "position": "3B",
-              "bats": "R"
+              "player_id": 665923,
+              "player": "Esteury Ruiz",
+              "position": "RF"
             },
             {
               "order": 9,
-              "player_id": null,
-              "player": "Brian Navarreto",
-              "position": "C",
-              "bats": "R"
+              "player_id": 691788,
+              "player": "Joe Mack",
+              "position": "C"
             }
           ]
         }
@@ -601,22 +572,29 @@
         "source": "Open-Meteo hourly best-match",
         "forecast_time": "2026-08-24T23:00:00+00:00",
         "dome": false,
-        "temp_f": 85.3,
-        "temperature_f": 85.3,
-        "humidity_pct": 69.0,
-        "precipitation_probability_pct": 3.0,
+        "temp_f": 84.8,
+        "temperature_f": 84.8,
+        "humidity_pct": 72.0,
+        "precipitation_probability_pct": 2.0,
         "precipitation_in": 0.0,
-        "pressure_hpa": 1016.3,
-        "wind_mph": 7.4,
-        "wind_direction_deg": 136.0,
-        "wind_gust_mph": 11.0,
-        "wind_out_mph": -7.33
+        "pressure_hpa": 1016.5,
+        "wind_mph": 6.5,
+        "wind_direction_deg": 124.0,
+        "wind_gust_mph": 9.6,
+        "wind_out_mph": -6.48
       },
       "umpire": {
-        "status": "unannounced",
-        "umpire_id": null,
-        "umpire": null,
-        "profile": null
+        "status": "announced",
+        "umpire_id": 427292,
+        "umpire": "Ron Kulpa",
+        "profile": {
+          "umpire_id": 427292,
+          "umpire": "Ron Kulpa",
+          "games": 15,
+          "raw_runs_per_game": 9.67,
+          "adjusted_runs_per_game": 9.17,
+          "run_factor": 1.0278
+        }
       },
       "injuries": {
         "away": [
@@ -751,14 +729,6 @@
             "injury": "Right shin stress reaction."
           },
           {
-            "player_id": 669065,
-            "player": "Kyle Stowers",
-            "position": "1B",
-            "status_code": "D10",
-            "status": "Injured 10-Day",
-            "injury": "Left hamstring strain."
-          },
-          {
             "player_id": 676974,
             "player": "Max Meyer",
             "position": "P",
@@ -875,140 +845,122 @@
       },
       "lineups": {
         "away": {
-          "status": "projected",
-          "source": "Rotowire (projected)",
+          "status": "confirmed",
+          "source": "MLB live feed",
           "players": [
             {
               "order": 1,
-              "player_id": null,
+              "player_id": 664983,
               "player": "Jake McCarthy",
-              "position": "LF",
-              "bats": "L"
+              "position": "CF"
             },
             {
               "order": 2,
-              "player_id": null,
-              "player": "Cole Carrigg",
-              "position": "CF",
-              "bats": "S"
+              "player_id": 666160,
+              "player": "Mickey Moniak",
+              "position": "RF"
             },
             {
               "order": 3,
-              "player_id": null,
-              "player": "Mickey Moniak",
-              "position": "DH",
-              "bats": "L"
+              "player_id": 650489,
+              "player": "Willi Castro",
+              "position": "3B"
             },
             {
               "order": 4,
-              "player_id": null,
+              "player_id": 681198,
               "player": "TJ Rumfield",
-              "position": "1B",
-              "bats": "L"
+              "position": "1B"
             },
             {
               "order": 5,
-              "player_id": null,
-              "player": "Willi Castro",
-              "position": "3B",
-              "bats": "S"
+              "player_id": 687859,
+              "player": "Troy Johnston",
+              "position": "DH"
             },
             {
               "order": 6,
-              "player_id": null,
-              "player": "Zac Veen",
-              "position": "RF",
-              "bats": "L"
+              "player_id": 681393,
+              "player": "Connor Norby",
+              "position": "2B"
             },
             {
               "order": 7,
-              "player_id": null,
-              "player": "Connor Norby",
-              "position": "2B",
-              "bats": "R"
+              "player_id": 664954,
+              "player": "Brett Sullivan",
+              "position": "C"
             },
             {
               "order": 8,
-              "player_id": null,
-              "player": "Brett Sullivan",
-              "position": "C",
-              "bats": "L"
+              "player_id": 691728,
+              "player": "Zac Veen",
+              "position": "LF"
             },
             {
               "order": 9,
-              "player_id": null,
+              "player_id": 678662,
               "player": "Ezequiel Tovar",
-              "position": "SS",
-              "bats": "R"
+              "position": "SS"
             }
           ]
         },
         "home": {
-          "status": "projected",
-          "source": "Rotowire (projected)",
+          "status": "confirmed",
+          "source": "MLB live feed",
           "players": [
             {
               "order": 1,
-              "player_id": null,
+              "player_id": 682928,
               "player": "CJ Abrams",
-              "position": "SS",
-              "bats": "L"
+              "position": "DH"
             },
             {
               "order": 2,
-              "player_id": null,
+              "player_id": 694673,
               "player": "Abimelec Ortiz",
-              "position": "1B",
-              "bats": "L"
+              "position": "1B"
             },
             {
               "order": 3,
-              "player_id": null,
-              "player": "Brady House",
-              "position": "3B",
-              "bats": "R"
+              "player_id": 686611,
+              "player": "Dylan Crews",
+              "position": "RF"
             },
             {
               "order": 4,
-              "player_id": null,
+              "player_id": 695734,
               "player": "Daylen Lile",
-              "position": "LF",
-              "bats": "L"
+              "position": "LF"
             },
             {
               "order": 5,
-              "player_id": null,
-              "player": "Dylan Crews",
-              "position": "RF",
-              "bats": "R"
+              "player_id": 691781,
+              "player": "Brady House",
+              "position": "3B"
             },
             {
               "order": 6,
-              "player_id": null,
+              "player_id": 660688,
               "player": "Keibert Ruiz",
-              "position": "C",
-              "bats": "S"
+              "position": "C"
             },
             {
               "order": 7,
-              "player_id": null,
-              "player": "Andres Chaparro",
-              "position": "DH",
-              "bats": "R"
+              "player_id": 696285,
+              "player": "Jacob Young",
+              "position": "CF"
             },
             {
               "order": 8,
-              "player_id": null,
-              "player": "Nasim Nunez",
-              "position": "2B",
-              "bats": "S"
+              "player_id": 678391,
+              "player": "Jorbit Vivas",
+              "position": "2B"
             },
             {
               "order": 9,
-              "player_id": null,
-              "player": "Jacob Young",
-              "position": "CF",
-              "bats": "R"
+              "player_id": 683083,
+              "player": "Nasim Nu\u00f1ez",
+              "position": "SS"
             }
           ]
         }
@@ -1018,22 +970,29 @@
         "source": "Open-Meteo hourly best-match",
         "forecast_time": "2026-08-24T23:00:00+00:00",
         "dome": false,
-        "temp_f": 78.9,
-        "temperature_f": 78.9,
-        "humidity_pct": 39.0,
-        "precipitation_probability_pct": 2.0,
+        "temp_f": 76.8,
+        "temperature_f": 76.8,
+        "humidity_pct": 45.0,
+        "precipitation_probability_pct": 3.0,
         "precipitation_in": 0.0,
-        "pressure_hpa": 1014.7,
-        "wind_mph": 6.1,
-        "wind_direction_deg": 327.0,
-        "wind_gust_mph": 13.2,
-        "wind_out_mph": -2.96
+        "pressure_hpa": 1015.6,
+        "wind_mph": 7.6,
+        "wind_direction_deg": 328.0,
+        "wind_gust_mph": 15.0,
+        "wind_out_mph": -3.8
       },
       "umpire": {
-        "status": "unannounced",
-        "umpire_id": null,
-        "umpire": null,
-        "profile": null
+        "status": "announced",
+        "umpire_id": 521051,
+        "umpire": "Nick Mahrley",
+        "profile": {
+          "umpire_id": 521051,
+          "umpire": "Nick Mahrley",
+          "games": 15,
+          "raw_runs_per_game": 8.87,
+          "adjusted_runs_per_game": 8.9,
+          "run_factor": 0.9979
+        }
       },
       "injuries": {
         "away": [
@@ -1068,6 +1027,14 @@
             "status_code": "D60",
             "status": "Injured 60-Day",
             "injury": "Lumbar degenerative disk disease."
+          },
+          {
+            "player_id": 607536,
+            "player": "Kyle Freeland",
+            "position": "P",
+            "status_code": "D15",
+            "status": "Injured 15-Day",
+            "injury": "Cervical radiculopathy."
           },
           {
             "player_id": 691720,
@@ -1268,140 +1235,122 @@
       },
       "lineups": {
         "away": {
-          "status": "projected",
-          "source": "Rotowire (projected)",
+          "status": "confirmed",
+          "source": "MLB live feed",
           "players": [
             {
               "order": 1,
-              "player_id": null,
+              "player_id": 592626,
               "player": "Joc Pederson",
-              "position": "DH",
-              "bats": "L"
+              "position": "DH"
             },
             {
               "order": 2,
-              "player_id": null,
+              "player_id": 608369,
               "player": "Corey Seager",
-              "position": "SS",
-              "bats": "L"
+              "position": "SS"
             },
             {
               "order": 3,
-              "player_id": null,
+              "player_id": 694671,
               "player": "Wyatt Langford",
-              "position": "LF",
-              "bats": "R"
+              "position": "LF"
             },
             {
               "order": 4,
-              "player_id": null,
+              "player_id": 607043,
               "player": "Brandon Nimmo",
-              "position": "RF",
-              "bats": "L"
+              "position": "RF"
             },
             {
               "order": 5,
-              "player_id": null,
+              "player_id": 677649,
               "player": "Ezequiel Duran",
-              "position": "3B",
-              "bats": "R"
+              "position": "3B"
             },
             {
               "order": 6,
-              "player_id": null,
+              "player_id": 694497,
               "player": "Evan Carter",
-              "position": "CF",
-              "bats": "L"
+              "position": "CF"
             },
             {
               "order": 7,
-              "player_id": null,
+              "player_id": 669394,
               "player": "Jake Burger",
-              "position": "1B",
-              "bats": "R"
+              "position": "1B"
             },
             {
               "order": 8,
-              "player_id": null,
-              "player": "Nicky Lopez",
-              "position": "2B",
-              "bats": "L"
+              "player_id": 553869,
+              "player": "Elias D\u00edaz",
+              "position": "C"
             },
             {
               "order": 9,
-              "player_id": null,
-              "player": "Danny Jansen",
-              "position": "C",
-              "bats": "R"
+              "player_id": 683227,
+              "player": "Cody Freeman",
+              "position": "2B"
             }
           ]
         },
         "home": {
-          "status": "projected",
-          "source": "Rotowire (projected)",
+          "status": "confirmed",
+          "source": "MLB live feed",
           "players": [
             {
               "order": 1,
-              "player_id": null,
+              "player_id": 803011,
               "player": "Sam Antonacci",
-              "position": "LF",
-              "bats": "L"
+              "position": "LF"
             },
             {
               "order": 2,
-              "player_id": null,
+              "player_id": 808959,
               "player": "Munetaka Murakami",
-              "position": "1B",
-              "bats": "L"
+              "position": "1B"
             },
             {
               "order": 3,
-              "player_id": null,
+              "player_id": 678246,
               "player": "Miguel Vargas",
-              "position": "3B",
-              "bats": "R"
+              "position": "3B"
             },
             {
               "order": 4,
-              "player_id": null,
+              "player_id": 643217,
               "player": "Andrew Benintendi",
-              "position": "DH",
-              "bats": "L"
+              "position": "DH"
             },
             {
               "order": 5,
-              "player_id": null,
+              "player_id": 695731,
               "player": "Braden Montgomery",
-              "position": "RF",
-              "bats": "S"
+              "position": "RF"
             },
             {
               "order": 6,
-              "player_id": null,
+              "player_id": 695657,
               "player": "Colson Montgomery",
-              "position": "SS",
-              "bats": "L"
+              "position": "SS"
             },
             {
               "order": 7,
-              "player_id": null,
+              "player_id": 805367,
               "player": "Chase Meidroth",
-              "position": "2B",
-              "bats": "R"
+              "position": "2B"
             },
             {
               "order": 8,
-              "player_id": null,
+              "player_id": 671976,
               "player": "Tristan Peters",
-              "position": "CF",
-              "bats": "L"
+              "position": "CF"
             },
             {
               "order": 9,
-              "player_id": null,
+              "player_id": 691011,
               "player": "Drew Romo",
-              "position": "C",
-              "bats": "S"
+              "position": "C"
             }
           ]
         }
@@ -1411,22 +1360,29 @@
         "source": "Open-Meteo hourly best-match",
         "forecast_time": "2026-08-24T23:00:00+00:00",
         "dome": false,
-        "temp_f": 71.0,
-        "temperature_f": 71.0,
-        "humidity_pct": 63.0,
+        "temp_f": 70.6,
+        "temperature_f": 70.6,
+        "humidity_pct": 67.0,
         "precipitation_probability_pct": 0.0,
         "precipitation_in": 0.0,
-        "pressure_hpa": 1016.9,
-        "wind_mph": 7.8,
-        "wind_direction_deg": 63.0,
-        "wind_gust_mph": 9.6,
-        "wind_out_mph": -3.42
+        "pressure_hpa": 1018.2,
+        "wind_mph": 9.2,
+        "wind_direction_deg": 56.0,
+        "wind_gust_mph": 11.2,
+        "wind_out_mph": -3.0
       },
       "umpire": {
-        "status": "unannounced",
-        "umpire_id": null,
-        "umpire": null,
-        "profile": null
+        "status": "announced",
+        "umpire_id": 427197,
+        "umpire": "Chris Guccione",
+        "profile": {
+          "umpire_id": 427197,
+          "umpire": "Chris Guccione",
+          "games": 18,
+          "raw_runs_per_game": 9.11,
+          "adjusted_runs_per_game": 8.99,
+          "run_factor": 1.008
+        }
       },
       "injuries": {
         "away": [
@@ -1678,7 +1634,7 @@
       "lineups": {
         "away": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
@@ -1690,7 +1646,7 @@
             {
               "order": 2,
               "player_id": null,
-              "player": "Chase DeLauter",
+              "player": "C. DeLauter",
               "position": "RF",
               "bats": "L"
             },
@@ -1711,7 +1667,7 @@
             {
               "order": 5,
               "player_id": null,
-              "player": "Nathaniel Lowe",
+              "player": "N. Lowe",
               "position": "1B",
               "bats": "L"
             },
@@ -1725,21 +1681,21 @@
             {
               "order": 7,
               "player_id": null,
-              "player": "Travis Bazzana",
+              "player": "T. Bazzana",
               "position": "2B",
               "bats": "L"
             },
             {
               "order": 8,
               "player_id": null,
-              "player": "Patrick Bailey",
+              "player": "P. Bailey",
               "position": "C",
               "bats": "S"
             },
             {
               "order": 9,
               "player_id": null,
-              "player": "Brayan Rocchio",
+              "player": "B. Rocchio",
               "position": "SS",
               "bats": "S"
             }
@@ -1747,7 +1703,7 @@
         },
         "home": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
@@ -1766,51 +1722,51 @@
             {
               "order": 3,
               "player_id": null,
-              "player": "Vaughn Grissom",
-              "position": "1B",
-              "bats": "R"
-            },
-            {
-              "order": 4,
-              "player_id": null,
-              "player": "Moises Ballesteros",
+              "player": "M. Ballesteros",
               "position": "DH",
               "bats": "L"
             },
             {
+              "order": 4,
+              "player_id": null,
+              "player": "V. Grissom",
+              "position": "1B",
+              "bats": "R"
+            },
+            {
               "order": 5,
               "player_id": null,
-              "player": "Jose Siri",
+              "player": "Josh Lowe",
               "position": "RF",
-              "bats": "R"
+              "bats": "L"
             },
             {
               "order": 6,
               "player_id": null,
-              "player": "Gustavo Campero",
-              "position": "LF",
-              "bats": "S"
-            },
-            {
-              "order": 7,
-              "player_id": null,
-              "player": "Denzer Guzman",
+              "player": "D. Guzman",
               "position": "3B",
               "bats": "R"
             },
             {
+              "order": 7,
+              "player_id": null,
+              "player": "G. Campero",
+              "position": "LF",
+              "bats": "S"
+            },
+            {
               "order": 8,
               "player_id": null,
-              "player": "Christian Moore",
+              "player": "C. Moore",
               "position": "2B",
               "bats": "R"
             },
             {
               "order": 9,
               "player_id": null,
-              "player": "Travis d'Arnaud",
+              "player": "T. Heineman",
               "position": "C",
-              "bats": "R"
+              "bats": "S"
             }
           ]
         }
@@ -1820,16 +1776,16 @@
         "source": "Open-Meteo hourly best-match",
         "forecast_time": "2026-08-25T02:00:00+00:00",
         "dome": false,
-        "temp_f": 84.7,
-        "temperature_f": 84.7,
-        "humidity_pct": 47.0,
+        "temp_f": 83.3,
+        "temperature_f": 83.3,
+        "humidity_pct": 56.0,
         "precipitation_probability_pct": 1.0,
         "precipitation_in": 0.0,
-        "pressure_hpa": 1012.1,
-        "wind_mph": 7.4,
-        "wind_direction_deg": 205.0,
-        "wind_gust_mph": 9.4,
-        "wind_out_mph": 7.01
+        "pressure_hpa": 1011.7,
+        "wind_mph": 6.9,
+        "wind_direction_deg": 213.0,
+        "wind_gust_mph": 8.7,
+        "wind_out_mph": 6.78
       },
       "umpire": {
         "status": "unannounced",
@@ -2031,12 +1987,12 @@
       "lineups": {
         "away": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
               "player_id": null,
-              "player": "Pete Crow-Armstrong",
+              "player": "P. Crow-Armstrong",
               "position": "CF",
               "bats": "L"
             },
@@ -2050,7 +2006,7 @@
             {
               "order": 3,
               "player_id": null,
-              "player": "Michael Busch",
+              "player": "M. Busch",
               "position": "1B",
               "bats": "L"
             },
@@ -2078,14 +2034,14 @@
             {
               "order": 7,
               "player_id": null,
-              "player": "Pedro Ramirez",
+              "player": "P. Ramirez",
               "position": "2B",
               "bats": "S"
             },
             {
               "order": 8,
               "player_id": null,
-              "player": "Michael Conforto",
+              "player": "M. Conforto",
               "position": "DH",
               "bats": "L"
             },
@@ -2100,40 +2056,40 @@
         },
         "home": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
               "player_id": null,
-              "player": "Lars Nootbaar",
+              "player": "L. Nootbaar",
               "position": "DH",
               "bats": "L"
             },
             {
               "order": 2,
               "player_id": null,
-              "player": "Corbin Carroll",
+              "player": "C. Carroll",
               "position": "RF",
               "bats": "L"
             },
             {
               "order": 3,
               "player_id": null,
-              "player": "Gabriel Moreno",
+              "player": "G. Moreno",
               "position": "C",
               "bats": "R"
             },
             {
               "order": 4,
               "player_id": null,
-              "player": "Geraldo Perdomo",
+              "player": "G. Perdomo",
               "position": "SS",
               "bats": "S"
             },
             {
               "order": 5,
               "player_id": null,
-              "player": "Nolan Arenado",
+              "player": "N. Arenado",
               "position": "3B",
               "bats": "R"
             },
@@ -2154,14 +2110,14 @@
             {
               "order": 8,
               "player_id": null,
-              "player": "Jordan Lawlar",
+              "player": "J. Lawlar",
               "position": "CF",
               "bats": "R"
             },
             {
               "order": 9,
               "player_id": null,
-              "player": "Ildemaro Vargas",
+              "player": "I. Vargas",
               "position": "2B",
               "bats": "S"
             }
@@ -2173,16 +2129,16 @@
         "source": "Open-Meteo hourly best-match",
         "forecast_time": "2026-08-25T02:00:00+00:00",
         "dome": false,
-        "temp_f": 103.1,
-        "temperature_f": 103.1,
-        "humidity_pct": 16.0,
+        "temp_f": 101.6,
+        "temperature_f": 101.6,
+        "humidity_pct": 15.0,
         "precipitation_probability_pct": 1.0,
         "precipitation_in": 0.0,
-        "pressure_hpa": 1007.2,
-        "wind_mph": 5.6,
-        "wind_direction_deg": 277.0,
-        "wind_gust_mph": 12.5,
-        "wind_out_mph": -0.68
+        "pressure_hpa": 1007.0,
+        "wind_mph": 5.1,
+        "wind_direction_deg": 270.0,
+        "wind_gust_mph": 11.6,
+        "wind_out_mph": 0.0
       },
       "umpire": {
         "status": "unannounced",
@@ -2488,95 +2444,95 @@
       "lineups": {
         "away": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
               "player_id": null,
-              "player": "Nick Gonzales",
-              "position": "3B",
-              "bats": "R"
+              "player": "S. Horwitz",
+              "position": "1B",
+              "bats": "L"
             },
             {
               "order": 2,
-              "player_id": null,
-              "player": "Esmerlyn Valdez",
-              "position": "RF",
-              "bats": "R"
-            },
-            {
-              "order": 3,
-              "player_id": null,
-              "player": "Bryan Reynolds",
-              "position": "DH",
-              "bats": "S"
-            },
-            {
-              "order": 4,
               "player_id": null,
               "player": "Brandon Lowe",
               "position": "2B",
               "bats": "L"
             },
             {
-              "order": 5,
+              "order": 3,
               "player_id": null,
-              "player": "Rafael Flores",
-              "position": "C",
+              "player": "B. Reynolds",
+              "position": "DH",
+              "bats": "S"
+            },
+            {
+              "order": 4,
+              "player_id": null,
+              "player": "E. Valdez",
+              "position": "RF",
               "bats": "R"
             },
             {
-              "order": 6,
+              "order": 5,
               "player_id": null,
               "player": "Oneil Cruz",
               "position": "CF",
               "bats": "L"
             },
             {
+              "order": 6,
+              "player_id": null,
+              "player": "N. Gonzales",
+              "position": "3B",
+              "bats": "R"
+            },
+            {
               "order": 7,
+              "player_id": null,
+              "player": "R. Flores",
+              "position": "C",
+              "bats": "R"
+            },
+            {
+              "order": 8,
               "player_id": null,
               "player": "Jake Mangum",
               "position": "LF",
               "bats": "S"
             },
             {
-              "order": 8,
-              "player_id": null,
-              "player": "Nick Yorke",
-              "position": "1B",
-              "bats": "R"
-            },
-            {
               "order": 9,
               "player_id": null,
-              "player": "Jared Triolo",
+              "player": "J. Gonzalez",
               "position": "SS",
-              "bats": "R"
+              "bats": "L"
             }
           ]
         },
         "home": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
               "player_id": null,
-              "player": "Fernando Tatis",
+              "player": "F. Tatis",
               "position": "RF",
               "bats": "R"
             },
             {
               "order": 2,
               "player_id": null,
-              "player": "Jake Cronenworth",
+              "player": "J. Cronenworth",
               "position": "2B",
               "bats": "L"
             },
             {
               "order": 3,
               "player_id": null,
-              "player": "Manny Machado",
+              "player": "M. Machado",
               "position": "3B",
               "bats": "R"
             },
@@ -2590,14 +2546,14 @@
             {
               "order": 5,
               "player_id": null,
-              "player": "Jackson Merrill",
+              "player": "J. Merrill",
               "position": "CF",
               "bats": "L"
             },
             {
               "order": 6,
               "player_id": null,
-              "player": "Luis Campusano",
+              "player": "L. Campusano",
               "position": "C",
               "bats": "R"
             },
@@ -2611,7 +2567,7 @@
             {
               "order": 8,
               "player_id": null,
-              "player": "Xander Bogaerts",
+              "player": "X. Bogaerts",
               "position": "SS",
               "bats": "R"
             },
@@ -2630,16 +2586,16 @@
         "source": "Open-Meteo hourly best-match",
         "forecast_time": "2026-08-25T02:00:00+00:00",
         "dome": false,
-        "temp_f": 71.3,
-        "temperature_f": 71.3,
-        "humidity_pct": 97.0,
-        "precipitation_probability_pct": 1.0,
+        "temp_f": 72.6,
+        "temperature_f": 72.6,
+        "humidity_pct": 88.0,
+        "precipitation_probability_pct": 2.0,
         "precipitation_in": 0.0,
-        "pressure_hpa": 1013.7,
-        "wind_mph": 5.7,
-        "wind_direction_deg": 198.0,
-        "wind_gust_mph": 7.8,
-        "wind_out_mph": 5.42
+        "pressure_hpa": 1013.2,
+        "wind_mph": 4.8,
+        "wind_direction_deg": 202.0,
+        "wind_gust_mph": 6.0,
+        "wind_out_mph": 4.45
       },
       "umpire": {
         "status": "unannounced",
@@ -2833,12 +2789,12 @@
       "lineups": {
         "away": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
               "player_id": null,
-              "player": "Luke Keaschall",
+              "player": "L. Keaschall",
               "position": "RF",
               "bats": "R"
             },
@@ -2880,7 +2836,7 @@
             {
               "order": 7,
               "player_id": null,
-              "player": "Victor Caratini",
+              "player": "V. Caratini",
               "position": "1B",
               "bats": "S"
             },
@@ -2894,7 +2850,7 @@
             {
               "order": 9,
               "player_id": null,
-              "player": "Kaelen Culpepper",
+              "player": "K. Culpepper",
               "position": "SS",
               "bats": "R"
             }
@@ -2902,7 +2858,7 @@
         },
         "home": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
@@ -2928,14 +2884,14 @@
             {
               "order": 4,
               "player_id": null,
-              "player": "Carlos Cortes",
+              "player": "C. Cortes",
               "position": "LF",
               "bats": "L"
             },
             {
               "order": 5,
               "player_id": null,
-              "player": "Lawrence Butler",
+              "player": "L. Butler",
               "position": "RF",
               "bats": "L"
             },
@@ -2956,7 +2912,7 @@
             {
               "order": 8,
               "player_id": null,
-              "player": "Donovan Walton",
+              "player": "D. Walton",
               "position": "SS",
               "bats": "L"
             },
@@ -2975,16 +2931,16 @@
         "source": "Open-Meteo hourly best-match",
         "forecast_time": "2026-08-25T02:00:00+00:00",
         "dome": false,
-        "temp_f": 85.4,
-        "temperature_f": 85.4,
-        "humidity_pct": 33.0,
-        "precipitation_probability_pct": 0.0,
+        "temp_f": 86.0,
+        "temperature_f": 86.0,
+        "humidity_pct": 31.0,
+        "precipitation_probability_pct": 1.0,
         "precipitation_in": 0.0,
-        "pressure_hpa": 1012.3,
-        "wind_mph": 9.0,
-        "wind_direction_deg": 226.0,
-        "wind_gust_mph": 16.1,
-        "wind_out_mph": 9.0
+        "pressure_hpa": 1012.1,
+        "wind_mph": 8.9,
+        "wind_direction_deg": 223.0,
+        "wind_gust_mph": 15.2,
+        "wind_out_mph": 8.89
       },
       "umpire": {
         "status": "unannounced",
@@ -3250,12 +3206,12 @@
       "lineups": {
         "away": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
               "player_id": null,
-              "player": "Kyle Schwarber",
+              "player": "K. Schwarber",
               "position": "DH",
               "bats": "L"
             },
@@ -3297,21 +3253,21 @@
             {
               "order": 7,
               "player_id": null,
-              "player": "Brandon Marsh",
+              "player": "B. Marsh",
               "position": "LF",
               "bats": "L"
             },
             {
               "order": 8,
               "player_id": null,
-              "player": "J.T. Realmuto",
+              "player": "J. Realmuto",
               "position": "C",
               "bats": "R"
             },
             {
               "order": 9,
               "player_id": null,
-              "player": "Justin Crawford",
+              "player": "J. Crawford",
               "position": "CF",
               "bats": "L"
             }
@@ -3319,26 +3275,26 @@
         },
         "home": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
               "player_id": null,
-              "player": "Randy Arozarena",
+              "player": "R. Arozarena",
               "position": "LF",
               "bats": "R"
             },
             {
               "order": 2,
               "player_id": null,
-              "player": "Dominic Canzone",
+              "player": "D. Canzone",
               "position": "RF",
               "bats": "L"
             },
             {
               "order": 3,
               "player_id": null,
-              "player": "Julio Rodriguez",
+              "player": "J. Rodriguez",
               "position": "CF",
               "bats": "R"
             },
@@ -3373,7 +3329,7 @@
             {
               "order": 8,
               "player_id": null,
-              "player": "Weston Wilson",
+              "player": "W. Wilson",
               "position": "3B",
               "bats": "R"
             },
@@ -3392,16 +3348,16 @@
         "source": "Open-Meteo hourly best-match",
         "forecast_time": "2026-08-25T02:00:00+00:00",
         "dome": false,
-        "temp_f": 72.7,
-        "temperature_f": 72.7,
+        "temp_f": 72.9,
+        "temperature_f": 72.9,
         "humidity_pct": 62.0,
         "precipitation_probability_pct": 0.0,
         "precipitation_in": 0.0,
-        "pressure_hpa": 1013.0,
-        "wind_mph": 6.9,
-        "wind_direction_deg": 360.0,
-        "wind_gust_mph": 15.0,
-        "wind_out_mph": -4.53
+        "pressure_hpa": 1013.5,
+        "wind_mph": 6.5,
+        "wind_direction_deg": 4.0,
+        "wind_gust_mph": 14.5,
+        "wind_out_mph": -4.6
       },
       "umpire": {
         "status": "unannounced",
@@ -3627,12 +3583,12 @@
       "lineups": {
         "away": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
               "player_id": null,
-              "player": "Elly De La Cruz",
+              "player": "E. De La Cruz",
               "position": "SS",
               "bats": "S"
             },
@@ -3646,22 +3602,22 @@
             {
               "order": 3,
               "player_id": null,
-              "player": "Dane Myers",
-              "position": "CF",
-              "bats": "R"
+              "player": "JJ Bleday",
+              "position": "LF",
+              "bats": "L"
             },
             {
               "order": 4,
               "player_id": null,
-              "player": "Tyler Stephenson",
-              "position": "DH",
+              "player": "T. Stephenson",
+              "position": "C",
               "bats": "R"
             },
             {
               "order": 5,
               "player_id": null,
-              "player": "Eugenio Suarez",
-              "position": "3B",
+              "player": "E. Suarez",
+              "position": "DH",
               "bats": "R"
             },
             {
@@ -3674,29 +3630,29 @@
             {
               "order": 7,
               "player_id": null,
-              "player": "JJ Bleday",
-              "position": "LF",
-              "bats": "L"
+              "player": "Dane Myers",
+              "position": "CF",
+              "bats": "R"
             },
             {
               "order": 8,
               "player_id": null,
-              "player": "Jose Trevino",
-              "position": "C",
-              "bats": "R"
+              "player": "H. Rodriguez",
+              "position": "RF",
+              "bats": "L"
             },
             {
               "order": 9,
               "player_id": null,
-              "player": "Hector Rodriguez",
-              "position": "RF",
-              "bats": "L"
+              "player": "K. Hayes",
+              "position": "3B",
+              "bats": "R"
             }
           ]
         },
         "home": {
           "status": "projected",
-          "source": "Rotowire (projected)",
+          "source": "MLBMA Today_Lineups",
           "players": [
             {
               "order": 1,
@@ -3708,7 +3664,7 @@
             {
               "order": 2,
               "player_id": null,
-              "player": "Rafael Devers",
+              "player": "R. Devers",
               "position": "1B",
               "bats": "L"
             },
@@ -3729,7 +3685,7 @@
             {
               "order": 5,
               "player_id": null,
-              "player": "Osleivis Basabe",
+              "player": "O. Basabe",
               "position": "2B",
               "bats": "R"
             },
@@ -3743,21 +3699,21 @@
             {
               "order": 7,
               "player_id": null,
-              "player": "Victor Bericoto",
+              "player": "V. Bericoto",
               "position": "RF",
               "bats": "R"
             },
             {
               "order": 8,
               "player_id": null,
-              "player": "Drew Cavanaugh",
+              "player": "D. Cavanaugh",
               "position": "C",
               "bats": "L"
             },
             {
               "order": 9,
               "player_id": null,
-              "player": "Christian Koss",
+              "player": "C. Koss",
               "position": "3B",
               "bats": "R"
             }
@@ -3769,16 +3725,16 @@
         "source": "Open-Meteo hourly best-match",
         "forecast_time": "2026-08-25T02:00:00+00:00",
         "dome": false,
-        "temp_f": 59.3,
-        "temperature_f": 59.3,
-        "humidity_pct": 93.0,
+        "temp_f": 59.4,
+        "temperature_f": 59.4,
+        "humidity_pct": 91.0,
         "precipitation_probability_pct": 1.0,
         "precipitation_in": 0.0,
-        "pressure_hpa": 1015.2,
-        "wind_mph": 12.5,
-        "wind_direction_deg": 281.0,
-        "wind_gust_mph": 23.0,
-        "wind_out_mph": 12.02
+        "pressure_hpa": 1014.9,
+        "wind_mph": 13.8,
+        "wind_direction_deg": 284.0,
+        "wind_gust_mph": 24.4,
+        "wind_out_mph": 13.05
       },
       "umpire": {
         "status": "unannounced",

@@ -1,32 +1,33 @@
 bats,team,status,throws,position,full_name,player_id,team_abbr,jersey_number,position_type
 R,Arizona Diamondbacks,active,R,1B,Ildemaro Vargas,545121,ARI,6,1B
-R,Arizona Diamondbacks,active,R,1B,Tyler Locklear,682988,ARI,31,1B
-R,Arizona Diamondbacks,active,R,2B,Ketel Marte,606466,ARI,4,2B
+R,Arizona Diamondbacks,active,R,1B,Tim Tawa,694374,ARI,13,1B
 R,Arizona Diamondbacks,active,R,3B,Nolan Arenado,571448,ARI,28,3B
 R,Arizona Diamondbacks,active,R,C,Gabriel Moreno,672515,ARI,14,C
 R,Arizona Diamondbacks,active,R,C,James McCann,543510,ARI,8,C
+R,Arizona Diamondbacks,active,R,DH,Jose Fernandez,699912,ARI,11,DH
 R,Arizona Diamondbacks,active,R,RF,Corbin Carroll,682998,ARI,7,OF
+R,Arizona Diamondbacks,active,R,LF,Jordan Lawlar,691783,ARI,10,OF
 R,Arizona Diamondbacks,active,R,CF,Jorge Barrosa,678489,ARI,1,OF
 R,Arizona Diamondbacks,active,R,LF,Lars Nootbaar,663457,ARI,21,OF
 R,Arizona Diamondbacks,active,R,LF,Max Kepler,596146,ARI,22,OF
 R,Arizona Diamondbacks,active,R,CF,Ryan Waldschmidt,814439,ARI,15,OF
-R,Arizona Diamondbacks,active,R,LF,Tim Tawa,694374,ARI,13,OF
 R,Arizona Diamondbacks,active,R,P,Brandon Pfaadt,694297,ARI,32,RP
 R,Arizona Diamondbacks,active,R,P,Brandyn Garcia,805299,ARI,55,RP
+R,Arizona Diamondbacks,active,R,P,Dennis Santana,642701,ARI,59,RP
+R,Arizona Diamondbacks,active,R,P,Drey Jameson,686753,ARI,99,RP
 R,Arizona Diamondbacks,active,R,P,Eduardo Rodriguez,593958,ARI,57,RP
 R,Arizona Diamondbacks,active,R,P,Gerardo Carrillo,672629,ARI,68,RP
 R,Arizona Diamondbacks,active,R,P,Jonathan Loáisiga,642528,ARI,43,RP
 R,Arizona Diamondbacks,active,R,P,Juan Morillo,666661,ARI,62,RP
+R,Arizona Diamondbacks,active,R,P,Justin Martinez,679885,ARI,63,RP
 R,Arizona Diamondbacks,active,R,P,Kevin Ginkel,656464,ARI,37,RP
 R,Arizona Diamondbacks,active,R,P,Merrill Kelly,518876,ARI,29,RP
-R,Arizona Diamondbacks,active,R,P,Michael Soroka,647336,ARI,34,RP
 R,Arizona Diamondbacks,active,R,P,Mitch Bratt,683352,ARI,60,RP
-R,Arizona Diamondbacks,active,R,P,Philip Abner,691769,ARI,50,RP
 R,Arizona Diamondbacks,active,R,P,Taylor Clarke,664199,ARI,45,RP
-R,Arizona Diamondbacks,active,R,P,Zack Littell,641793,ARI,46,RP
 R,Arizona Diamondbacks,active,R,SS,Geraldo Perdomo,672695,ARI,2,SS
 R,Athletics,active,R,2B,Donovan Walton,622268,ATH,29,2B
 R,Athletics,active,R,2B,Jeff McNeil,643446,ATH,22,2B
+R,Athletics,active,R,2B,Michael Stefanic,683021,ATH,17,2B
 R,Athletics,active,R,3B,Max Muncy,691777,ATH,3,3B
 R,Athletics,active,R,3B,Tommy White,695720,ATH,47,3B
 R,Athletics,active,R,3B,Zack Gelof,680869,ATH,20,3B
@@ -35,7 +36,6 @@ R,Athletics,active,R,C,Jonah Heim,641680,ATH,15,C
 R,Athletics,active,R,RF,Carlos Cortes,666126,ATH,26,OF
 R,Athletics,active,R,CF,Henry Bolte,703607,ATH,33,OF
 R,Athletics,active,R,RF,Lawrence Butler,671732,ATH,4,OF
-R,Athletics,active,R,LF,Tyler Soderstrom,691016,ATH,21,OF
 R,Athletics,active,R,P,Brady Basso,669620,ATH,66,RP
 R,Athletics,active,R,P,Drew Rom,680723,ATH,39,RP
 R,Athletics,active,R,P,Elvis Alvarado,665660,ATH,37,RP
@@ -45,62 +45,62 @@ R,Athletics,active,R,P,Hogan Harris,663687,ATH,36,RP
 R,Athletics,active,R,P,J.T. Ginn,669372,ATH,35,RP
 R,Athletics,active,R,P,Jack Perkins,678022,ATH,50,RP
 R,Athletics,active,R,P,Jacob Lopez,682052,ATH,57,RP
+R,Athletics,active,R,P,Jeffrey Springs,605488,ATH,59,RP
+R,Athletics,active,R,P,Kade Morris,695034,ATH,67,RP
 R,Athletics,active,R,P,Luis Medina,665622,ATH,46,RP
-R,Athletics,active,R,P,Mason Barnett,686930,ATH,63,RP
 R,Athletics,active,R,P,Scott Blewett,656240,ATH,49,RP
-R,Athletics,active,R,P,Seth Johnson,686751,ATH,52,RP
 R,Athletics,active,R,SS,Alika Williams,675961,ATH,12,SS
-R,Athletics,active,R,SS,Jacob Wilson,805779,ATH,5,SS
+R,Athletics,active,R,SS,Darell Hernaiz,687231,ATH,2,SS
 R,Atlanta Braves,active,R,1B,Matt Olson,621566,ATL,28,1B
 R,Atlanta Braves,active,R,2B,Ozzie Albies,645277,ATL,1,2B
 R,Atlanta Braves,active,R,3B,Austin Riley,663586,ATL,27,3B
 R,Atlanta Braves,active,R,C,Drake Baldwin,686948,ATL,30,C
 R,Atlanta Braves,active,R,C,Sean Murphy,669221,ATL,12,C
 R,Atlanta Braves,active,R,DH,Dominic Smith,642086,ATL,8,DH
-R,Atlanta Braves,active,R,CF,Lane Thomas,657041,ATL,20,OF
+R,Atlanta Braves,active,R,RF,Brewer Hicklen,676551,ATL,53,OF
+R,Atlanta Braves,active,R,LF,Lane Thomas,657041,ATL,20,OF
 R,Atlanta Braves,active,R,LF,Mauricio Dubón,643289,ATL,14,OF
 R,Atlanta Braves,active,R,CF,Michael Harris II,671739,ATL,23,OF
 R,Atlanta Braves,active,R,LF,Mike Yastrzemski,573262,ATL,18,OF
 R,Atlanta Braves,active,R,RF,Ronald Acuña Jr.,660670,ATL,13,OF
+R,Atlanta Braves,active,R,P,AJ Smith-Shawver,700363,ATL,32,RP
 R,Atlanta Braves,active,R,P,Brent Suter,608718,ATL,39,RP
 R,Atlanta Braves,active,R,P,Bryce Elder,693821,ATL,55,RP
 R,Atlanta Braves,active,R,P,Chris Sale,519242,ATL,51,RP
-R,Atlanta Braves,active,R,P,Danny Young,664849,ATL,63,RP
 R,Atlanta Braves,active,R,P,Didier Fuentes,800311,ATL,72,RP
 R,Atlanta Braves,active,R,P,Dylan Dodd,689266,ATL,46,RP
 R,Atlanta Braves,active,R,P,Dylan Lee,669276,ATL,52,RP
 R,Atlanta Braves,active,R,P,Grant Holmes,656550,ATL,66,RP
 R,Atlanta Braves,active,R,P,Martín Pérez,527048,ATL,33,RP
 R,Atlanta Braves,active,R,P,Raisel Iglesias,628452,ATL,26,RP
-R,Atlanta Braves,active,R,P,Tyler Kinley,641755,ATL,45,RP
+R,Atlanta Braves,active,R,P,Ray Kerr,678061,ATL,62,RP
 R,Atlanta Braves,active,R,P,Tyler Mahle,641816,ATL,54,RP
 R,Atlanta Braves,active,R,P,Victor Mederos,682989,ATL,58,RP
 R,Atlanta Braves,active,R,SS,Ha-Seong Kim,673490,ATL,7,SS
-R,Atlanta Braves,active,R,SS,Jim Jarvis,805347,ATL,74,SS
 R,Baltimore Orioles,active,R,1B,Pete Alonso,624413,BAL,25,1B
 R,Baltimore Orioles,active,R,2B,Jackson Holliday,702616,BAL,7,2B
-R,Baltimore Orioles,active,R,2B,Jeremiah Jackson,669236,BAL,82,2B
 R,Baltimore Orioles,active,R,3B,Christian Encarnacion-Strand,687952,BAL,32,3B
 R,Baltimore Orioles,active,R,3B,Coby Mayo,691723,BAL,16,3B
 R,Baltimore Orioles,active,R,C,Carlos Narváez,665966,BAL,75,C
+R,Baltimore Orioles,active,R,C,Samuel Basallo,694212,BAL,29,C
 R,Baltimore Orioles,active,R,C,Yohel Pozo,650968,BAL,79,C
-R,Baltimore Orioles,active,R,LF,Christian Franklin,681047,BAL,27,OF
+R,Baltimore Orioles,active,R,CF,Christian Franklin,681047,BAL,27,OF
 R,Baltimore Orioles,active,R,CF,Colton Cowser,681297,BAL,17,OF
 R,Baltimore Orioles,active,R,RF,Dylan Beavers,687637,BAL,12,OF
 R,Baltimore Orioles,active,R,CF,Leody Taveras,665750,BAL,30,OF
 R,Baltimore Orioles,active,R,RF,Tyler O'Neill,641933,BAL,9,OF
-R,Baltimore Orioles,active,R,P,Albert Suárez,544150,BAL,49,RP
 R,Baltimore Orioles,active,R,P,Alex Hoppe,695380,BAL,26,RP
 R,Baltimore Orioles,active,R,P,Andrew Kittredge,552640,BAL,39,RP
+R,Baltimore Orioles,active,R,P,Anthony Nunez,689296,BAL,66,RP
 R,Baltimore Orioles,active,R,P,Brandon Young,687064,BAL,63,RP
 R,Baltimore Orioles,active,R,P,Cam Sanders,676742,BAL,73,RP
+R,Baltimore Orioles,active,R,P,Chris Bassitt,605135,BAL,40,RP
 R,Baltimore Orioles,active,R,P,Grant Wolfram,664991,BAL,48,RP
 R,Baltimore Orioles,active,R,P,Josh Walker,677020,BAL,61,RP
 R,Baltimore Orioles,active,R,P,Kyle Bradish,680694,BAL,38,RP
 R,Baltimore Orioles,active,R,P,Rico Garcia,670329,BAL,50,RP
 R,Baltimore Orioles,active,R,P,Shane Baz,669358,BAL,34,RP
 R,Baltimore Orioles,active,R,P,Trevor Rogers,669432,BAL,28,RP
-R,Baltimore Orioles,active,R,P,Yaramil Hiraldo,682274,BAL,76,RP
 R,Baltimore Orioles,active,R,P,Yennier Cano,666974,BAL,78,RP
 R,Baltimore Orioles,active,R,SS,Gunnar Henderson,683002,BAL,2,SS
 R,Boston Red Sox,active,R,1B,Willson Contreras,575929,BOS,40,1B
@@ -110,7 +110,7 @@ R,Boston Red Sox,active,R,3B,Caleb Durbin,702332,BOS,5,3B
 R,Boston Red Sox,active,R,C,Adley Rutschman,668939,BOS,31,C
 R,Boston Red Sox,active,R,C,Connor Wong,657136,BOS,12,C
 R,Boston Red Sox,active,R,DH,Jahmai Jones,663330,BOS,37,DH
-R,Boston Red Sox,active,R,DH,Masataka Yoshida,807799,BOS,7,DH
+R,Boston Red Sox,active,R,DH,Mickey Gasper,681508,BOS,30,DH
 R,Boston Red Sox,active,R,CF,Ceddanne Rafaela,678882,BOS,3,OF
 R,Boston Red Sox,active,R,RF,Eli White,642201,BOS,38,OF
 R,Boston Red Sox,active,R,LF,Jarren Duran,680776,BOS,16,OF
@@ -119,23 +119,24 @@ R,Boston Red Sox,active,R,P,Alec Gamboa,687941,BOS,68,RP
 R,Boston Red Sox,active,R,P,Aroldis Chapman,547973,BOS,44,RP
 R,Boston Red Sox,active,R,P,Brayan Bello,678394,BOS,66,RP
 R,Boston Red Sox,active,R,P,Erik Miller,669062,BOS,67,RP
-R,Boston Red Sox,active,R,P,Garrett Whitlock,676477,BOS,22,RP
+R,Boston Red Sox,active,R,P,Greg Weissert,669711,BOS,57,RP
 R,Boston Red Sox,active,R,P,Jake Bennett,687562,BOS,64,RP
 R,Boston Red Sox,active,R,P,Jovani Morán,663558,BOS,47,RP
-R,Boston Red Sox,active,R,P,Justin Slaten,686580,BOS,63,RP
 R,Boston Red Sox,active,R,P,Patrick Sandoval,663776,BOS,43,RP
 R,Boston Red Sox,active,R,P,Payton Tolle,801139,BOS,70,RP
 R,Boston Red Sox,active,R,P,Ranger Suarez,624133,BOS,55,RP
 R,Boston Red Sox,active,R,P,Sonny Gray,543243,BOS,54,RP
 R,Boston Red Sox,active,R,P,Tyron Guerrero,594027,BOS,41,RP
+R,Boston Red Sox,active,R,P,Wyatt Olds,681544,BOS,75,RP
 R,Boston Red Sox,active,R,SS,Andruw Monasterio,655316,BOS,32,SS
 R,Chicago Cubs,active,R,1B,Michael Busch,683737,CHC,29,1B
-R,Chicago Cubs,active,R,2B,James Triantos,701649,CHC,5,2B
 R,Chicago Cubs,active,R,2B,Nico Hoerner,663538,CHC,2,2B
 R,Chicago Cubs,active,R,2B,Pedro Ramírez,699393,CHC,75,2B
 R,Chicago Cubs,active,R,3B,Alex Bregman,608324,CHC,3,3B
+R,Chicago Cubs,active,R,3B,Gabriel Arias,672356,CHC,43,3B
 R,Chicago Cubs,active,R,C,Carson Kelly,608348,CHC,15,C
 R,Chicago Cubs,active,R,C,Miguel Amaya,665804,CHC,9,C
+R,Chicago Cubs,active,R,DH,Kevin Alcántara,682634,CHC,13,DH
 R,Chicago Cubs,active,R,DH,Michael Conforto,624424,CHC,20,DH
 R,Chicago Cubs,active,R,LF,Ian Happ,664023,CHC,8,OF
 R,Chicago Cubs,active,R,CF,Pete Crow-Armstrong,691718,CHC,4,OF
@@ -145,21 +146,20 @@ R,Chicago Cubs,active,R,P,Aaron Civale,650644,CHC,38,RP
 R,Chicago Cubs,active,R,P,Caleb Thielbar,573204,CHC,24,RP
 R,Chicago Cubs,active,R,P,Clay Holmes,605280,CHC,25,RP
 R,Chicago Cubs,active,R,P,Colin Rea,607067,CHC,53,RP
+R,Chicago Cubs,active,R,P,Daniel Palencia,694037,CHC,48,RP
 R,Chicago Cubs,active,R,P,David Peterson,656849,CHC,19,RP
 R,Chicago Cubs,active,R,P,Jacob Webb,657097,CHC,71,RP
-R,Chicago Cubs,active,R,P,Javier Assad,665871,CHC,72,RP
 R,Chicago Cubs,active,R,P,Kevin Gausman,592332,CHC,12,RP
 R,Chicago Cubs,active,R,P,Matthew Boyd,571510,CHC,16,RP
 R,Chicago Cubs,active,R,P,Ryan Rolison,669020,CHC,33,RP
 R,Chicago Cubs,active,R,P,Ryan Zeferjahn,666171,CHC,56,RP
 R,Chicago Cubs,active,R,P,Shota Imanaga,684007,CHC,18,RP
 R,Chicago Cubs,active,R,P,Trent Thornton,663423,CHC,49,RP
-R,Chicago Cubs,active,R,SS,Dansby Swanson,621020,CHC,7,SS
 R,Chicago White Sox,active,R,1B,Munetaka Murakami,808959,CHW,5,1B
 R,Chicago White Sox,active,R,2B,Chase Meidroth,805367,CHW,10,2B
 R,Chicago White Sox,active,R,3B,Miguel Vargas,678246,CHW,20,3B
 R,Chicago White Sox,active,R,C,Drew Romo,691011,CHW,36,C
-R,Chicago White Sox,active,R,C,Edgar Quero,700337,CHW,26,C
+R,Chicago White Sox,active,R,C,Jake Rogers,668670,CHW,28,C
 R,Chicago White Sox,active,R,DH,Andrew Benintendi,643217,CHW,23,DH
 R,Chicago White Sox,active,R,DH,Randal Grichuk,545341,CHW,34,DH
 R,Chicago White Sox,active,R,RF,Braden Montgomery,695731,CHW,24,OF
@@ -168,30 +168,30 @@ R,Chicago White Sox,active,R,LF,Sam Antonacci,803011,CHW,17,OF
 R,Chicago White Sox,active,R,CF,Tristan Peters,671976,CHW,29,OF
 R,Chicago White Sox,active,R,P,Anthony Kay,641743,CHW,18,RP
 R,Chicago White Sox,active,R,P,Bryan Hudson,663542,CHW,60,RP
-R,Chicago White Sox,active,R,P,Davis Martin,663436,CHW,65,RP
 R,Chicago White Sox,active,R,P,Erick Fedde,607200,CHW,47,RP
 R,Chicago White Sox,active,R,P,Grant Taylor,691799,CHW,31,RP
 R,Chicago White Sox,active,R,P,Hagen Smith,696146,CHW,32,RP
 R,Chicago White Sox,active,R,P,Huascar Brazobán,623211,CHW,50,RP
 R,Chicago White Sox,active,R,P,Jordan Hicks,663855,CHW,44,RP
+R,Chicago White Sox,active,R,P,José Urquidy,664353,CHW,70,RP
 R,Chicago White Sox,active,R,P,Luis Castillo,622491,CHW,58,RP
 R,Chicago White Sox,active,R,P,Sean Burke,680732,CHW,59,RP
 R,Chicago White Sox,active,R,P,Sean Newcomb,656794,CHW,15,RP
-R,Chicago White Sox,active,R,P,Tanner McDougal,701780,CHW,55,RP
 R,Chicago White Sox,active,R,P,Trevor Richards,670950,CHW,43,RP
+R,Chicago White Sox,active,R,P,Tyler Schweitzer,805326,CHW,62,RP
 R,Chicago White Sox,active,R,SS,Colson Montgomery,695657,CHW,12,SS
 R,Chicago White Sox,active,R,SS,Luisangel Acuña,682668,CHW,0,SS
-R,Cincinnati Reds,active,R,1B,Michael Toglia,669911,CIN,48,1B
 R,Cincinnati Reds,active,R,1B,Sal Stewart,701398,CIN,27,1B
+R,Cincinnati Reds,active,R,2B,Ivan Johnson,671155,CIN,63,2B
 R,Cincinnati Reds,active,R,2B,Matt McLain,680574,CIN,9,2B
 R,Cincinnati Reds,active,R,3B,Ke'Bryan Hayes,663647,CIN,3,3B
 R,Cincinnati Reds,active,R,C,Jose Trevino,624431,CIN,35,C
 R,Cincinnati Reds,active,R,C,Tyler Stephenson,663886,CIN,37,C
+R,Cincinnati Reds,active,R,C,Will Banfield,677943,CIN,60,C
 R,Cincinnati Reds,active,R,DH,Eugenio Suárez,553993,CIN,28,DH
 R,Cincinnati Reds,active,R,CF,Dane Myers,667472,CIN,17,OF
-R,Cincinnati Reds,active,R,LF,Héctor Rodríguez,699302,CIN,43,OF
+R,Cincinnati Reds,active,R,RF,Héctor Rodríguez,699302,CIN,43,OF
 R,Cincinnati Reds,active,R,LF,JJ Bleday,668709,CIN,22,OF
-R,Cincinnati Reds,active,R,RF,Noelvi Marte,682622,CIN,4,OF
 R,Cincinnati Reds,active,R,CF,TJ Friedl,670770,CIN,29,OF
 R,Cincinnati Reds,active,R,P,Andrew Abbott,671096,CIN,41,RP
 R,Cincinnati Reds,active,R,P,Brady Singer,663903,CIN,51,RP
@@ -203,19 +203,19 @@ R,Cincinnati Reds,active,R,P,Luis Mey,682825,CIN,47,RP
 R,Cincinnati Reds,active,R,P,Nick Lodolo,666157,CIN,40,RP
 R,Cincinnati Reds,active,R,P,Pierce Johnson,572955,CIN,52,RP
 R,Cincinnati Reds,active,R,P,Rhett Lowder,695076,CIN,25,RP
-R,Cincinnati Reds,active,R,P,Ron Marinaccio,676760,CIN,97,RP
 R,Cincinnati Reds,active,R,P,Sam Moll,594580,CIN,50,RP
 R,Cincinnati Reds,active,R,P,Tejay Antone,622088,CIN,70,RP
+R,Cincinnati Reds,active,R,P,Tony Santillan,663574,CIN,64,RP
 R,Cincinnati Reds,active,R,SS,Elly De La Cruz,682829,CIN,44,SS
 R,Cleveland Guardians,active,R,1B,Nathaniel Lowe,663993,CLE,46,1B
-R,Cleveland Guardians,active,R,1B,Rhys Hoskins,656555,CLE,8,1B
+R,Cleveland Guardians,active,R,2B,Angel Genao,694197,CLE,17,2B
 R,Cleveland Guardians,active,R,2B,Travis Bazzana,683953,CLE,37,2B
-R,Cleveland Guardians,active,R,3B,Angel Genao,694197,CLE,17,3B
 R,Cleveland Guardians,active,R,3B,José Ramírez,608070,CLE,11,3B
 R,Cleveland Guardians,active,R,C,Austin Hedges,595978,CLE,27,C
 R,Cleveland Guardians,active,R,C,Patrick Bailey,672275,CLE,16,C
 R,Cleveland Guardians,active,R,LF,Angel Martínez,682657,CLE,1,OF
 R,Cleveland Guardians,active,R,RF,Chase DeLauter,800050,CLE,24,OF
+R,Cleveland Guardians,active,R,RF,David Fry,681807,CLE,6,OF
 R,Cleveland Guardians,active,R,RF,Jo Adell,666176,CLE,7,OF
 R,Cleveland Guardians,active,R,CF,Petey Halpin,690984,CLE,0,OF
 R,Cleveland Guardians,active,R,LF,Steven Kwan,680757,CLE,38,OF
@@ -224,55 +224,55 @@ R,Cleveland Guardians,active,R,P,Colin Holderman,670059,CLE,35,RP
 R,Cleveland Guardians,active,R,P,Craig Yoho,684974,CLE,23,RP
 R,Cleveland Guardians,active,R,P,Erik Sabrowski,681870,CLE,62,RP
 R,Cleveland Guardians,active,R,P,Foster Griffin,656492,CLE,22,RP
-R,Cleveland Guardians,active,R,P,Franco Aleman,680916,CLE,55,RP
 R,Cleveland Guardians,active,R,P,Gavin Williams,668909,CLE,32,RP
 R,Cleveland Guardians,active,R,P,Hunter Gaddis,683769,CLE,33,RP
 R,Cleveland Guardians,active,R,P,Joey Cantillo,676282,CLE,54,RP
+R,Cleveland Guardians,active,R,P,Logan Allen,671106,CLE,26,RP
 R,Cleveland Guardians,active,R,P,Matt Festa,670036,CLE,52,RP
 R,Cleveland Guardians,active,R,P,Parker Messick,800048,CLE,77,RP
 R,Cleveland Guardians,active,R,P,Tanner Bibee,676440,CLE,28,RP
 R,Cleveland Guardians,active,R,P,Tim Herrin,682120,CLE,29,RP
 R,Cleveland Guardians,active,R,SS,Brayan Rocchio,677587,CLE,4,SS
-R,Colorado Rockies,active,R,1B,Connor Norby,681393,COL,35,1B
 R,Colorado Rockies,active,R,1B,TJ Rumfield,681198,COL,7,1B
-R,Colorado Rockies,active,R,2B,Adael Amador,691182,COL,1,2B
+R,Colorado Rockies,active,R,2B,Connor Norby,681393,COL,35,2B
 R,Colorado Rockies,active,R,2B,Willi Castro,650489,COL,3,2B
 R,Colorado Rockies,active,R,C,Brett Sullivan,664954,COL,26,C
-R,Colorado Rockies,active,R,C,Hunter Goodman,696100,COL,15,C
+R,Colorado Rockies,active,R,DH,Braxton Fulford,690924,COL,37,DH
 R,Colorado Rockies,active,R,CF,Cole Carrigg,694249,COL,16,OF
 R,Colorado Rockies,active,R,LF,Jake McCarthy,664983,COL,31,OF
 R,Colorado Rockies,active,R,LF,Jordan Beck,687597,COL,27,OF
 R,Colorado Rockies,active,R,LF,Mickey Moniak,666160,COL,22,OF
 R,Colorado Rockies,active,R,RF,Troy Johnston,687859,COL,20,OF
 R,Colorado Rockies,active,R,LF,Zac Veen,691728,COL,13,OF
+R,Colorado Rockies,active,R,P,Blake Adams,687060,COL,57,RP
 R,Colorado Rockies,active,R,P,Brennan Bernardino,657514,COL,83,RP
 R,Colorado Rockies,active,R,P,Gabriel Hughes,687312,COL,43,RP
+R,Colorado Rockies,active,R,P,Jaden Hill,677955,COL,0,RP
 R,Colorado Rockies,active,R,P,Jimmy Herget,623474,COL,44,RP
 R,Colorado Rockies,active,R,P,Jordan Romano,605447,COL,68,RP
 R,Colorado Rockies,active,R,P,Juan Mejia,675848,COL,47,RP
-R,Colorado Rockies,active,R,P,Kyle Freeland,607536,COL,21,RP
-R,Colorado Rockies,active,R,P,Michael Lorenzen,547179,COL,24,RP
+R,Colorado Rockies,active,R,P,Mark Manfredi,815081,COL,54,RP
 R,Colorado Rockies,active,R,P,Nick Frasso,693308,COL,41,RP
-R,Colorado Rockies,active,R,P,Parker Mushinski,656786,COL,67,RP
 R,Colorado Rockies,active,R,P,Ryan Feltner,663372,COL,18,RP
 R,Colorado Rockies,active,R,P,Tanner Gordon,685299,COL,29,RP
 R,Colorado Rockies,active,R,P,Tomoyuki Sugano,608372,COL,11,RP
 R,Colorado Rockies,active,R,P,Zach Agnos,688642,COL,36,RP
 R,Colorado Rockies,active,R,SS,Ezequiel Tovar,678662,COL,14,SS
+R,Colorado Rockies,active,R,SS,Ryan Ritter,690022,COL,8,SS
 R,Detroit Tigers,active,R,1B,Spencer Torkelson,679529,DET,20,1B
 R,Detroit Tigers,active,R,2B,Gleyber Torres,650402,DET,25,2B
 R,Detroit Tigers,active,R,2B,Hao-Yu Lee,701678,DET,50,2B
 R,Detroit Tigers,active,R,2B,Zach McKinstry,656716,DET,39,2B
 R,Detroit Tigers,active,R,3B,Colt Keith,690993,DET,33,3B
 R,Detroit Tigers,active,R,C,Dillon Dingler,693307,DET,13,C
-R,Detroit Tigers,active,R,C,Eduardo Valencia,680664,DET,32,C
+R,Detroit Tigers,active,R,DH,Eduardo Valencia,680664,DET,32,DH
 R,Detroit Tigers,active,R,RF,Ben Malgeri,701162,DET,53,OF
+R,Detroit Tigers,active,R,LF,Brett Callahan,814430,DET,34,OF
 R,Detroit Tigers,active,R,LF,Corey Julks,667452,DET,44,OF
-R,Detroit Tigers,active,R,CF,James Outman,681546,DET,43,OF
 R,Detroit Tigers,active,R,CF,Max Clark,703601,DET,15,OF
+R,Detroit Tigers,active,R,P,Andrew Sears,808825,DET,64,RP
 R,Detroit Tigers,active,R,P,Drew Anderson,623454,DET,38,RP
 R,Detroit Tigers,active,R,P,Drew Sommers,805427,DET,51,RP
-R,Detroit Tigers,active,R,P,Enmanuel De Jesus,646241,DET,37,RP
 R,Detroit Tigers,active,R,P,Framber Valdez,664285,DET,59,RP
 R,Detroit Tigers,active,R,P,Jackson Jobe,695549,DET,21,RP
 R,Detroit Tigers,active,R,P,Jacob Waguespack,621097,DET,58,RP
@@ -281,12 +281,13 @@ R,Detroit Tigers,active,R,P,Kenley Jansen,445276,DET,74,RP
 R,Detroit Tigers,active,R,P,Kyle Finnegan,640448,DET,67,RP
 R,Detroit Tigers,active,R,P,Tanner Rainey,663432,DET,56,RP
 R,Detroit Tigers,active,R,P,Troy Melton,675512,DET,52,RP
-R,Detroit Tigers,active,R,P,Ty Madden,680744,DET,36,RP
 R,Detroit Tigers,active,R,P,Tyler Holton,663947,DET,87,RP
+R,Detroit Tigers,active,R,P,Tyler Kinley,641755,DET,55,RP
 R,Detroit Tigers,active,R,SS,Javier Báez,595879,DET,28,SS
 R,Detroit Tigers,active,R,SS,Kevin McGonigle,805808,DET,7,SS
 R,Houston Astros,active,R,1B,Christian Walker,572233,HOU,8,1B
 R,Houston Astros,active,R,2B,Jose Altuve,514888,HOU,27,2B
+R,Houston Astros,active,R,2B,Raynel Delgado,669384,HOU,29,2B
 R,Houston Astros,active,R,3B,Isaac Paredes,670623,HOU,15,3B
 R,Houston Astros,active,R,C,Christian Vázquez,543877,HOU,2,C
 R,Houston Astros,active,R,C,Yainer Diaz,673237,HOU,21,C
@@ -294,25 +295,24 @@ R,Houston Astros,active,R,DH,Yordan Alvarez,670541,HOU,44,DH
 R,Houston Astros,active,R,RF,Cam Smith,701358,HOU,11,OF
 R,Houston Astros,active,R,CF,Daulton Varsho,662139,HOU,18,OF
 R,Houston Astros,active,R,LF,LaMonte Wade Jr.,664774,HOU,31,OF
-R,Houston Astros,active,R,LF,Nelson Velázquez,676369,HOU,30,OF
 R,Houston Astros,active,R,CF,Taylor Trammell,666211,HOU,26,OF
 R,Houston Astros,active,R,P,AJ Blubaugh,805123,HOU,69,RP
 R,Houston Astros,active,R,P,Bennett Sousa,656986,HOU,62,RP
 R,Houston Astros,active,R,P,Bryan Abreu,650556,HOU,52,RP
-R,Houston Astros,active,R,P,Bryan King,687911,HOU,74,RP
 R,Houston Astros,active,R,P,Cristian Javier,664299,HOU,53,RP
 R,Houston Astros,active,R,P,Enyel De Los Santos,660853,HOU,65,RP
+R,Houston Astros,active,R,P,Ethan Pecko,814490,HOU,70,RP
 R,Houston Astros,active,R,P,Hayden Wesneski,669713,HOU,39,RP
 R,Houston Astros,active,R,P,Hunter Brown,686613,HOU,58,RP
 R,Houston Astros,active,R,P,Josh Hader,623352,HOU,71,RP
+R,Houston Astros,active,R,P,Kai-Wei Teng,678906,HOU,17,RP
 R,Houston Astros,active,R,P,Peter Lambert,663567,HOU,38,RP
-R,Houston Astros,active,R,P,Ronel Blanco,669854,HOU,56,RP
 R,Houston Astros,active,R,P,Steven Okert,595345,HOU,48,RP
 R,Houston Astros,active,R,P,Tatsuya Imai,837227,HOU,45,RP
 R,Houston Astros,active,R,SS,Jeremy Peña,665161,HOU,3,SS
 R,Houston Astros,active,R,SS,Nick Allen,669397,HOU,20,SS
+R,Kansas City Royals,active,R,1B,Vinnie Pasquantino,686469,KCR,9,1B
 R,Kansas City Royals,active,R,2B,Michael Massey,686681,KCR,19,2B
-R,Kansas City Royals,active,R,3B,Josh Rojas,668942,KCR,40,3B
 R,Kansas City Royals,active,R,3B,Nick Loftin,679845,KCR,12,3B
 R,Kansas City Royals,active,R,C,Carter Jensen,695600,KCR,22,C
 R,Kansas City Royals,active,R,C,Luke Maile,571912,KCR,18,C
@@ -321,13 +321,13 @@ R,Kansas City Royals,active,R,LF,Isaac Collins,686555,KCR,1,OF
 R,Kansas City Royals,active,R,RF,Jac Caglianone,695506,KCR,14,OF
 R,Kansas City Royals,active,R,RF,John Rave,670231,KCR,16,OF
 R,Kansas City Royals,active,R,CF,Kyle Isbel,664728,KCR,28,OF
-R,Kansas City Royals,active,R,RF,Starling Marte,516782,KCR,0,OF
+R,Kansas City Royals,active,R,LF,Matthew Lugo,683090,KCR,24,OF
 R,Kansas City Royals,active,R,P,Alex Lange,656638,KCR,56,RP
+R,Kansas City Royals,active,R,P,Connor Thomas,671162,KCR,50,RP
 R,Kansas City Royals,active,R,P,Craig Kimbrel,518886,KCR,26,RP
 R,Kansas City Royals,active,R,P,Daniel Lynch IV,663738,KCR,41,RP
 R,Kansas City Royals,active,R,P,John Schreiber,670167,KCR,46,RP
 R,Kansas City Royals,active,R,P,Jose Cuas,621016,KCR,74,RP
-R,Kansas City Royals,active,R,P,Lucas Erceg,668674,KCR,60,RP
 R,Kansas City Royals,active,R,P,Mason Black,696131,KCR,47,RP
 R,Kansas City Royals,active,R,P,Michael Wacha,608379,KCR,52,RP
 R,Kansas City Royals,active,R,P,Nate Pearson,663878,KCR,61,RP
@@ -337,18 +337,18 @@ R,Kansas City Royals,active,R,P,Seth Lugo,607625,KCR,67,RP
 R,Kansas City Royals,active,R,P,Steven Cruz,674444,KCR,64,RP
 R,Kansas City Royals,active,R,SS,Bobby Witt Jr.,677951,KCR,7,SS
 R,Kansas City Royals,active,R,SS,Tyler Tolbert,686475,KCR,2,SS
-R,Los Angeles Angels,active,R,1B,Nolan Schanuel,694384,LAA,18,1B
 R,Los Angeles Angels,active,R,2B,Adam Frazier,624428,LAA,20,2B
+R,Los Angeles Angels,active,R,2B,Christian Moore,695681,LAA,4,2B
 R,Los Angeles Angels,active,R,2B,Oswald Peraza,672724,LAA,2,2B
 R,Los Angeles Angels,active,R,2B,Vaughn Grissom,687093,LAA,5,2B
 R,Los Angeles Angels,active,R,3B,Denzer Guzman,694203,LAA,23,3B
-R,Los Angeles Angels,active,R,C,Moisés Ballesteros,694208,LAA,13,C
 R,Los Angeles Angels,active,R,C,Travis d'Arnaud,518595,LAA,25,C
 R,Los Angeles Angels,active,R,C,Tyler Heineman,623168,LAA,31,C
+R,Los Angeles Angels,active,R,DH,Moisés Ballesteros,694208,LAA,13,DH
+R,Los Angeles Angels,active,R,OF,Gustavo Campero,672569,LAA,51,OF
 R,Los Angeles Angels,active,R,CF,Jose Siri,642350,LAA,28,OF
 R,Los Angeles Angels,active,R,LF,Josh Lowe,666139,LAA,3,OF
 R,Los Angeles Angels,active,R,CF,Mike Trout,545361,LAA,27,OF
-R,Los Angeles Angels,active,R,LF,Wade Meckler,685133,LAA,53,OF
 R,Los Angeles Angels,active,R,P,Ben Joyce,690829,LAA,44,RP
 R,Los Angeles Angels,active,R,P,Blake Weiman,676620,LAA,68,RP
 R,Los Angeles Angels,active,R,P,George Klassen,691946,LAA,58,RP
@@ -359,9 +359,9 @@ R,Los Angeles Angels,active,R,P,Reid Detmers,672282,LAA,48,RP
 R,Los Angeles Angels,active,R,P,Ryan Johnson,696270,LAA,32,RP
 R,Los Angeles Angels,active,R,P,Ryan Watson,670245,LAA,56,RP
 R,Los Angeles Angels,active,R,P,Sammy Peralta,671111,LAA,67,RP
-R,Los Angeles Angels,active,R,P,Samy Natera Jr.,696519,LAA,52,RP
 R,Los Angeles Angels,active,R,P,Tayler Saucedo,642048,LAA,55,RP
 R,Los Angeles Angels,active,R,P,Walbert Ureña,700712,LAA,57,RP
+R,Los Angeles Angels,active,R,P,Yusei Kikuchi,579328,LAA,16,RP
 R,Los Angeles Angels,active,R,SS,Zach Neto,687263,LAA,9,SS
 R,Los Angeles Dodgers,active,R,1B,Enrique Hernández,571771,LAD,8,1B
 R,Los Angeles Dodgers,active,R,1B,Freddie Freeman,518692,LAD,5,1B
@@ -370,27 +370,27 @@ R,Los Angeles Dodgers,active,R,2B,Tommy Edman,669242,LAD,25,2B
 R,Los Angeles Dodgers,active,R,3B,Max Muncy,571970,LAD,13,3B
 R,Los Angeles Dodgers,active,R,C,Ben Rortvedt,666163,LAD,47,C
 R,Los Angeles Dodgers,active,R,C,Hunter Feduccia,676439,LAD,46,C
+R,Los Angeles Dodgers,active,R,CF,Alek Thomas,677950,LAD,9,OF
 R,Los Angeles Dodgers,active,R,LF,Alex Call,669743,LAD,12,OF
-R,Los Angeles Dodgers,active,R,CF,Andy Pages,681624,LAD,44,OF
 R,Los Angeles Dodgers,active,R,RF,Kyle Tucker,663656,LAD,23,OF
 R,Los Angeles Dodgers,active,R,LF,Teoscar Hernández,606192,LAD,37,OF
 R,Los Angeles Dodgers,active,R,P,Alex Vesia,681911,LAD,51,RP
 R,Los Angeles Dodgers,active,R,P,Blake Snell,605483,LAD,7,RP
+R,Los Angeles Dodgers,active,R,P,Brock Stewart,592779,LAD,41,RP
 R,Los Angeles Dodgers,active,R,P,Edgardo Henriquez,683618,LAD,60,RP
-R,Los Angeles Dodgers,active,R,P,Edwin Díaz,621242,LAD,3,RP
 R,Los Angeles Dodgers,active,R,P,Eric Lauer,641778,LAD,33,RP
 R,Los Angeles Dodgers,active,R,P,Evan Phillips,623465,LAD,59,RP
 R,Los Angeles Dodgers,active,R,P,Jack Dreyer,676263,LAD,86,RP
-R,Los Angeles Dodgers,active,R,P,Justin Wrobleski,680736,LAD,70,RP
-R,Los Angeles Dodgers,active,R,P,Landon Knack,689017,LAD,96,RP
+R,Los Angeles Dodgers,active,R,P,Kyle Hurt,669165,LAD,63,RP
+R,Los Angeles Dodgers,active,R,P,Paul Gervase,801434,LAD,65,RP
 R,Los Angeles Dodgers,active,R,P,Roki Sasaki,808963,LAD,11,RP
 R,Los Angeles Dodgers,active,R,P,Tanner Scott,656945,LAD,66,RP
 R,Los Angeles Dodgers,active,R,P,Tarik Skubal,669373,LAD,29,RP
 R,Los Angeles Dodgers,active,R,P,Yoshinobu Yamamoto,808967,LAD,18,RP
 R,Los Angeles Dodgers,active,R,SS,Mookie Betts,605141,LAD,50,SS
 R,Los Angeles Dodgers,active,R,TWP,Shohei Ohtani,660271,LAD,17,TWP
+R,Miami Marlins,active,R,1B,Kyle Stowers,669065,MIA,28,1B
 R,Miami Marlins,active,R,2B,Xavier Edwards,669364,MIA,9,2B
-R,Miami Marlins,active,R,3B,Graham Pauley,688363,MIA,21,3B
 R,Miami Marlins,active,R,3B,Javier Sanoja,691594,MIA,8,3B
 R,Miami Marlins,active,R,3B,Leo Jiménez,677870,MIA,19,3B
 R,Miami Marlins,active,R,C,Agustín Ramírez,682663,MIA,50,C
@@ -404,8 +404,8 @@ R,Miami Marlins,active,R,RF,Owen Caissie,683357,MIA,17,OF
 R,Miami Marlins,active,R,P,Cade Gibson,806188,MIA,58,RP
 R,Miami Marlins,active,R,P,Calvin Faucher,676534,MIA,53,RP
 R,Miami Marlins,active,R,P,Eury Pérez,691587,MIA,39,RP
+R,Miami Marlins,active,R,P,Jack Ralston,667652,MIA,79,RP
 R,Miami Marlins,active,R,P,Janson Junk,676083,MIA,26,RP
-R,Miami Marlins,active,R,P,John King,667463,MIA,47,RP
 R,Miami Marlins,active,R,P,Josh Ekness,694795,MIA,95,RP
 R,Miami Marlins,active,R,P,Michael Petersen,656848,MIA,49,RP
 R,Miami Marlins,active,R,P,Pete Fairbanks,664126,MIA,29,RP
@@ -422,25 +422,25 @@ R,Milwaukee Brewers,active,R,3B,David Hamilton,666152,MIL,6,3B
 R,Milwaukee Brewers,active,R,C,Gary Sánchez,596142,MIL,99,C
 R,Milwaukee Brewers,active,R,C,William Contreras,661388,MIL,24,C
 R,Milwaukee Brewers,active,R,DH,Christian Yelich,592885,MIL,22,DH
-R,Milwaukee Brewers,active,R,LF,Brandon Lockridge,663604,MIL,20,OF
 R,Milwaukee Brewers,active,R,CF,Garrett Mitchell,669003,MIL,5,OF
 R,Milwaukee Brewers,active,R,LF,Jackson Chourio,694192,MIL,11,OF
-R,Milwaukee Brewers,active,R,CF,Jihwan Bae,678225,MIL,0,OF
 R,Milwaukee Brewers,active,R,RF,Luis Lara,800325,MIL,18,OF
 R,Milwaukee Brewers,active,R,P,Aaron Ashby,676879,MIL,26,RP
-R,Milwaukee Brewers,active,R,P,Abner Uribe,682842,MIL,45,RP
 R,Milwaukee Brewers,active,R,P,Antonio Senzatela,622608,MIL,49,RP
 R,Milwaukee Brewers,active,R,P,Bryse Wilson,669060,MIL,41,RP
 R,Milwaukee Brewers,active,R,P,Chad Patrick,694477,MIL,39,RP
 R,Milwaukee Brewers,active,R,P,DL Hall,669084,MIL,37,RP
 R,Milwaukee Brewers,active,R,P,Dustin May,669160,MIL,21,RP
+R,Milwaukee Brewers,active,R,P,Grant Anderson,681982,MIL,56,RP
 R,Milwaukee Brewers,active,R,P,Jacob Misiorowski,694819,MIL,32,RP
 R,Milwaukee Brewers,active,R,P,Kyle Harrison,690986,MIL,52,RP
 R,Milwaukee Brewers,active,R,P,Logan Henderson,701656,MIL,43,RP
 R,Milwaukee Brewers,active,R,P,Robert Gasser,688107,MIL,54,RP
 R,Milwaukee Brewers,active,R,P,Shane Drohan,675660,MIL,55,RP
 R,Milwaukee Brewers,active,R,P,Trevor Megill,656730,MIL,29,RP
+R,Milwaukee Brewers,active,R,SS,Cooper Pratt,806198,MIL,12,SS
 R,Milwaukee Brewers,active,R,SS,Joey Ortiz,687401,MIL,3,SS
+R,Milwaukee Brewers,active,R,SS,Jonathan Ornelas,680716,MIL,13,SS
 R,Minnesota Twins,active,R,1B,Kody Clemens,665019,MIN,2,1B
 R,Minnesota Twins,active,R,1B,Royce Lewis,668904,MIN,23,1B
 R,Minnesota Twins,active,R,2B,Luke Keaschall,807712,MIN,15,2B
@@ -450,7 +450,7 @@ R,Minnesota Twins,active,R,C,Ryan Jeffers,680777,MIN,27,C
 R,Minnesota Twins,active,R,C,Victor Caratini,605170,MIN,37,C
 R,Minnesota Twins,active,R,DH,Josh Bell,605137,MIN,56,DH
 R,Minnesota Twins,active,R,RF,Alan Roden,702176,MIN,18,OF
-R,Minnesota Twins,active,R,RF,Austin Martin,668885,MIN,16,OF
+R,Minnesota Twins,active,R,CF,Byron Buxton,621439,MIN,25,OF
 R,Minnesota Twins,active,R,LF,Trevor Larnach,663616,MIN,9,OF
 R,Minnesota Twins,active,R,P,A.J. Minter,621345,MIN,33,RP
 R,Minnesota Twins,active,R,P,Andrew Morris,702193,MIN,78,RP
@@ -467,23 +467,23 @@ R,Minnesota Twins,active,R,P,Yoendrys Gómez,672782,MIN,94,RP
 R,Minnesota Twins,active,R,P,Zebby Matthews,805673,MIN,52,RP
 R,Minnesota Twins,active,R,SS,Kaelen Culpepper,701785,MIN,12,SS
 R,Minnesota Twins,active,R,SS,Ryan Kreidler,668952,MIN,5,SS
+R,New York Mets,active,R,1B,Christopher Morel,666624,NYM,28,1B
+R,New York Mets,active,R,1B,Eric Wagaman,676572,NYM,39,1B
 R,New York Mets,active,R,1B,Jared Young,676724,NYM,29,1B
 R,New York Mets,active,R,2B,Marcus Semien,543760,NYM,10,2B
 R,New York Mets,active,R,3B,Bo Bichette,666182,NYM,19,3B
 R,New York Mets,active,R,3B,Brett Baty,683146,NYM,7,3B
-R,New York Mets,active,R,3B,Gabriel Arias,672356,NYM,25,3B
 R,New York Mets,active,R,C,Francisco Alvarez,682626,NYM,4,C
 R,New York Mets,active,R,C,Luis Torrens,620443,NYM,13,C
-R,New York Mets,active,R,DH,Jorge Polanco,593871,NYM,11,DH
 R,New York Mets,active,R,CF,A.J. Ewing,805999,NYM,9,OF
 R,New York Mets,active,R,RF,Carson Benge,701807,NYM,3,OF
 R,New York Mets,active,R,OF,Cristian Pache,665506,NYM,71,OF
 R,New York Mets,active,R,CF,Luis Robert Jr.,673357,NYM,88,OF
+R,New York Mets,active,R,P,Austin Warren,681810,NYM,44,RP
 R,New York Mets,active,R,P,Chayce McDermott,694646,NYM,43,RP
 R,New York Mets,active,R,P,Christian Scott,681035,NYM,45,RP
 R,New York Mets,active,R,P,Daniel Duarte,650960,NYM,54,RP
 R,New York Mets,active,R,P,Dedniel Núñez,673380,NYM,72,RP
-R,New York Mets,active,R,P,Jack Weisenburger,674073,NYM,82,RP
 R,New York Mets,active,R,P,Jefry Yan,642376,NYM,84,RP
 R,New York Mets,active,R,P,Jonathan Pintaro,702752,NYM,91,RP
 R,New York Mets,active,R,P,Kodai Senga,673540,NYM,34,RP
@@ -493,26 +493,25 @@ R,New York Mets,active,R,P,Robert Stock,476594,NYM,89,RP
 R,New York Mets,active,R,P,Sean Manaea,640455,NYM,59,RP
 R,New York Mets,active,R,P,Zac Thornton,804267,NYM,49,RP
 R,New York Mets,active,R,SS,Francisco Lindor,596019,NYM,12,SS
-R,New York Yankees,active,R,1B,Ben Rice,700250,NYY,22,1B
 R,New York Yankees,active,R,1B,Luis García Jr.,671277,NYY,26,1B
 R,New York Yankees,active,R,1B,Paul Goldschmidt,502671,NYY,48,1B
 R,New York Yankees,active,R,2B,Jazz Chisholm Jr.,665862,NYY,13,2B
 R,New York Yankees,active,R,3B,Amed Rosario,642708,NYY,14,3B
-R,New York Yankees,active,R,3B,Ryan McMahon,641857,NYY,19,3B
 R,New York Yankees,active,R,C,Ali Sánchez,645305,NYY,39,C
 R,New York Yankees,active,R,C,Austin Wells,669224,NYY,28,C
+R,New York Yankees,active,R,DH,Ben Rice,700250,NYY,22,DH
+R,New York Yankees,active,R,LF,Cody Bellinger,641355,NYY,35,OF
 R,New York Yankees,active,R,LF,Heliot Ramos,671218,NYY,34,OF
-R,New York Yankees,active,R,CF,Spencer Jones,682987,NYY,78,OF
+R,New York Yankees,active,R,RF,Spencer Jones,682987,NYY,78,OF
 R,New York Yankees,active,R,CF,Trent Grisham,663757,NYY,12,OF
 R,New York Yankees,active,R,P,Bradley Hanner,690440,NYY,93,RP
 R,New York Yankees,active,R,P,Brent Headrick,687396,NYY,47,RP
 R,New York Yankees,active,R,P,Cam Schlittler,693645,NYY,31,RP
+R,New York Yankees,active,R,P,Carlos Rodón,607074,NYY,55,RP
 R,New York Yankees,active,R,P,David Bednar,670280,NYY,53,RP
 R,New York Yankees,active,R,P,Fernando Cruz,518585,NYY,63,RP
 R,New York Yankees,active,R,P,Gerrit Cole,543037,NYY,45,RP
-R,New York Yankees,active,R,P,Max Fried,608331,NYY,54,RP
 R,New York Yankees,active,R,P,Paul Blackburn,621112,NYY,58,RP
-R,New York Yankees,active,R,P,Ryan Weathers,677960,NYY,40,RP
 R,New York Yankees,active,R,P,Ryan Yarbrough,642232,NYY,33,RP
 R,New York Yankees,active,R,P,Tim Hill,657612,NYY,41,RP
 R,New York Yankees,active,R,P,Will Warren,701542,NYY,29,RP
@@ -547,22 +546,22 @@ R,Philadelphia Phillies,active,R,P,Zack Wheeler,554430,PHI,45,RP
 R,Philadelphia Phillies,active,R,SS,Trea Turner,607208,PHI,7,SS
 R,Pittsburgh Pirates,active,R,1B,Spencer Horwitz,687462,PIT,2,1B
 R,Pittsburgh Pirates,active,R,2B,Brandon Lowe,664040,PIT,5,2B
-R,Pittsburgh Pirates,active,R,2B,Ronny Simon,682927,PIT,63,2B
 R,Pittsburgh Pirates,active,R,3B,Nick Gonzales,693304,PIT,3,3B
-R,Pittsburgh Pirates,active,R,C,Endy Rodríguez,682848,PIT,13,C
+R,Pittsburgh Pirates,active,R,3B,Nick Yorke,694377,PIT,38,3B
 R,Pittsburgh Pirates,active,R,C,Henry Davis,680779,PIT,32,C
 R,Pittsburgh Pirates,active,R,C,Rafael Flores Jr.,804668,PIT,43,C
+R,Pittsburgh Pirates,active,R,CF,Billy Cook,695257,PIT,25,OF
 R,Pittsburgh Pirates,active,R,LF,Bryan Reynolds,668804,PIT,10,OF
 R,Pittsburgh Pirates,active,R,RF,Esmerlyn Valdez,699013,PIT,55,OF
 R,Pittsburgh Pirates,active,R,CF,Jake Mangum,663968,PIT,28,OF
-R,Pittsburgh Pirates,active,R,RF,Jhostynxon Garcia,691373,PIT,34,OF
+R,Pittsburgh Pirates,active,R,CF,Oneil Cruz,665833,PIT,15,OF
 R,Pittsburgh Pirates,active,R,P,Braxton Ashcraft,677952,PIT,35,RP
 R,Pittsburgh Pirates,active,R,P,Bubba Chandler,696149,PIT,36,RP
 R,Pittsburgh Pirates,active,R,P,Camilo Doval,666808,PIT,75,RP
 R,Pittsburgh Pirates,active,R,P,Carmen Mlodzinski,669387,PIT,50,RP
-R,Pittsburgh Pirates,active,R,P,Evan Sisk,681895,PIT,48,RP
 R,Pittsburgh Pirates,active,R,P,Gregory Soto,642397,PIT,31,RP
 R,Pittsburgh Pirates,active,R,P,Jared Jones,683003,PIT,17,RP
+R,Pittsburgh Pirates,active,R,P,Khristian Curtis,694753,PIT,64,RP
 R,Pittsburgh Pirates,active,R,P,Kirby Yates,489446,PIT,54,RP
 R,Pittsburgh Pirates,active,R,P,Lake Bachar,669199,PIT,71,RP
 R,Pittsburgh Pirates,active,R,P,Luke Weaver,596133,PIT,18,RP
@@ -599,41 +598,41 @@ R,San Diego Padres,active,R,P,Yuki Matsui,673513,SDP,1,RP
 R,San Diego Padres,active,R,SS,Xander Bogaerts,593428,SDP,2,SS
 R,Seattle Mariners,active,R,1B,Josh Naylor,647304,SEA,12,1B
 R,Seattle Mariners,active,R,2B,Cole Young,702284,SEA,2,2B
-R,Seattle Mariners,active,R,3B,Brendan Donovan,680977,SEA,33,3B
 R,Seattle Mariners,active,R,3B,Leo Rivas,660844,SEA,76,3B
+R,Seattle Mariners,active,R,3B,Patrick Wisdom,621550,SEA,35,3B
 R,Seattle Mariners,active,R,3B,Weston Wilson,642215,SEA,31,3B
 R,Seattle Mariners,active,R,C,Cal Raleigh,663728,SEA,29,C
 R,Seattle Mariners,active,R,C,Jhonny Pereda,640902,SEA,5,C
 R,Seattle Mariners,active,R,DH,Dominic Canzone,686527,SEA,8,DH
+R,Seattle Mariners,active,R,DH,Taylor Ward,621493,SEA,27,DH
 R,Seattle Mariners,active,R,CF,Julio Rodríguez,677594,SEA,44,OF
 R,Seattle Mariners,active,R,LF,Randy Arozarena,668227,SEA,56,OF
-R,Seattle Mariners,active,R,LF,Taylor Ward,621493,SEA,27,OF
 R,Seattle Mariners,active,R,RF,Victor Robles,645302,SEA,10,OF
 R,Seattle Mariners,active,R,P,Andrés Muñoz,662253,SEA,75,RP
 R,Seattle Mariners,active,R,P,Bryan Woo,693433,SEA,22,RP
 R,Seattle Mariners,active,R,P,Bryce Miller,682243,SEA,50,RP
+R,Seattle Mariners,active,R,P,Carlos Vargas,672841,SEA,54,RP
 R,Seattle Mariners,active,R,P,Eduard Bazardo,660825,SEA,83,RP
 R,Seattle Mariners,active,R,P,Emerson Hancock,676106,SEA,26,RP
 R,Seattle Mariners,active,R,P,Gabe Speier,642100,SEA,55,RP
 R,Seattle Mariners,active,R,P,George Kirby,669923,SEA,68,RP
-R,Seattle Mariners,active,R,P,Josh Simpson,681006,SEA,37,RP
 R,Seattle Mariners,active,R,P,José A. Ferrer,678606,SEA,45,RP
+R,Seattle Mariners,active,R,P,Kade Anderson,807739,SEA,13,RP
 R,Seattle Mariners,active,R,P,Logan Gilbert,669302,SEA,36,RP
 R,Seattle Mariners,active,R,P,Michael Rucker,621074,SEA,38,RP
-R,Seattle Mariners,active,R,P,Nick Davila,689546,SEA,82,RP
 R,Seattle Mariners,active,R,P,Seranthony Domínguez,622554,SEA,58,RP
-R,Seattle Mariners,active,R,SS,Colt Emerson,806068,SEA,4,SS
-R,San Francisco Giants,active,R,1B,Buddy Kennedy,671083,SFG,41,1B
+R,Seattle Mariners,active,R,SS,Brock Rodden,801126,SEA,90,SS
 R,San Francisco Giants,active,R,1B,Rafael Devers,646240,SFG,16,1B
-R,San Francisco Giants,active,R,2B,Nate Furman,801501,SFG,56,2B
 R,San Francisco Giants,active,R,2B,Osleivis Basabe,678545,SFG,39,2B
+R,San Francisco Giants,active,R,3B,Buddy Kennedy,671083,SFG,41,3B
 R,San Francisco Giants,active,R,3B,Christian Koss,683766,SFG,50,3B
 R,San Francisco Giants,active,R,C,Andrew Knizner,668800,SFG,19,C
 R,San Francisco Giants,active,R,C,Drew Cavanaugh,701852,SFG,61,C
 R,San Francisco Giants,active,R,DH,Bryce Eldridge,805811,SFG,8,DH
 R,San Francisco Giants,active,R,CF,Drew Gilbert,687551,SFG,0,OF
-R,San Francisco Giants,active,R,CF,Grant McCray,687529,SFG,58,OF
+R,San Francisco Giants,active,R,CF,Jonah Cox,813841,SFG,53,OF
 R,San Francisco Giants,active,R,RF,Jung Hoo Lee,808982,SFG,51,OF
+R,San Francisco Giants,active,R,CF,Turner Hill,806367,SFG,52,OF
 R,San Francisco Giants,active,R,LF,Victor Bericoto,682674,SFG,78,OF
 R,San Francisco Giants,active,R,P,Adrian Houser,605288,SFG,12,RP
 R,San Francisco Giants,active,R,P,Blade Tidwell,694918,SFG,46,RP
@@ -642,9 +641,9 @@ R,San Francisco Giants,active,R,P,Carson Whisenhunt,687931,SFG,88,RP
 R,San Francisco Giants,active,R,P,Dylan Smith,681916,SFG,66,RP
 R,San Francisco Giants,active,R,P,JT Brubaker,664141,SFG,34,RP
 R,San Francisco Giants,active,R,P,Jason Foley,671345,SFG,64,RP
-R,San Francisco Giants,active,R,P,Keaton Winn,676775,SFG,67,RP
 R,San Francisco Giants,active,R,P,Landen Roupp,694738,SFG,65,RP
 R,San Francisco Giants,active,R,P,Logan Webb,657277,SFG,62,RP
+R,San Francisco Giants,active,R,P,Matt Wilkinson,683363,SFG,71,RP
 R,San Francisco Giants,active,R,P,Reiver Sanmartin,665665,SFG,48,RP
 R,San Francisco Giants,active,R,P,Sam Hentges,656529,SFG,31,RP
 R,San Francisco Giants,active,R,P,Trent Harris,805345,SFG,68,RP
@@ -652,32 +651,33 @@ R,San Francisco Giants,active,R,SS,Willy Adames,642715,SFG,2,SS
 R,St. Louis Cardinals,active,R,1B,Alec Burleson,676475,STL,41,1B
 R,St. Louis Cardinals,active,R,2B,JJ Wetherholt,802139,STL,26,2B
 R,St. Louis Cardinals,active,R,3B,Blaze Jordan,691458,STL,33,3B
-R,St. Louis Cardinals,active,R,3B,César Prieto,693409,STL,31,3B
+R,St. Louis Cardinals,active,R,3B,Ramón Urías,602104,STL,29,3B
 R,St. Louis Cardinals,active,R,C,Jimmy Crooks,699625,STL,8,C
 R,St. Louis Cardinals,active,R,C,Pedro Pagés,686780,STL,43,C
 R,St. Louis Cardinals,active,R,DH,Iván Herrera,671056,STL,48,DH
 R,St. Louis Cardinals,active,R,LF,Bryan Torres,663494,STL,39,OF
-R,St. Louis Cardinals,active,R,RF,Everson Pereira,677592,STL,21,OF
 R,St. Louis Cardinals,active,R,RF,Jordan Walker,691023,STL,18,OF
+R,St. Louis Cardinals,active,R,LF,Joshua Báez,695491,STL,22,OF
 R,St. Louis Cardinals,active,R,LF,José Fermín,665877,STL,15,OF
 R,St. Louis Cardinals,active,R,CF,Nathan Church,701675,STL,27,OF
-R,St. Louis Cardinals,active,R,P,Andre Pallante,669467,STL,53,RP
 R,St. Louis Cardinals,active,R,P,Caleb Ferguson,657571,STL,54,RP
 R,St. Louis Cardinals,active,R,P,George Soriano,666277,STL,65,RP
 R,St. Louis Cardinals,active,R,P,Gordon Graceffo,700669,STL,44,RP
-R,St. Louis Cardinals,active,R,P,Hunter Dobbins,690928,STL,40,RP
 R,St. Louis Cardinals,active,R,P,Justin Bruihl,677865,STL,47,RP
 R,St. Louis Cardinals,active,R,P,Kyle Leahy,681517,STL,62,RP
 R,St. Louis Cardinals,active,R,P,Luis Gastelum,703725,STL,72,RP
 R,St. Louis Cardinals,active,R,P,Matthew Liberatore,669461,STL,32,RP
 R,St. Louis Cardinals,active,R,P,Michael McGreevy,700241,STL,36,RP
 R,St. Louis Cardinals,active,R,P,Peter Strzelecki,657265,STL,58,RP
+R,St. Louis Cardinals,active,R,P,Quinn Mathews,687273,STL,60,RP
 R,St. Louis Cardinals,active,R,P,Riley O'Brien,676617,STL,61,RP
+R,St. Louis Cardinals,active,R,P,Ryan Fernandez,681676,STL,64,RP
 R,St. Louis Cardinals,active,R,P,Ryne Stanek,592773,STL,55,RP
 R,St. Louis Cardinals,active,R,SS,Masyn Winn,691026,STL,0,SS
 R,Tampa Bay Rays,active,R,1B,Jonathan Aranda,666018,TBR,8,1B
 R,Tampa Bay Rays,active,R,2B,Richie Palacios,680700,TBR,1,2B
 R,Tampa Bay Rays,active,R,3B,Junior Caminero,691406,TBR,13,3B
+R,Tampa Bay Rays,active,R,C,Kenny Piper,700652,TBR,50,C
 R,Tampa Bay Rays,active,R,C,Liam Hicks,689414,TBR,34,C
 R,Tampa Bay Rays,active,R,C,Nick Fortes,663743,TBR,40,C
 R,Tampa Bay Rays,active,R,DH,Yandy Díaz,650490,TBR,2,DH
@@ -685,40 +685,39 @@ R,Tampa Bay Rays,active,R,CF,Cedric Mullins,656775,TBR,31,OF
 R,Tampa Bay Rays,active,R,LF,Chandler Simpson,802415,TBR,14,OF
 R,Tampa Bay Rays,active,R,RF,Jonny DeLuca,676356,TBR,21,OF
 R,Tampa Bay Rays,active,R,RF,Ryan Vilade,668723,TBR,26,OF
-R,Tampa Bay Rays,active,R,RF,Victor Mesa Jr.,683748,TBR,25,OF
 R,Tampa Bay Rays,active,R,P,Bryan Baker,641329,TBR,47,RP
 R,Tampa Bay Rays,active,R,P,Cam Booser,592155,TBR,62,RP
 R,Tampa Bay Rays,active,R,P,Casey Legumina,668984,TBR,67,RP
-R,Tampa Bay Rays,active,R,P,Chris Roycroft,688297,TBR,56,RP
 R,Tampa Bay Rays,active,R,P,Drew Rasmussen,656876,TBR,57,RP
 R,Tampa Bay Rays,active,R,P,Freddy Peralta,642547,TBR,51,RP
 R,Tampa Bay Rays,active,R,P,Garrett Cleavinger,664076,TBR,60,RP
 R,Tampa Bay Rays,active,R,P,Ian Seymour,693855,TBR,61,RP
 R,Tampa Bay Rays,active,R,P,Kevin Kelly,687330,TBR,49,RP
-R,Tampa Bay Rays,active,R,P,Michael Grove,675627,TBR,58,RP
+R,Tampa Bay Rays,active,R,P,Manuel Rodríguez,655889,TBR,39,RP
 R,Tampa Bay Rays,active,R,P,Nick Martinez,607259,TBR,28,RP
+R,Tampa Bay Rays,active,R,P,Shane McClanahan,663556,TBR,18,RP
 R,Tampa Bay Rays,active,R,P,Steven Matz,571927,TBR,32,RP
 R,Tampa Bay Rays,active,R,P,Tyler Wells,669330,TBR,68,RP
-R,Tampa Bay Rays,active,R,SS,Carson Williams,700246,TBR,7,SS
+R,Tampa Bay Rays,active,R,SS,Jorge Mateo,622761,TBR,9,SS
 R,Tampa Bay Rays,active,R,SS,Taylor Walls,670764,TBR,6,SS
 R,Texas Rangers,active,R,1B,Jake Burger,669394,TEX,21,1B
 R,Texas Rangers,active,R,2B,Justin Foscue,679822,TEX,14,2B
 R,Texas Rangers,active,R,2B,Nicky Lopez,670032,TEX,33,2B
-R,Texas Rangers,active,R,C,Austin Wynns,642851,TEX,38,C
+R,Texas Rangers,active,R,3B,Cody Freeman,683227,TEX,39,3B
+R,Texas Rangers,active,R,C,Danny Jansen,643376,TEX,9,C
 R,Texas Rangers,active,R,C,Elias Díaz,553869,TEX,35,C
+R,Texas Rangers,active,R,C,Logan O'Hoppe,681351,TEX,4,C
 R,Texas Rangers,active,R,DH,Joc Pederson,592626,TEX,3,DH
 R,Texas Rangers,active,R,RF,Brandon Nimmo,607043,TEX,24,OF
-R,Texas Rangers,active,R,CF,Cam Cauley,695508,TEX,27,OF
 R,Texas Rangers,active,R,CF,Evan Carter,694497,TEX,32,OF
-R,Texas Rangers,active,R,RF,Jarred Kelenic,672284,TEX,25,OF
 R,Texas Rangers,active,R,LF,Wyatt Langford,694671,TEX,36,OF
-R,Texas Rangers,active,R,P,Ben Peoples,687239,TEX,70,RP
 R,Texas Rangers,active,R,P,Cal Quantrill,615698,TEX,44,RP
 R,Texas Rangers,active,R,P,Chase Silseth,681217,TEX,63,RP
 R,Texas Rangers,active,R,P,Cody Bradford,674003,TEX,61,RP
 R,Texas Rangers,active,R,P,Cole Winn,668390,TEX,60,RP
 R,Texas Rangers,active,R,P,Jacob Latz,656641,TEX,67,RP
 R,Texas Rangers,active,R,P,Jacob deGrom,594798,TEX,48,RP
+R,Texas Rangers,active,R,P,Jakob Junis,596001,TEX,16,RP
 R,Texas Rangers,active,R,P,Jordan Montgomery,656756,TEX,52,RP
 R,Texas Rangers,active,R,P,Kumar Rocker,677958,TEX,80,RP
 R,Texas Rangers,active,R,P,MacKenzie Gore,669022,TEX,1,RP
@@ -730,26 +729,26 @@ R,Texas Rangers,active,R,SS,Ezequiel Duran,677649,TEX,20,SS
 R,Toronto Blue Jays,active,R,1B,Vladimir Guerrero Jr.,665489,TOR,27,1B
 R,Toronto Blue Jays,active,R,2B,Charles McAdoo,807727,TOR,26,2B
 R,Toronto Blue Jays,active,R,2B,Ernie Clement,676391,TOR,22,2B
-R,Toronto Blue Jays,active,R,2B,Josh Smith,669701,TOR,9,2B
 R,Toronto Blue Jays,active,R,3B,Kazuma Okamoto,672960,TOR,7,3B
 R,Toronto Blue Jays,active,R,C,Alejandro Kirk,672386,TOR,30,C
 R,Toronto Blue Jays,active,R,C,Brandon Valenzuela,678218,TOR,59,C
 R,Toronto Blue Jays,active,R,DH,George Springer,543807,TOR,4,DH
 R,Toronto Blue Jays,active,R,CF,Brett Bateman,703520,TOR,21,OF
+R,Toronto Blue Jays,active,R,RF,Daz Cameron,663662,TOR,23,OF
 R,Toronto Blue Jays,active,R,RF,Jesús Sánchez,660821,TOR,12,OF
-R,Toronto Blue Jays,active,R,RF,Myles Straw,664702,TOR,3,OF
+R,Toronto Blue Jays,active,R,CF,Myles Straw,664702,TOR,3,OF
 R,Toronto Blue Jays,active,R,RF,Nathan Lukes,664770,TOR,38,OF
 R,Toronto Blue Jays,active,R,P,Braydon Fisher,680755,TOR,63,RP
 R,Toronto Blue Jays,active,R,P,Brendon Little,663893,TOR,54,RP
-R,Toronto Blue Jays,active,R,P,Chase Lee,695445,TOR,52,RP
 R,Toronto Blue Jays,active,R,P,Dylan Cease,656302,TOR,84,RP
 R,Toronto Blue Jays,active,R,P,José Soriano,667755,TOR,40,RP
 R,Toronto Blue Jays,active,R,P,Louis Varland,686973,TOR,77,RP
 R,Toronto Blue Jays,active,R,P,Mason Fluharty,689254,TOR,68,RP
-R,Toronto Blue Jays,active,R,P,Matt Waldron,663362,TOR,64,RP
 R,Toronto Blue Jays,active,R,P,Max Scherzer,453286,TOR,31,RP
+R,Toronto Blue Jays,active,R,P,Paul Sewald,623149,TOR,43,RP
 R,Toronto Blue Jays,active,R,P,Shane Bieber,669456,TOR,57,RP
 R,Toronto Blue Jays,active,R,P,Simeon Woods Richardson,680573,TOR,10,RP
+R,Toronto Blue Jays,active,R,P,Spencer Arrighetti,681293,TOR,45,RP
 R,Toronto Blue Jays,active,R,P,Spencer Miles,693686,TOR,62,RP
 R,Toronto Blue Jays,active,R,P,Tyler Rogers,643511,TOR,71,RP
 R,Toronto Blue Jays,active,R,SS,Andrés Giménez,665926,TOR,0,SS
@@ -769,6 +768,7 @@ R,Washington Nationals,active,R,P,Andrew Alvarez,674841,WSN,54,RP
 R,Washington Nationals,active,R,P,Brad Lord,695418,WSN,41,RP
 R,Washington Nationals,active,R,P,Cade Cavalli,676917,WSN,24,RP
 R,Washington Nationals,active,R,P,Clayton Beeter,690925,WSN,39,RP
+R,Washington Nationals,active,R,P,Erik Tolman,680899,WSN,73,RP
 R,Washington Nationals,active,R,P,Jackson Kent,800600,WSN,25,RP
 R,Washington Nationals,active,R,P,Jake Bird,656234,WSN,59,RP
 R,Washington Nationals,active,R,P,Jake Irvin,663623,WSN,27,RP
@@ -777,5 +777,4 @@ R,Washington Nationals,active,R,P,Orlando Ribalta,687377,WSN,64,RP
 R,Washington Nationals,active,R,P,Tom Cosgrove,676680,WSN,34,RP
 R,Washington Nationals,active,R,P,Trevor Williams,592866,WSN,32,RP
 R,Washington Nationals,active,R,P,Will Dion,702021,WSN,76,RP
-R,Washington Nationals,active,R,P,Yovanny Cruz,672442,WSN,48,RP
 R,Washington Nationals,active,R,SS,CJ Abrams,682928,WSN,5,SS
