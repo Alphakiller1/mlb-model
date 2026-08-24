@@ -201,6 +201,10 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                     f'<template class=matchup-full-src>{full_terminal}</template>'
                 )
         except Exception as exc:
+            # The card degrades to a short message, but the traceback is the only way to tell
+            # a data gap from a code bug — log it instead of discarding it.
+            log.exception("matchup card build failed for %s", game_key)
+            print(f"  [report] matchup card failed: {game_key}: {exc}", flush=True)
             report = f'<div class=empty>Could not build {e(game_key)}: {e(str(exc))}</div>'
         hidden = "" if game_key == featured_key else " hidden"
         matchup_reports.append(

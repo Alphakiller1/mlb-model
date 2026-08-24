@@ -198,6 +198,7 @@ def build_board(events: list[dict], fetched_at: str | None = None) -> OddsBoard:
 def fetch_events(*, cache_path: Path | None = None) -> tuple[list[dict], str]:
     if not settings.ODDS_API_KEY:
         raise RuntimeError("ODDS_API_KEY is not configured")
+    usage.check_budget("game-lines")
     params = urllib.parse.urlencode({
         "apiKey": settings.ODDS_API_KEY,
         "regions": settings.ODDS_REGIONS,

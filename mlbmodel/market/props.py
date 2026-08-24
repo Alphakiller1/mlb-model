@@ -197,6 +197,8 @@ def build_prop_board(
 def fetch_prop_payloads(cache_path: Path | None = None) -> tuple[list[dict], str]:
     if not settings.ODDS_API_KEY:
         raise RuntimeError("ODDS_API_KEY is not configured")
+    # Props are the expensive fetch (one call per game), so guard before the event list.
+    usage.check_budget("props")
     event_query = urllib.parse.urlencode(
         {"apiKey": settings.ODDS_API_KEY, "dateFormat": "iso"}
     )

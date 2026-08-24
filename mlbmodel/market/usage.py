@@ -11,7 +11,11 @@ pipeline run reports what it spent. Never raises — accounting must not break a
 """
 from __future__ import annotations
 
+import json
 import logging
+import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Any
 
 logger = logging.getLogger("mlbmodel.odds.usage")
@@ -62,3 +66,66 @@ def record(response: Any, label: str) -> int | None:
 def run_total() -> int:
     """Credits spent by this process so far (sum of x-requests-last)."""
     return _run_total
+
+
+class OddsBudgetExhausted(RuntimeError):
+    """Raised instead of spending credits when the key is at or below its configured floor.
+
+    Subclasses RuntimeError so the existing fetch-then-fall-back-to-cache handlers treat a
+    budget stop exactly like any other fetch failure: the board loads from the last snapshot
+    instead of the run dying or silently draining the key.
+    """
+
+
+# Per-process cache of the free quota probe. False = not yet probed this run.
+_remaining_cache: Any = False
+
+
+def remaining_credits(*, refresh: bool = False) -> int | None:
+    """Credits left on the configured key, or None if unknown.
+
+    Uses /v4/sports, which the Odds API serves for FREE (it costs no credit but still carries
+    the x-requests-remaining header). Cached per process so a pipeline that fetches several
+    times probes once. Never raises — an unknown budget must not block a fetch.
+    """
+    global _remaining_cache
+    if _remaining_cache is not False and not refresh:
+        return _remaining_cache
+    from mlbmodel import settings
+
+    _remaining_cache = None
+    if not settings.ODDS_API_KEY:
+        return None
+    params = urllib.parse.urlencode({"apiKey": settings.ODDS_API_KEY})
+    try:
+        with urllib.request.urlopen(
+            f"{settings.ODDS_API_BASE}/sports?{params}", timeout=20
+        ) as response:
+            response.read()
+            value = _header(response.headers, "x-requests-remaining")
+        _remaining_cache = int(float(value)) if value is not None else None
+    except (OSError, urllib.error.URLError, TypeError, ValueError, json.JSONDecodeError):
+        _remaining_cache = None
+    return _remaining_cache
+
+
+def check_budget(label: str) -> None:
+    """Raise OddsBudgetExhausted when spending would take the key below its floor.
+
+    No-op when the floor is unset (0) or the remaining budget could not be determined.
+    """
+    from mlbmodel import settings
+
+    floor = settings.ODDS_API_MIN_REMAINING
+    if floor <= 0:
+        return
+    remaining = remaining_credits()
+    if remaining is None or remaining >= floor:
+        return
+    message = (
+        f"skipping {label}: {remaining} Odds API credits left, "
+        f"below the ODDS_API_MIN_REMAINING={floor} floor"
+    )
+    logger.warning(message)
+    print(f"  [odds] {message}", flush=True)
+    raise OddsBudgetExhausted(message)

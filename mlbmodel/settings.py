@@ -64,6 +64,13 @@ ODDS_SPORT_KEY = "baseball_mlb"
 ODDS_REGIONS = os.getenv("ODDS_REGIONS", "us,eu")
 ODDS_PROP_REGIONS = os.getenv("ODDS_PROP_REGIONS", "us")
 ODDS_GAME_MARKETS = "h2h,spreads,totals"
+# Floor below which we refuse to spend Odds API credits. The monthly quota is shared by the
+# scheduled deploy and every manual refresh, so a nearly-drained key would otherwise get
+# finished off by a local run and empty the live board. 0 disables the guard.
+try:
+    ODDS_API_MIN_REMAINING = int(os.getenv("ODDS_API_MIN_REMAINING", "0") or 0)
+except ValueError:
+    ODDS_API_MIN_REMAINING = 0
 # First-5-innings markets are "additional markets": only the per-event odds endpoint returns
 # them, so they cost ~1 extra API call PER GAME per fetch. That multiplies Odds API credit
 # usage and can exhaust the quota (which would empty the WHOLE board), so live F5 pricing is
