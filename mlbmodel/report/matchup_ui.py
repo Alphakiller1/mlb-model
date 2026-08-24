@@ -6,6 +6,8 @@ import json
 import urllib.request
 from functools import lru_cache
 
+import pandas as pd
+
 from mlbmodel.report.html_fmt import (
     edge_grade,
     prob_chip_html,
@@ -153,6 +155,16 @@ def _team_row(repo, team: str) -> dict:
     return sub.iloc[0].to_dict() if not sub.empty else {}
 
 
+def _opt_int(value) -> int | None:
+    """Coerce a frame cell to int. Absent cells arrive as NaN, which is truthy, so `or` leaks it."""
+    if value is None or pd.isna(value):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _l10_record(repo, team: str, hand: str | None = None) -> str:
     frame = repo.load("game_results.csv")
     if frame is None or frame.empty:
@@ -178,10 +190,13 @@ def _l10_record(repo, team: str, hand: str | None = None) -> str:
                 & (l10["opp_starter_hand"].astype(str).str.upper() == hand.upper())
             ]
             if not hand_row.empty:
-                w = int(hand_row.iloc[0].get("wins") or wins)
-                g = int(hand_row.iloc[0].get("games") or 10)
-                losses = max(0, g - w)
-                wins = w
+                w = _opt_int(hand_row.iloc[0].get("wins"))
+                g = _opt_int(hand_row.iloc[0].get("games"))
+                # A partial hand row would otherwise mix a split win count with an
+                # assumed game count; keep the overall L10 unless both are present.
+                if w is not None and g is not None:
+                    losses = max(0, g - w)
+                    wins = w
     if ties:
         return f"{wins}-{losses}-{ties}"
     return f"{wins}-{losses}"

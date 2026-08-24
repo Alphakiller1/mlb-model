@@ -165,3 +165,41 @@ def test_sym_projection_board_mirrored():
     assert panel.count("sym-metric-cell--home") >= 4
     assert "Win %" in panel
     assert "SP FIP" in panel
+
+
+def test_l10_record_survives_nan_hand_split():
+    """NaN is truthy, so a missing wins/games cell must not reach int() and blank the card."""
+    from mlbmodel.report.matchup_ui import _l10_record
+
+    import pandas as pd
+
+    results = pd.DataFrame(
+        {
+            "team": ["TBR"] * 4,
+            "date": ["2026-08-20", "2026-08-21", "2026-08-22", "2026-08-23"],
+            "result": ["W", "W", "L", "W"],
+        }
+    )
+    hand_split = pd.DataFrame(
+        {
+            "team": ["TBR"],
+            "opp_starter_hand": ["R"],
+            "wins": [float("nan")],
+            "games": [float("nan")],
+        }
+    )
+
+    class Repo:
+        def load(self, name):
+            if name == "game_results.csv":
+                return results
+            if name == "team_l10_sp_hand.csv":
+                return hand_split
+            return None
+
+    # Falls back to the computed L10 (3-1) instead of raising on int(NaN).
+    assert _l10_record(Repo(), "TBR", "R") == "3-1"
+
+    # A complete hand row still overrides the overall record.
+    hand_split.loc[0, ["wins", "games"]] = [6.0, 9.0]
+    assert _l10_record(Repo(), "TBR", "R") == "6-3"
