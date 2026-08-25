@@ -46,6 +46,15 @@ def test_results_view_renders_calibration_board():
             "line": 5.5,
             "recorded_at": "2026-07-05T12:00:00Z",
         },
+        {
+            "slate_date": "2026-07-07",
+            "source": "projection",
+            "market": "k",
+            "selection": "model:test",
+            "settled": False,
+            "ungraded_reason": "pitcher_stats_not_found",
+            "recorded_at": "2026-07-07T12:00:00Z",
+        },
     ]
     html = results(StaticReader(rows, extra={
         "prediction_market_snapshots": [{
@@ -60,6 +69,8 @@ def test_results_view_renders_calibration_board():
     assert "By source" in html
     assert "Projection error" in html
     assert "1-1-0" in html
+    assert "2026-07-07 awaiting finals" in html
+    assert "Historical retry / void" in html
 
 
 def test_results_view_handles_warehouse_error():

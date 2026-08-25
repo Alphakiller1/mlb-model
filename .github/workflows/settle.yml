@@ -25,6 +25,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          # A missing/unreadable warehouse or stale rows outside the retry window must
+          # fail the job. The scheduled grader is not allowed to report a false success.
+          LEAN_SETTLE_REQUIRED: "1"
+          STALE_PENDING_THRESHOLD: "0"
         run: |
           set -o pipefail
           python -m mlbmodel.sources.build_game_results

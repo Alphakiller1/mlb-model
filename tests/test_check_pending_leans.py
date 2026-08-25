@@ -20,8 +20,9 @@ def test_pending_breakdown_ignores_today_without_reason():
         {"slate_date": "2026-07-01", "ungraded_reason": None},
         {"slate_date": "2026-07-01", "ungraded_reason": "game_outcome_missing"},
     ])
-    counts, unexplained, error = pending_breakdown(reader)
+    counts, unexplained, stale, error = pending_breakdown(reader)
     assert error is None
     assert counts["(no reason recorded)"] == 2
     assert counts["game_outcome_missing"] == 1
     assert unexplained == 1
+    assert stale == 2

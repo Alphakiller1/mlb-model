@@ -141,7 +141,7 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
  {deck}"""
 
 
-def _prediction_status(row: dict) -> tuple[str, str]:
+def _prediction_status(row: dict, active_slate_date: str = "") -> tuple[str, str]:
     if row.get("void"):
         return "VOID", str(row.get("ungraded_reason") or "ungradeable")
     if row.get("push"):
@@ -152,15 +152,22 @@ def _prediction_status(row: dict) -> tuple[str, str]:
         return "L", ""
     if row.get("settled"):
         return "GRADED", "realized value recorded"
-    return "PENDING", str(row.get("ungraded_reason") or "awaiting final")
+    slate_date = str(row.get("slate_date") or "")[:10]
+    detail = str(row.get("ungraded_reason") or "awaiting final")
+    if active_slate_date and slate_date == active_slate_date:
+        return "AWAITING", detail
+    return "RETRY", detail
 
 
 def _audit_asset_rows(rows: list[dict]) -> list[dict]:
     """Compact public audit schema used by the lazy, paginated Results tables."""
     game_sources = {"matchup", "f5", "sharp"}
     payload = []
+    active_slate_date = max(
+        (str(row.get("slate_date") or "")[:10] for row in rows), default=""
+    )
     for row in rows:
-        status, detail = _prediction_status(row)
+        status, detail = _prediction_status(row, active_slate_date)
         source = str(row.get("source") or "").lower()
         payload.append({
             "k": "game" if source in game_sources else "prop",
@@ -190,9 +197,12 @@ def prediction_audit_html(
     game_sources = {"matchup", "f5", "sharp"}
     games = [row for row in rows if str(row.get("source") or "").lower() in game_sources]
     props = [row for row in rows if str(row.get("source") or "").lower() not in game_sources]
+    active_slate_date = max(
+        (str(row.get("slate_date") or "")[:10] for row in rows), default=""
+    )
 
     def result_cell(row: dict) -> str:
-        status, detail = _prediction_status(row)
+        status, detail = _prediction_status(row, active_slate_date)
         cls = "pos" if status == "W" else "neg" if status == "L" else "mut"
         note = f'<span class="mut mut-sm">{e(detail)}</span>' if detail else ""
         return f'<b class="{cls}">{status}</b>{note}'
@@ -323,6 +333,14 @@ def results(reader, *, audit_asset_dir: str | Path | None = None):
     proj_errors = projection_error_summary(rows)
     reasons = ungraded_reason_counts(rows)
     pending_n = sum(1 for r in rows if not r.get("settled"))
+    active_slate_date = max(
+        (str(r.get("slate_date") or "")[:10] for r in rows), default=""
+    )
+    awaiting_n = sum(
+        1 for r in rows
+        if not r.get("settled") and str(r.get("slate_date") or "")[:10] == active_slate_date
+    )
+    retry_n = pending_n - awaiting_n
     void_n = sum(1 for r in rows if r.get("void"))
     teams = team_prediction_record(rows)
     market_perf = market_type_record(rows)
@@ -423,7 +441,9 @@ def results(reader, *, audit_asset_dir: str | Path | None = None):
    <div class=card><div class=k>Brier</div><div class=v>{brier_txt}</div></div>
    <div class=card><div class=k>Lean CLV</div><div class=v>{(f'{lean_clv["clv_pts"]:+.1f}pt' if lean_clv else "—")}</div></div>
    <div class=card><div class=k>Snapshot CLV</div><div class=v>{(f'{clv_summary["clv_pts"]:+.1f}pt' if clv_summary else "—")}</div></div>
-   <div class=card><div class=k>Graded / pending / void</div><div class="v v-sm">{summary["total"]} / {pending_n} / {void_n}</div></div>
+   <div class=card><div class=k>Completed grades</div><div class="v v-sm">{summary["total"]}</div></div>
+   <div class=card><div class=k>{e(active_slate_date)} awaiting finals</div><div class="v v-sm">{awaiting_n}</div></div>
+   <div class=card><div class=k>Historical retry / void</div><div class="v v-sm">{retry_n} / {void_n}</div></div>
  </div>
  {lean_clv_cards}
  {clv_panel}

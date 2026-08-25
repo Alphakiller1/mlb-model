@@ -266,11 +266,16 @@ def settle_leans(
         return 0
     today = today or datetime.now(timezone.utc).date()
 
-    read_all = reader.get_all if hasattr(type(reader), "get_all") else reader.get
-    pending = read_all(
+    pending_path = (
         "model_leans?settled=eq.false&select=*"
         "&order=slate_date.asc,lean_id.asc"
     )
+    if hasattr(type(reader), "get_all"):
+        pending = reader.get_all(pending_path, max_rows=250000)
+        read_all = reader.get_all
+    else:
+        pending = reader.get(pending_path)
+        read_all = reader.get
     if pending.error:
         # Missing migration (PGRST205) or similar — degrade instead of aborting
         # the whole settle pass (sharp observations can still grade).

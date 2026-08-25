@@ -110,7 +110,7 @@ def test_prediction_audit_reports_all_game_f5_and_prop_rows():
     assert "f5_total under 4.5" in rendered
     assert "Gerrit Cole" in rendered
     assert "GRADED" in rendered
-    assert "PENDING" in rendered
+    assert "AWAITING" in rendered
 
     lazy = prediction_audit_html(rows, external_asset_url="assets/prediction-audit.json")
     assert "Load complete history" in lazy
