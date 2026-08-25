@@ -99,6 +99,21 @@ def test_matchup_breakdown_symmetric_columns():
     assert "Pitcher R/L" in panel
     assert "vs BOS" in panel
     assert "vs NYY" in panel
+    assert "matchup-info-grid" in panel
+    assert "matchup-info-card" in panel
+    assert "Lineup status" in panel
+    assert "High-leverage ERA" in panel
+    assert "pitches yesterday" in panel
+
+
+def test_loaded_shell_css_contains_matchup_layout_rules():
+    from mlbmodel.report.shell import shell_css
+
+    css = shell_css()
+    assert ".matchup-breakdown__row" in css
+    assert ".matchup-info-grid" in css
+    assert ".matchup-info-card__meta" in css
+    assert ".pitch-mix-board" in css
 
 
 def test_split_tables_share_one_explicit_header_and_body_grid():

@@ -592,10 +592,16 @@ def _lineup_ha_rows(prof) -> str:
 def _bullpen_block(prof: dict, pen_factor, pen_features: dict, esc) -> str:
     workload = pen_features.get("pitches_1d", "—")
     return (
-        f'<div class=matchup-bullpen-strip>'
-        f'<div><span class=k>Run factor</span>{_metric_cells(pen_factor, "park", invert=True, digits=3)}</div>'
-        f'<div><span class=k>High-lev ERA</span>{_metric_cells(prof.get("bullpen_high_lev_era"), "era", invert=True)}</div>'
-        f'<div><span class=k>Workload</span><span class=mut>{esc(str(workload))} pitches yesterday</span></div>'
+        f'<div class="matchup-info-grid matchup-info-grid--bullpen">'
+        f'<div class=matchup-info-card><span class=k>Run factor</span>'
+        f'<div class=matchup-info-card__value>{_metric_cells(pen_factor, "park", invert=True, digits=3)}</div>'
+        f'<span class=matchup-info-card__meta>Expected scoring effect</span></div>'
+        f'<div class=matchup-info-card><span class=k>High-leverage ERA</span>'
+        f'<div class=matchup-info-card__value>{_metric_cells(prof.get("bullpen_high_lev_era"), "era", invert=True)}</div>'
+        f'<span class=matchup-info-card__meta>Late-inning performance</span></div>'
+        f'<div class=matchup-info-card><span class=k>Recent workload</span>'
+        f'<div class=matchup-info-card__value>{esc(str(workload))}</div>'
+        f'<span class=matchup-info-card__meta>pitches yesterday</span></div>'
         f'</div>'
     )
 
@@ -603,7 +609,12 @@ def _bullpen_block(prof: dict, pen_factor, pen_features: dict, esc) -> str:
 def _posted_lineup_block(features: dict, source, esc) -> str:
     status = str(features.get("status") or "unavailable")
     if status not in {"confirmed", "projected"}:
-        return '<div class=matchup-bullpen-strip><div><span class=k>Status</span><span class=mut>Not posted yet</span></div></div>'
+        return (
+            '<div class="matchup-info-grid matchup-info-grid--single">'
+            '<div class=matchup-info-card><span class=k>Lineup status</span>'
+            '<div class=matchup-info-card__value>Not posted yet</div>'
+            '<span class=matchup-info-card__meta>Using team-level baseline</span></div></div>'
+        )
     pill = "pos" if status == "confirmed" else "warnc"
     projected = features.get("projected_osi")
     baseline = features.get("team_baseline_osi")
@@ -613,13 +624,17 @@ def _posted_lineup_block(features: dict, source, esc) -> str:
         _metric_cells(factor, "park", digits=3) if factor is not None else "—"
     )
     return (
-        f'<div class=matchup-bullpen-strip>'
-        f'<div><span class=k>Status</span><span class="pill {pill}">{esc(status)}</span></div>'
-        f'<div><span class=k>Order OSI</span>'
-        f'{_metric_cells(projected, "osi", digits=0) if projected is not None else "<span class=c-na>—</span>"}'
-        f'<span class=mut> vs {esc(str(baseline if baseline is not None else "—"))} team base</span></div>'
-        f'<div><span class=k>Run factor</span>{factor_html}'
-        f'<span class=mut> · {matched}/9 matched{" · " + esc(str(source)) if source else ""}</span></div>'
+        f'<div class="matchup-info-grid matchup-info-grid--lineup">'
+        f'<div class=matchup-info-card><span class=k>Lineup status</span>'
+        f'<div class=matchup-info-card__value><span class="pill {pill}">{esc(status)}</span></div>'
+        f'<span class=matchup-info-card__meta>{esc(str(source)) if source else "Model lineup"}</span></div>'
+        f'<div class=matchup-info-card><span class=k>Order strength (OSI)</span>'
+        f'<div class=matchup-info-card__value>'
+        f'{_metric_cells(projected, "osi", digits=0) if projected is not None else "<span class=c-na>—</span>"}</div>'
+        f'<span class=matchup-info-card__meta>Team baseline: {esc(str(baseline if baseline is not None else "—"))}</span></div>'
+        f'<div class=matchup-info-card><span class=k>Projected run factor</span>'
+        f'<div class=matchup-info-card__value>{factor_html}</div>'
+        f'<span class=matchup-info-card__meta>{matched} of 9 batters matched</span></div>'
         f'</div>'
     )
 
