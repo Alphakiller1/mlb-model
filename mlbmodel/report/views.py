@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import html
+import json
+from pathlib import Path
 
 from mlbmodel.baseball.model import model_probabilities
 from mlbmodel.leans.calibration import (
@@ -153,7 +155,37 @@ def _prediction_status(row: dict) -> tuple[str, str]:
     return "PENDING", str(row.get("ungraded_reason") or "awaiting final")
 
 
-def prediction_audit_html(rows: list[dict]) -> str:
+def _audit_asset_rows(rows: list[dict]) -> list[dict]:
+    """Compact public audit schema used by the lazy, paginated Results tables."""
+    game_sources = {"matchup", "f5", "sharp"}
+    payload = []
+    for row in rows:
+        status, detail = _prediction_status(row)
+        source = str(row.get("source") or "").lower()
+        payload.append({
+            "k": "game" if source in game_sources else "prop",
+            "d": str(row.get("slate_date") or ""),
+            "t": str(row.get("recorded_at") or ""),
+            "g": str(row.get("game_pk") or ""),
+            "p": str(row.get("pitcher_name") or ""),
+            "s": source,
+            "m": str(row.get("market") or ""),
+            "x": str(row.get("selection") or ""),
+            "l": row.get("line"),
+            "q": row.get("model_prob"),
+            "v": row.get("model_value"),
+            "o": row.get("entry_odds"),
+            "a": row.get("realized_value"),
+            "z": status,
+            "n": detail,
+            "r": str(row.get("run_id") or ""),
+        })
+    return payload
+
+
+def prediction_audit_html(
+    rows: list[dict], *, external_asset_url: str | None = None
+) -> str:
     """Complete game/F5 and player-prop audit ledgers—never a recent-only sample."""
     game_sources = {"matchup", "f5", "sharp"}
     games = [row for row in rows if str(row.get("source") or "").lower() in game_sources]
@@ -168,6 +200,8 @@ def prediction_audit_html(rows: list[dict]) -> str:
     def number(value, digits=1) -> str:
         return _display(value, digits=digits) if value is not None else "—"
 
+    preview_games = games[:100] if external_asset_url else games
+    preview_props = props[:100] if external_asset_url else props
     game_rows = "".join(
         f'<tr><td>{e(str(row.get("slate_date") or ""))}'
         f'<span class="mut mut-sm">{e(str(row.get("recorded_at") or ""))}</span></td>'
@@ -179,7 +213,7 @@ def prediction_audit_html(rows: list[dict]) -> str:
         f'<td class=num>{number(row.get("entry_odds"), 0)}</td>'
         f'<td class=num>{number(row.get("realized_value"))}</td>'
         f'<td>{result_cell(row)}</td><td class=mut>{e(str(row.get("run_id") or "—"))}</td></tr>'
-        for row in games
+        for row in preview_games
     ) or '<tr><td class=mut colspan=9>No game projections logged.</td></tr>'
 
     prop_rows = "".join(
@@ -193,23 +227,76 @@ def prediction_audit_html(rows: list[dict]) -> str:
         f'<td class=num>{number(row.get("model_value"))}</td>'
         f'<td class=num>{number(row.get("realized_value"))}</td>'
         f'<td>{result_cell(row)}</td><td class=mut>{e(str(row.get("run_id") or "—"))}</td></tr>'
-        for row in props
+        for row in preview_props
     ) or '<tr><td class=mut colspan=9>No player-prop projections logged.</td></tr>'
+
+    load_controls = ""
+    audit_script = ""
+    game_filter_attr = 'data-filter-for="results-game-audit"'
+    prop_filter_attr = 'data-filter-for="results-prop-audit"'
+    game_pager = ""
+    prop_pager = ""
+    if external_asset_url:
+        asset_url = json.dumps(external_asset_url)
+        load_controls = f"""
+   <div class=audit-load><button type=button class=btn onclick=loadPredictionAudit(this)>Load complete history</button>
+     <span class=mut>Newest 100 shown initially · <a href={e(external_asset_url)} download>download full audit JSON</a></span></div>"""
+        game_filter_attr = 'oninput="auditSearch(\'game\',this.value)"'
+        prop_filter_attr = 'oninput="auditSearch(\'prop\',this.value)"'
+        game_pager = (
+            f'<div class=table-toolbar><button type=button onclick="auditPage(\'game\',-1)">Previous</button>'
+            f'<span id=results-game-audit-page class=mut>Newest {len(preview_games)} of {len(games)}</span>'
+            '<button type=button onclick="auditPage(\'game\',1)">Next</button></div>'
+        )
+        prop_pager = (
+            f'<div class=table-toolbar><button type=button onclick="auditPage(\'prop\',-1)">Previous</button>'
+            f'<span id=results-prop-audit-page class=mut>Newest {len(preview_props)} of {len(props)}</span>'
+            '<button type=button onclick="auditPage(\'prop\',1)">Next</button></div>'
+        )
+        audit_script = f"""<script>
+const AUDIT_URL={asset_url}, audit={{rows:[], game:{{page:0,q:''}}, prop:{{page:0,q:''}}}}, AUDIT_PAGE=100;
+function auditText(v){{return v===null||v===undefined||v===''?'—':String(v)}}
+function auditNum(v,d=1){{const n=Number(v);return Number.isFinite(n)?n.toFixed(d):'—'}}
+function auditGrade(r){{const box=document.createElement('span');box.textContent=r.z+(r.n?' · '+r.n:'');box.className=r.z==='W'?'pos':r.z==='L'?'neg':'mut';return box}}
+function auditCell(tr,value,cls){{const td=document.createElement('td');if(value instanceof Node)td.append(value);else td.textContent=auditText(value);if(cls)td.className=cls;tr.append(td)}}
+function renderPredictionAudit(kind){{
+  const state=audit[kind], q=state.q.toLowerCase();
+  const rows=audit.rows.filter(r=>r.k===kind&&(!q||Object.values(r).join(' ').toLowerCase().includes(q)));
+  const pages=Math.max(1,Math.ceil(rows.length/AUDIT_PAGE));state.page=Math.min(state.page,pages-1);
+  const body=document.getElementById('results-'+kind+'-audit-body');body.replaceChildren();
+  rows.slice(state.page*AUDIT_PAGE,(state.page+1)*AUDIT_PAGE).forEach(r=>{{const tr=document.createElement('tr');
+    auditCell(tr,r.d+' '+r.t);if(kind==='game'){{auditCell(tr,r.g);auditCell(tr,r.s);auditCell(tr,r.m+' '+r.x+(r.l===null?'':' '+auditText(r.l)));auditCell(tr,auditNum(r.q,3),'num');auditCell(tr,auditNum(r.o,0),'num');}}
+    else{{auditCell(tr,r.p);auditCell(tr,r.s);auditCell(tr,r.m);auditCell(tr,r.x+(r.l===null?'':' '+auditText(r.l)));auditCell(tr,auditNum(r.v,1),'num');}}
+    auditCell(tr,auditNum(r.a,1),'num');auditCell(tr,auditGrade(r));auditCell(tr,r.r,'mut');body.append(tr)}});
+  document.getElementById('results-'+kind+'-audit-page').textContent=`${{rows.length.toLocaleString()}} records · page ${{state.page+1}}/${{pages}}`;
+}}
+function auditSearch(kind,value){{audit[kind].q=value;audit[kind].page=0;renderPredictionAudit(kind)}}
+function auditPage(kind,delta){{audit[kind].page=Math.max(0,audit[kind].page+delta);renderPredictionAudit(kind)}}
+async function loadPredictionAudit(button){{
+  document.querySelectorAll('.audit-load button').forEach(b=>{{b.disabled=true;b.textContent='Loading complete history…'}});
+  try{{const data=await fetch(AUDIT_URL).then(r=>{{if(!r.ok)throw Error('HTTP '+r.status);return r.json()}});audit.rows=data.rows||[];renderPredictionAudit('game');renderPredictionAudit('prop');document.querySelectorAll('.audit-load button').forEach(b=>b.textContent='Complete history loaded')}}
+  catch(err){{button.disabled=false;button.textContent='Retry complete history';alert('Could not load prediction history: '+err.message)}}
+}}
+</script>"""
 
     return f"""
  <div class=ca-board>{section_head(f"All game and F5 prediction runs ({len(games)})", icon="results")}<div class=body>
    <p class=mut>Every recorded model run is retained below, including both market sides and repeated pregame refreshes.</p>
-   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter game audit…" data-filter-for="results-game-audit" aria-label="Filter game prediction audit"></div>
-   <div class=table-scroll><table id=results-game-audit class=sortable><tr><th>Date / logged</th><th>Game PK</th><th>Source</th><th>Projection</th><th>Model p</th><th>Entry</th><th>Actual</th><th>Grade</th><th>Run</th></tr>{game_rows}</table></div>
+   {load_controls}
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter game audit…" aria-label="Filter game prediction audit" {game_filter_attr}></div>
+   <div class=table-scroll><table id=results-game-audit class=sortable><thead><tr><th>Date / logged</th><th>Game PK</th><th>Source</th><th>Projection</th><th>Model p</th><th>Entry</th><th>Actual</th><th>Grade</th><th>Run</th></tr></thead><tbody id=results-game-audit-body>{game_rows}</tbody></table></div>
+   {game_pager}
  </div></div>
  <div class=ca-board>{section_head(f"All player-prop prediction runs ({len(props)})", icon="results")}<div class=body>
    <p class=mut>Priced props, pick'em calls, and unpriced model projections share one auditable outcome ledger.</p>
-   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter prop audit…" data-filter-for="results-prop-audit" aria-label="Filter player prop prediction audit"></div>
-   <div class=table-scroll><table id=results-prop-audit class=sortable><tr><th>Date / logged</th><th>Pitcher</th><th>Source</th><th>Market</th><th>Pick / line</th><th>Projection</th><th>Actual</th><th>Grade</th><th>Run</th></tr>{prop_rows}</table></div>
- </div></div>"""
+   {load_controls}
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter prop audit…" aria-label="Filter player prop prediction audit" {prop_filter_attr}></div>
+   <div class=table-scroll><table id=results-prop-audit class=sortable><thead><tr><th>Date / logged</th><th>Pitcher</th><th>Source</th><th>Market</th><th>Pick / line</th><th>Projection</th><th>Actual</th><th>Grade</th><th>Run</th></tr></thead><tbody id=results-prop-audit-body>{prop_rows}</tbody></table></div>
+   {prop_pager}
+ </div></div>{audit_script}"""
 
 
-def results(reader):
+def results(reader, *, audit_asset_dir: str | Path | None = None):
     query = (
         "model_leans?select=lean_id,slate_date,game_pk,source,market,selection,line,"
         "model_prob,model_value,edge,lean,won,push,settled,entry_odds,recorded_at,"
@@ -318,7 +405,16 @@ def results(reader):
     clv_panel = clv_panel_html(clv_summary)
     team_panel = team_accuracy_html(teams)
     market_panel = market_performance_html(market_perf)
-    audit = prediction_audit_html(rows)
+    audit_asset_url = None
+    if audit_asset_dir is not None:
+        asset_dir = Path(audit_asset_dir)
+        asset_dir.mkdir(parents=True, exist_ok=True)
+        (asset_dir / "prediction-audit.json").write_text(
+            json.dumps({"rows": _audit_asset_rows(rows)}, separators=(",", ":"), default=str),
+            encoding="utf-8",
+        )
+        audit_asset_url = "assets/prediction-audit.json"
+    audit = prediction_audit_html(rows, external_asset_url=audit_asset_url)
 
     return f"""{desk_pagehead("Results", sub="Paper track record · CLV · calibration · no fake ROI")}
  <div class=cards>

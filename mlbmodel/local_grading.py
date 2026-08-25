@@ -7,7 +7,6 @@ the same refreshed game and starter logs used by the model.
 """
 from __future__ import annotations
 
-import csv
 import math
 import uuid
 from datetime import datetime, timezone
@@ -125,7 +124,9 @@ def grade_pending(data_dir: str | Path) -> dict[str, int]:
                 actual = home_runs - away_runs if selection == home else away_runs - home_runs
                 won = actual + line > 0
             else:
-                frame.at[idx, "status"] = "void"; frame.at[idx, "void_reason"] = "ungradeable_market"; voided += 1
+                frame.at[idx, "status"] = "void"
+                frame.at[idx, "void_reason"] = "ungradeable_market"
+                voided += 1
                 continue
             frame.at[idx, "actual"] = str(actual)
             frame.at[idx, "status"] = "graded"
@@ -141,7 +142,9 @@ def grade_pending(data_dir: str | Path) -> dict[str, int]:
                   "F5_ER": _number(stat.get("f5_er"))}.get(key)
         line = _number(row["line"])
         if actual is None or line is None or row["selection"] not in {"over", "under"}:
-            frame.at[idx, "status"] = "void"; frame.at[idx, "void_reason"] = "ungradeable_market"; voided += 1
+            frame.at[idx, "status"] = "void"
+            frame.at[idx, "void_reason"] = "ungradeable_market"
+            voided += 1
             continue
         frame.at[idx, "actual"] = str(actual)
         frame.at[idx, "status"] = "graded"

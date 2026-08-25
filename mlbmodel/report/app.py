@@ -75,7 +75,7 @@ log = logging.getLogger(__name__)
 __all__ = ["_NAV", "_props", "build_app", "main"]
 
 
-def build_app(featured_game, *, fetch=True, data_dir=None):
+def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None):
     repo = DataRepository(data_dir)
     reader = SupabaseReader()
     cache_dir = Path(data_dir) if data_dir else settings.CACHE_DIR
@@ -367,7 +367,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             pitchers, prop_prices, pp_board, ud_board, sl_board,
             pickem_snapshots=pickem_snapshots, slate_date=str(sd or "")[:10] or None,
         ),
-        "results": _results(reader),
+        "results": _results(reader, audit_asset_dir=audit_asset_dir),
         "research": _research(reader, gate, f5_board, clv_summary),
     }
     nav_items = [(k, lbl, f"show('{k}')") for k, lbl in _NAV]
@@ -432,7 +432,12 @@ def main():  # pragma: no cover
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
-        build_app(args.game, fetch=not args.no_fetch, data_dir=args.data_dir),
+        build_app(
+            args.game,
+            fetch=not args.no_fetch,
+            data_dir=args.data_dir,
+            audit_asset_dir=out.parent / "assets",
+        ),
         encoding="utf-8",
     )
     published = publish_assets(out.parent)

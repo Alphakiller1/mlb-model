@@ -221,9 +221,7 @@ jobs:
           from pathlib import Path
           html = Path('_site/index.html').read_text(encoding='utf-8')
           size_kb = len(html) // 1024
-          # A full ~15-game slate with embedded matchup breakdowns + live pick'em/market rows
-          # The Results view embeds the complete game/F5/prop audit ledger, not a recent-only
-          # sample. Leave room for that history while still catching accidental runaway HTML.
+          # Full history is a lazy-loaded, paginated data asset so the main app stays usable.
           assert size_kb < 5000, f'HTML too large: {size_kb} KB'
           for key in ('matchups', 'trends', 'markets', 'props', 'results', 'research'):
               assert f'id=\"v-{key}\"' in html, key
@@ -233,6 +231,8 @@ jobs:
           assert 'bd-card' in html, 'slate board missing'
           assert 'results-game-audit' in html, 'complete game grading report missing'
           assert 'results-prop-audit' in html, 'complete prop grading report missing'
+          audit = Path('_site/assets/prediction-audit.json')
+          assert audit.exists() and audit.stat().st_size > 100, 'complete grading data missing'
           # Shared brand contract with wnba-edge-model and nfl-model. The graphite fork
           # below is what these three products silently drifted into once before.
           for key in ('#08090F', '#9A6BFF', 'DM Sans', 'Roboto Condensed'):
