@@ -101,6 +101,20 @@ def test_matchup_breakdown_symmetric_columns():
     assert "vs NYY" in panel
 
 
+def test_split_tables_share_one_explicit_header_and_body_grid():
+    from mlbmodel.report.matchup_ui import _split_table
+
+    table = _split_table(
+        "<th>Split</th><th>FIP</th><th>K%</th><th>HR/9</th><th>OPS</th>",
+        "<tr><td>vs LHB</td><td>4.5</td><td>17.1%</td><td>1.6</td><td>.700</td></tr>",
+        empty_cols=5,
+    )
+    assert "<thead><tr>" in table
+    assert "</thead><tbody>" in table
+    assert "matchup-split-table__label" in table
+    assert "matchup-split-table__metric span=4" in table
+
+
 def test_matchup_banner_symmetric_no_duplicate_fg():
     gd = type("GD", (), {
         "away": "NYY", "home": "BOS",

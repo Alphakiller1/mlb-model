@@ -779,15 +779,23 @@
   table-layout: fixed;
   border-collapse: collapse;
 }
+.matchup-breakdown-sym .matchup-split-table__label {
+  width: 24%;
+}
 .matchup-breakdown-sym .matchup-split-table th,
 .matchup-breakdown-sym .matchup-split-table td {
   font-variant-numeric: tabular-nums;
   padding: 5px 6px;
-  vertical-align: baseline;
+  vertical-align: middle;
 }
 .matchup-breakdown-sym .matchup-split-table th:not(:first-child),
 .matchup-breakdown-sym .matchup-split-table td:not(:first-child) {
-  text-align: right;
+  text-align: center;
+}
+.matchup-breakdown-sym .matchup-split-table th:first-child,
+.matchup-breakdown-sym .matchup-split-table td:first-child {
+  text-align: left;
+  white-space: nowrap;
 }
 .matchup-breakdown-sym .table-scroll {
   overflow: visible;

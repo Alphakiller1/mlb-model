@@ -524,9 +524,12 @@ def matchup_banner_html(r: dict, esc) -> str:
 
 def _split_table(headers: str, rows: str, *, empty_cols: int = 4) -> str:
     body = rows or f'<tr><td class=mut colspan={empty_cols}>No split data.</td></tr>'
+    metric_cols = max(1, empty_cols - 1)
     return (
         f'<div class=table-scroll><table class=matchup-split-table>'
-        f'<tr>{headers}</tr>{body}</table></div>'
+        f'<colgroup><col class=matchup-split-table__label>'
+        f'<col class=matchup-split-table__metric span={metric_cols}></colgroup>'
+        f'<thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div>'
     )
 
 
