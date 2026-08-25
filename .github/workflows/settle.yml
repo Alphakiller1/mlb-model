@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
   settle:
@@ -38,3 +39,13 @@ jobs:
           STATUS=$([ "$JOB_STATUS" = "success" ] && echo success || echo failure)
           python scripts/notify_discord.py --title "nightly settle" \
             --status "$STATUS" --body-stdin < settle_report.txt || true
+      - name: Rebuild published grading report
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Settlement changes warehouse state, not repository files. Explicitly rebuild
+          # Pages so the Results view reflects those grades immediately instead of waiting
+          # for an unrelated push or odds refresh.
+          gh workflow run deploy-pages.yml --ref main
+          echo "dispatched deploy-pages.yml for the newly graded report"

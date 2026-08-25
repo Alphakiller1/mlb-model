@@ -90,15 +90,35 @@ def test_unverified_book_fantasy_gets_reason_not_a_grade():
     assert result.reason == REASON_FANTASY_UNVERIFIED
 
 
-def test_f5_markets_void_instead_of_misgrading_against_full_game():
-    for market in ("f5_ml", "f5_total", "f5_er"):
-        result = grade_lean_detailed(
-            {"market": market, "selection": "over", "line": 4.5, "source": "matchup"},
-            outcome={"total_runs": 9, "winner_team": "BOS", "margin_home": 2},
-            pitcher_stats=BOX if market == "f5_er" else None,
-        )
-        assert result.won is None, market
-        assert result.reason == REASON_UNSUPPORTED_MARKET, market
+def test_f5_markets_grade_from_linescore_not_full_game():
+    outcome = {
+        "home_team": "BOS", "away_team": "NYY",
+        "home_f5_runs": 3, "away_f5_runs": 1,
+        "total_runs": 9, "winner_team": "NYY", "margin_home": -1,
+    }
+    assert grade_lean_detailed(
+        {"market": "f5_ml", "selection": "BOS", "line": None, "source": "f5"},
+        outcome=outcome,
+    ).won is True
+    total = grade_lean_detailed(
+        {"market": "f5_total", "selection": "under", "line": 4.5, "source": "f5"},
+        outcome=outcome,
+    )
+    assert total.won is True and total.realized_value == 4
+    spread = grade_lean_detailed(
+        {"market": "f5_runline", "selection": "NYY", "line": 1.5, "source": "f5"},
+        outcome=outcome,
+    )
+    assert spread.won is False and spread.realized_value == -2
+
+
+def test_f5_er_remains_explicitly_unsupported():
+    result = grade_lean_detailed(
+        {"market": "f5_er", "selection": "over", "line": 1.5, "source": "prop"},
+        pitcher_stats=BOX,
+    )
+    assert result.won is None
+    assert result.reason == REASON_UNSUPPORTED_MARKET
 
 
 def test_projection_lean_settles_by_realized_value_only():
@@ -149,8 +169,10 @@ def test_settle_writes_projection_realized_value():
 
 def test_settle_voids_terminal_and_expired_reasons():
     leans = [
-        {"lean_id": 1, "slate_date": "2026-07-06", "game_pk": 1, "source": "matchup",
-         "market": "f5_total", "selection": "over", "line": 4.5, "pitcher_name": None,
+        # Pitcher F5 ER remains unsupported because the box endpoint cannot isolate ER
+        # through five; this is terminal and must void immediately.
+        {"lean_id": 1, "slate_date": "2026-07-06", "game_pk": 1, "source": "prop",
+         "market": "f5_er", "selection": "over", "line": 1.5, "pitcher_name": "Gerrit Cole",
          "entry_odds": None, "closing_odds": None, "ungraded_reason": None},
         # ML lean with no outcome, slate 10 days old -> expired void.
         {"lean_id": 2, "slate_date": "2026-06-26", "game_pk": 99, "source": "matchup",
@@ -162,7 +184,8 @@ def test_settle_voids_terminal_and_expired_reasons():
          "entry_odds": None, "closing_odds": None, "ungraded_reason": None},
     ]
     writer = MockWriter()
-    with patch("mlbmodel.leans.grade.fetch_pitcher_stats_for_date", return_value={}):
+    with patch("mlbmodel.leans.grade.fetch_pitcher_stats_for_date",
+               return_value={"gerrit cole": BOX}):
         settled = settle_leans(reader=MockReader(_routes(leans)), writer=writer,
                                today=date(2026, 7, 6))
     assert settled == 0
@@ -186,6 +209,40 @@ def test_settle_computes_clv_on_graded_lean():
     assert payload["won"] is True
     # entry +110 -> 47.62%, close -120 -> 54.55%: beat the close by ~6.9pt.
     assert 6.5 < payload["clv_pts"] < 7.3
+
+
+def test_settle_reopens_and_backfills_legacy_f5_void():
+    legacy = {
+        "lean_id": 12, "slate_date": "2026-07-06", "game_pk": 1,
+        "source": "f5", "market": "f5_total", "selection": "under", "line": 4.5,
+        "pitcher_name": None, "entry_odds": -110, "closing_odds": None,
+        "settled": True, "void": True, "ungraded_reason": "unsupported_market",
+    }
+    routes = {
+        "model_leans?settled=eq.false": ReadResult([]),
+        "model_leans?settled=eq.true": ReadResult([legacy]),
+        "game_outcomes?": ReadResult([{
+            "game_pk": 1, "home_runs": 5, "away_runs": 4,
+            "home_f5_runs": 2, "away_f5_runs": 1,
+            "total_runs": 9, "margin_home": 1, "winner_team": "BOS",
+        }]),
+        "games?": ReadResult([{
+            "game_pk": 1, "home_team": "BOS", "away_team": "NYY",
+            "game_date": "2026-07-06",
+        }]),
+    }
+    writer = MockWriter()
+    with patch("mlbmodel.leans.grade.fetch_pitcher_stats_for_date", return_value={}):
+        settled = settle_leans(
+            reader=MockReader(routes), writer=writer, today=date(2026, 7, 7)
+        )
+
+    assert settled == 1
+    payload = writer.updates[0][2]
+    assert payload["settled"] is True
+    assert payload["void"] is False
+    assert payload["won"] is True
+    assert payload["realized_value"] == 3
 
 
 def test_clv_points_signs():

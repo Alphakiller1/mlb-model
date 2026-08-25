@@ -139,12 +139,87 @@ def props(pitchers, prop_board, pp_board=None, ud_board=None, sl_board=None,
  {deck}"""
 
 
+def _prediction_status(row: dict) -> tuple[str, str]:
+    if row.get("void"):
+        return "VOID", str(row.get("ungraded_reason") or "ungradeable")
+    if row.get("push"):
+        return "PUSH", ""
+    if row.get("settled") and row.get("won") is True:
+        return "W", ""
+    if row.get("settled") and row.get("won") is False:
+        return "L", ""
+    if row.get("settled"):
+        return "GRADED", "realized value recorded"
+    return "PENDING", str(row.get("ungraded_reason") or "awaiting final")
+
+
+def prediction_audit_html(rows: list[dict]) -> str:
+    """Complete game/F5 and player-prop audit ledgers—never a recent-only sample."""
+    game_sources = {"matchup", "f5", "sharp"}
+    games = [row for row in rows if str(row.get("source") or "").lower() in game_sources]
+    props = [row for row in rows if str(row.get("source") or "").lower() not in game_sources]
+
+    def result_cell(row: dict) -> str:
+        status, detail = _prediction_status(row)
+        cls = "pos" if status == "W" else "neg" if status == "L" else "mut"
+        note = f'<span class="mut mut-sm">{e(detail)}</span>' if detail else ""
+        return f'<b class="{cls}">{status}</b>{note}'
+
+    def number(value, digits=1) -> str:
+        return _display(value, digits=digits) if value is not None else "—"
+
+    game_rows = "".join(
+        f'<tr><td>{e(str(row.get("slate_date") or ""))}'
+        f'<span class="mut mut-sm">{e(str(row.get("recorded_at") or ""))}</span></td>'
+        f'<td>{e(str(row.get("game_pk") or "—"))}</td>'
+        f'<td>{e(str(row.get("source") or ""))}</td>'
+        f'<td>{e(str(row.get("market") or ""))} {e(str(row.get("selection") or ""))}'
+        f'{(" " + number(row.get("line"))) if row.get("line") is not None else ""}</td>'
+        f'<td class=num>{number(row.get("model_prob"), 3)}</td>'
+        f'<td class=num>{number(row.get("entry_odds"), 0)}</td>'
+        f'<td class=num>{number(row.get("realized_value"))}</td>'
+        f'<td>{result_cell(row)}</td><td class=mut>{e(str(row.get("run_id") or "—"))}</td></tr>'
+        for row in games
+    ) or '<tr><td class=mut colspan=9>No game projections logged.</td></tr>'
+
+    prop_rows = "".join(
+        f'<tr><td>{e(str(row.get("slate_date") or ""))}'
+        f'<span class="mut mut-sm">{e(str(row.get("recorded_at") or ""))}</span></td>'
+        f'<td>{e(str(row.get("pitcher_name") or "—"))}</td>'
+        f'<td>{e(str(row.get("source") or ""))}</td>'
+        f'<td>{e(str(row.get("market") or ""))}</td>'
+        f'<td>{e(str(row.get("selection") or ""))}'
+        f'{(" " + number(row.get("line"))) if row.get("line") is not None else ""}</td>'
+        f'<td class=num>{number(row.get("model_value"))}</td>'
+        f'<td class=num>{number(row.get("realized_value"))}</td>'
+        f'<td>{result_cell(row)}</td><td class=mut>{e(str(row.get("run_id") or "—"))}</td></tr>'
+        for row in props
+    ) or '<tr><td class=mut colspan=9>No player-prop projections logged.</td></tr>'
+
+    return f"""
+ <div class=ca-board>{section_head(f"All game and F5 prediction runs ({len(games)})", icon="results")}<div class=body>
+   <p class=mut>Every recorded model run is retained below, including both market sides and repeated pregame refreshes.</p>
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter game audit…" data-filter-for="results-game-audit" aria-label="Filter game prediction audit"></div>
+   <div class=table-scroll><table id=results-game-audit class=sortable><tr><th>Date / logged</th><th>Game PK</th><th>Source</th><th>Projection</th><th>Model p</th><th>Entry</th><th>Actual</th><th>Grade</th><th>Run</th></tr>{game_rows}</table></div>
+ </div></div>
+ <div class=ca-board>{section_head(f"All player-prop prediction runs ({len(props)})", icon="results")}<div class=body>
+   <p class=mut>Priced props, pick'em calls, and unpriced model projections share one auditable outcome ledger.</p>
+   <div class=table-toolbar><input class=table-filter type=search placeholder="Filter prop audit…" data-filter-for="results-prop-audit" aria-label="Filter player prop prediction audit"></div>
+   <div class=table-scroll><table id=results-prop-audit class=sortable><tr><th>Date / logged</th><th>Pitcher</th><th>Source</th><th>Market</th><th>Pick / line</th><th>Projection</th><th>Actual</th><th>Grade</th><th>Run</th></tr>{prop_rows}</table></div>
+ </div></div>"""
+
+
 def results(reader):
-    result = reader.get(
+    query = (
         "model_leans?select=lean_id,slate_date,game_pk,source,market,selection,line,"
         "model_prob,model_value,edge,lean,won,push,settled,entry_odds,recorded_at,"
-        "void,ungraded_reason,closing_odds,clv_pts,realized_value"
-        "&order=recorded_at.desc&limit=2000"
+        "void,ungraded_reason,closing_odds,clv_pts,realized_value,run_id,pitcher_name,model_version"
+        "&order=recorded_at.desc"
+    )
+    result = (
+        reader.get_all(query, max_rows=100000)
+        if hasattr(type(reader), "get_all")
+        else reader.get(query)
     )
     if result.error:
         return f"""{desk_pagehead("Results", sub="Paper track record · CLV · calibration")}
@@ -243,6 +318,7 @@ def results(reader):
     clv_panel = clv_panel_html(clv_summary)
     team_panel = team_accuracy_html(teams)
     market_panel = market_performance_html(market_perf)
+    audit = prediction_audit_html(rows)
 
     return f"""{desk_pagehead("Results", sub="Paper track record · CLV · calibration · no fake ROI")}
  <div class=cards>
@@ -284,7 +360,8 @@ def results(reader):
  <div class=ca-board>{section_head("Recent leans", icon="results")}<div class=body>
    <div class=table-toolbar><input class=table-filter type=search placeholder="Filter leans…" data-filter-for="results-recent-table" aria-label="Filter results"></div>
    <div class=table-scroll><table id=results-recent-table class=sortable><tr><th>Date</th><th>Source</th><th>Market</th><th>Entry</th><th>Lean</th><th>Edge</th><th>CLV</th><th>Result</th></tr>{recent}</table></div>
- </div></div>"""
+ </div></div>
+ {audit}"""
 
 
 def trends(reports, *, slate=None):

@@ -167,14 +167,35 @@ def grade_lean_detailed(
         want_over = selection == "over"
         return GradeOutcome(over == want_over, False, None, actual)
 
-    if market in {"f5_ml", "f5_total"}:
-        # A full-game outcome is NOT the first-5-innings result; grading F5
-        # markets against finals misgrades them. Void until linescore-based
-        # F5 outcomes are ingested.
-        return GradeOutcome(None, False, REASON_UNSUPPORTED_MARKET, None)
-
     if outcome is None:
         return GradeOutcome(None, False, REASON_NO_OUTCOME, None)
+
+    if market in {"f5_ml", "f5_total", "f5_runline"}:
+        home_f5 = outcome.get("home_f5_runs")
+        away_f5 = outcome.get("away_f5_runs")
+        if home_f5 is None or away_f5 is None:
+            return GradeOutcome(None, False, REASON_NO_OUTCOME, None)
+        home_f5, away_f5 = float(home_f5), float(away_f5)
+        home = str(outcome.get("home_team") or "").upper()
+        if market == "f5_ml":
+            if home_f5 == away_f5:
+                return GradeOutcome(None, True, None, home_f5 - away_f5)
+            winner = home if home_f5 > away_f5 else str(outcome.get("away_team") or "").upper()
+            return GradeOutcome(winner == selection.upper(), False, None, home_f5 - away_f5)
+        if market == "f5_total" and line is not None:
+            actual = home_f5 + away_f5
+            line_f = float(line)
+            if actual == line_f:
+                return GradeOutcome(None, True, None, actual)
+            over = actual > line_f
+            return GradeOutcome(over if selection == "over" else not over, False, None, actual)
+        if market == "f5_runline" and line is not None:
+            team_margin = home_f5 - away_f5 if selection.upper() == home else away_f5 - home_f5
+            adjusted = team_margin + float(line)
+            if adjusted == 0:
+                return GradeOutcome(None, True, None, team_margin)
+            return GradeOutcome(adjusted > 0, False, None, team_margin)
+        return GradeOutcome(None, False, REASON_BAD_VALUES, None)
 
     total = outcome.get("total_runs")
     winner = outcome.get("winner_team")
@@ -263,8 +284,24 @@ def settle_leans(
             return 0
         raise RuntimeError(pending.error)
 
+    # F5 game markets were historically voided as unsupported even though the outcomes
+    # table already stores first-five linescores. Re-open those audit rows automatically so
+    # the corrected grader backfills them instead of leaving permanent false voids.
+    f5_regrade = read_all(
+        "model_leans?settled=eq.true&void=eq.true&ungraded_reason=eq.unsupported_market"
+        "&market=in.(f5_ml,f5_total,f5_runline)&select=*"
+    )
+    candidates = list(pending.rows)
+    if not f5_regrade.error:
+        seen_ids = {str(row.get("lean_id")) for row in candidates}
+        candidates.extend(
+            row for row in f5_regrade.rows
+            if str(row.get("lean_id")) not in seen_ids
+        )
+
     outcomes = read_all(
-        "game_outcomes?select=game_pk,home_runs,away_runs,total_runs,margin_home,winner_team"
+        "game_outcomes?select=game_pk,home_runs,away_runs,home_f5_runs,away_f5_runs,"
+        "total_runs,margin_home,winner_team"
     )
     games = read_all("games?select=game_pk,home_team,away_team,game_date")
     if outcomes.error or games.error:
@@ -277,7 +314,7 @@ def settle_leans(
             row["home_team"] = game_by_pk[pk]["home_team"]
             row["away_team"] = game_by_pk[pk]["away_team"]
 
-    dates = sorted({str(row.get("slate_date") or "")[:10] for row in pending.rows if row.get("slate_date")})
+    dates = sorted({str(row.get("slate_date") or "")[:10] for row in candidates if row.get("slate_date")})
     stats_by_date: dict[str, dict[str, dict]] = {}
     for day in dates:
         if day:
@@ -298,7 +335,7 @@ def settle_leans(
             payload,
         )
 
-    for lean in pending.rows:
+    for lean in candidates:
         pk = lean.get("game_pk")
         outcome = outcome_by_pk.get(int(pk)) if pk is not None else None
         slate_date = str(lean.get("slate_date") or "")[:10]
@@ -318,6 +355,7 @@ def settle_leans(
         if graded or is_projection_settle:
             payload = {
                 "settled": True,
+                "void": False,
                 "won": result.won,
                 "push": result.push,
                 "settled_at": now_iso,

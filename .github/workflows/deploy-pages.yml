@@ -222,15 +222,17 @@ jobs:
           html = Path('_site/index.html').read_text(encoding='utf-8')
           size_kb = len(html) // 1024
           # A full ~15-game slate with embedded matchup breakdowns + live pick'em/market rows
-          # legitimately runs ~1.5 MB; 1400 was too tight and failed on busy slates. 1800 still
-          # catches a runaway page while leaving headroom for a max/double slate.
-          assert size_kb < 1800, f'HTML too large: {size_kb} KB'
+          # The Results view embeds the complete game/F5/prop audit ledger, not a recent-only
+          # sample. Leave room for that history while still catching accidental runaway HTML.
+          assert size_kb < 5000, f'HTML too large: {size_kb} KB'
           for key in ('matchups', 'trends', 'markets', 'props', 'results', 'research'):
               assert f'id=\"v-{key}\"' in html, key
           assert 'ca-board' in html
           assert 'matchup-full-src' in html
           assert 'ca-section-head' in html
           assert 'bd-card' in html, 'slate board missing'
+          assert 'results-game-audit' in html, 'complete game grading report missing'
+          assert 'results-prop-audit' in html, 'complete prop grading report missing'
           # Shared brand contract with wnba-edge-model and nfl-model. The graphite fork
           # below is what these three products silently drifted into once before.
           for key in ('#08090F', '#9A6BFF', 'DM Sans', 'Roboto Condensed'):
