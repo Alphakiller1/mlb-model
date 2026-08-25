@@ -56,10 +56,17 @@ jobs:
           # (its most likely failure mode) fails the whole deploy and freezes the live site
           # on a stale slate. Retry with backoff so a blip becomes a short delay, not a miss.
           bash scripts/retry.sh 3 python -m mlbmodel.sources.sync_mlbma --out _deploy_data
+          # Local/manual refreshes write to data/, while Pages historically seeded only from
+          # deployment_data/. Promote whichever committed odds snapshot is actually freshest
+          # before applying the API budget guard, otherwise a low-credit build can silently
+          # discard valid FanDuel lines and serve an older slate.
+          python scripts/seed_odds_snapshot.py --deploy-dir _deploy_data --candidate-dir data
       - name: Fetch live odds (props + game lines for sharp-money board)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           MLBMODEL_CACHE_DIR: _deploy_data
+          ODDS_BOOKMAKERS: fanduel
+          ODDS_REGIONS: us
           # Warehouse creds so market.collect PUBLISHES sharp signals/observations on
           # every scheduled build. Without these, point-in-time observation accrual only
           # happened when refresh.sh was run manually — and the promotion gate's OOS
@@ -88,6 +95,15 @@ jobs:
             # Game-line board (~6 credits) — powers Markets/decision board. Refresh whenever
             # there's any real budget left.
             if [ "$REMAINING" -ge 20 ]; then
+              # F5 requires per-event additional-market calls. Fetch it only with enough
+              # headroom for a full slate; core FanDuel ML/run line/total always comes first.
+              if [ "$REMAINING" -ge 80 ]; then
+                export ODDS_F5_ENABLED=1
+                echo "FanDuel F5 live pricing enabled."
+              else
+                export ODDS_F5_ENABLED=0
+                echo "FanDuel F5 fetch skipped at $REMAINING credits; preserving core game lines."
+              fi
               bash scripts/retry.sh 3 python -m mlbmodel.market.collect --data-dir _deploy_data \
                 || echo "WARNING: game odds fetch failed after retries; sharp board stays empty"
             else

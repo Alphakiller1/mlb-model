@@ -278,6 +278,11 @@ def markets_html(
 
     def row(play):
         mkt = MKT_LABEL.get(play["mkt_type"], play["mkt_type"].title())
+        missing_price = (
+            "F5 line unavailable"
+            if str(play.get("mkt_type") or "").startswith("f5_")
+            else "live line unavailable"
+        )
         if isinstance(play["price"], int):
             bet = (
                 f'<b>{e(mkt)} {e(play["sel"])}</b> <span class="pill side">{_num(play["price"])}</span>'
@@ -291,10 +296,10 @@ def markets_html(
             line_txt = _fmt_line(play.get("market_line"))
             bet = (
                 f'<b>{e(mkt)} {e(play["sel"])}{line_txt}</b>'
-                f'<div class="mut meta-sub">fair {_num(play["fair"])} · no live #</div>'
+                f'<div class="mut meta-sub">fair {_num(play["fair"])} · {missing_price}</div>'
             )
         else:
-            bet = f'<b>{e(mkt)} {e(play["sel"])}</b><div class="mut meta-sub">no live #</div>'
+            bet = f'<b>{e(mkt)} {e(play["sel"])}</b><div class="mut meta-sub">{missing_price}</div>'
         sharp = (
             f'<b class={edge_grade(play["div_pts"] / 100)}>+{play["div_pts"]:.1f}pt</b>'
             f'<div class="mut meta-sub">{play["sharp_p"]:.0f}% vs {play["soft_p"]:.0f}% pub</div>'
@@ -309,7 +314,7 @@ def markets_html(
                 f'<div class="mut meta-sub">model {pct_chip_html(play["model_p"], digits=0)} · {ev_txt}</div>'
             )
         elif play["model_p"] is not None:
-            model = f'<span class=mut>{pct_chip_html(play["model_p"], digits=0)} · no live #</span>'
+            model = f'<span class=mut>{pct_chip_html(play["model_p"], digits=0)} · {missing_price}</span>'
         else:
             model = '<span class=mut>—</span>'
         stake = (
