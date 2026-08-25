@@ -199,13 +199,16 @@ def fetch_events(*, cache_path: Path | None = None) -> tuple[list[dict], str]:
     if not settings.ODDS_API_KEY:
         raise RuntimeError("ODDS_API_KEY is not configured")
     usage.check_budget("game-lines")
-    params = urllib.parse.urlencode({
+    query = {
         "apiKey": settings.ODDS_API_KEY,
         "regions": settings.ODDS_REGIONS,
         "markets": settings.ODDS_GAME_MARKETS,
         "oddsFormat": "american",
         "dateFormat": "iso",
-    })
+    }
+    if settings.ODDS_BOOKMAKERS:
+        query["bookmakers"] = settings.ODDS_BOOKMAKERS
+    params = urllib.parse.urlencode(query)
     url = f"{settings.ODDS_API_BASE}/sports/{settings.ODDS_SPORT_KEY}/odds?{params}"
     with urllib.request.urlopen(url, timeout=30) as response:
         events = json.loads(response.read().decode())
@@ -236,13 +239,16 @@ def _merge_f5_markets(events: list[dict]) -> None:
         event_id = event.get("id")
         if not event_id:
             continue
-        params = urllib.parse.urlencode({
+        query = {
             "apiKey": settings.ODDS_API_KEY,
             "regions": settings.ODDS_REGIONS,
             "markets": settings.ODDS_F5_MARKETS,
             "oddsFormat": "american",
             "dateFormat": "iso",
-        })
+        }
+        if settings.ODDS_BOOKMAKERS:
+            query["bookmakers"] = settings.ODDS_BOOKMAKERS
+        params = urllib.parse.urlencode(query)
         try:
             with urllib.request.urlopen(f"{base}/{event_id}/odds?{params}", timeout=30) as response:
                 payload = json.loads(response.read().decode())

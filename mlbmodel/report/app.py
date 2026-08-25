@@ -37,6 +37,7 @@ from mlbmodel.report.html_fmt import desk_pagehead
 from mlbmodel.leans.closing import build_price_index, update_closing_odds
 from mlbmodel.leans.decision_calibration import thresholds_from_leans
 from mlbmodel.leans.record import collect_leans, record_leans
+from mlbmodel.local_grading import grade_pending as grade_local_predictions, record_run as record_local_predictions
 from mlbmodel.market.pickem import (
     build_pickem_rows,
     build_pickem_rows_from_boards,
@@ -281,6 +282,13 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 **report,
                 "model_mean": (pitcher.get("projections") or {}).get(report.get("prop"), {}).get("mean"),
             })
+
+    # Always retain local, gradeable projections even when Supabase credentials
+    # are unavailable.  This is intentionally independent of lean thresholds.
+    if sd:
+        local_grade = grade_local_predictions(cache_dir)
+        local_written = record_local_predictions(cache_dir, str(sd)[:10], model_by_pk, pkmap, flat_props)
+        log.info("local prediction ledger: recorded=%s graded=%s pending=%s", local_written, local_grade["graded"], local_grade["pending"])
 
     clv_result = reader.get(
         "prediction_market_snapshots?settled=eq.true&won=not.is.null"

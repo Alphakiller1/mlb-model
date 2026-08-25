@@ -212,15 +212,16 @@ def fetch_prop_payloads(cache_path: Path | None = None) -> tuple[list[dict], str
     markets = ",".join(API_MARKETS)
     regions = getattr(settings, "ODDS_PROP_REGIONS", "us")
     for event in events:
-        query = urllib.parse.urlencode(
-            {
-                "apiKey": settings.ODDS_API_KEY,
-                "regions": regions,
-                "markets": markets,
-                "oddsFormat": "american",
-                "dateFormat": "iso",
-            }
-        )
+        query_params = {
+            "apiKey": settings.ODDS_API_KEY,
+            "regions": regions,
+            "markets": markets,
+            "oddsFormat": "american",
+            "dateFormat": "iso",
+        }
+        if settings.ODDS_BOOKMAKERS:
+            query_params["bookmakers"] = settings.ODDS_BOOKMAKERS
+        query = urllib.parse.urlencode(query_params)
         url = (
             f"{settings.ODDS_API_BASE}/sports/{settings.ODDS_SPORT_KEY}/events/"
             f"{event['id']}/odds?{query}"
