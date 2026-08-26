@@ -48,7 +48,7 @@ def test_build_app_renders_all_views():
     assert "pitcher-prop-deck" in html.split("v-props")[1].split("</section>")[0]
     assert "prop-engine-table" in html
     # Edge command strip removed from Today
-    assert "edge-command" not in html
+    assert '<div class="edge-command' not in html
     assert "Where we have edge today" not in html
     # No external stylesheet links: the page must be self-contained for Pages. Asserted on
     # the link tag rather than the bare filename, so a CSS comment naming a file cannot

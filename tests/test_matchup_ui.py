@@ -10,6 +10,7 @@ from mlbmodel.report.matchup_ui import (
     matchup_context_html,
     run_impacts_html,
 )
+from mlbmodel.report.shell import shell_css
 
 
 def test_league_avg_html_yellow_class():
@@ -24,6 +25,13 @@ def test_short_factor_trims_team_prefix():
 
 def test_short_markets_readable():
     assert "·" in _short_markets("Away runs / Total / ML")
+
+
+def test_shell_bundles_matchup_component_layouts():
+    css = shell_css()
+    assert ".f5-proj-grid" in css
+    assert 'grid-template-areas: "away total home"' in css
+    assert ".matchup-breakdown-sym" in css
 
 
 def test_run_impacts_no_trust_column():

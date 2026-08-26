@@ -834,13 +834,16 @@ def f5_section_html(r, gd, repo, esc) -> str:
         hand = gd.home_hand if team == gd.away else gd.away_hand
         rec = _l10_record(repo, team, hand)
         return (
-            f'<div class=f5-team-col><div class=f5-team-head><b>{esc(team)}</b>'
-            f'<span class=mut>L10 {esc(_l10_record(repo, team))}</span>'
-            f'<span class=mut>vs {esc(hand)}HP {esc(rec)}</span></div>'
-            f'<div class=f5-run-line>{val_chip_html(runs_mean, "team_runs", digits=2, suffix=" runs")}</div>'
-            f'<div class=f5-sp-line><span class=mut>{esc(sp_name)}</span>'
-            f'<span class=mut>R thru 5 · last 5</span></div>'
-            f'<div class=f5-inn1-row>{"".join(cells)}</div></div>'
+            f'<div class=f5-team-col>'
+            f'<div class=f5-team-head><b class=f5-team-name>{esc(team)}</b>'
+            f'<div class=f5-team-splits><span>L10 {esc(_l10_record(repo, team))}</span>'
+            f'<span>vs {esc(hand)}HP {esc(rec)}</span></div></div>'
+            f'<div class=f5-team-projection><span class=f5-label>Projected runs</span>'
+            f'<div class=f5-run-line>{val_chip_html(runs_mean, "team_runs", digits=2, suffix=" runs")}</div></div>'
+            f'<div class=f5-starter><span class=f5-label>Starting pitcher</span>'
+            f'<b>{esc(sp_name)}</b><span class=mut>Runs allowed through 5 · last 5 starts</span></div>'
+            f'<div class=f5-inn1-row aria-label="Runs allowed through five innings in last five starts">'
+            f'{"".join(cells)}</div></div>'
         )
 
     away_runs = proj["home_f5"]["mean"]
@@ -849,9 +852,10 @@ def f5_section_html(r, gd, repo, esc) -> str:
   <div class=f5-proj-grid>
     {inn1_strip(gd.away, gd.away_sp, away_inn1, away_runs)}
     <div class=f5-mid-col>
-      <span class=k>F5 total</span>
-      <span class=v>{val_chip_html(proj["total_mean"], "game_total", digits=2)}</span>
-      <span class=mut>{away_runs:.2f} + {home_runs:.2f}</span>
+      <span class=f5-label>Combined projection</span>
+      <strong>F5 total</strong>
+      <span class=f5-total-value>{val_chip_html(proj["total_mean"], "game_total", digits=2)}</span>
+      <span class=f5-equation>{esc(gd.away)} {away_runs:.2f} <i>+</i> {esc(gd.home)} {home_runs:.2f}</span>
     </div>
     {inn1_strip(gd.home, gd.home_sp, home_inn1, home_runs)}
   </div>

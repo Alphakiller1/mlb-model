@@ -72,13 +72,16 @@ def desk_sidebar_html(
 
 
 def shell_css() -> str:
-    """Brand tokens first, then the desk layout, then the shared board.
+    """Brand tokens first, then the desk layout, model UI, and shared board.
 
     Order matters: chase_tokens.css must land before desk_app.css so the desk's local
     names (--ink, --panel, --line …) resolve to Chase values instead of forking the palette.
+    model_ui.css contains the component layouts emitted by matchup_ui.py; omitting it turns
+    structured grids such as First 5 Innings into an unreadable stream of inline text.
     """
     desk = (_STATIC / "desk_app.css").read_text(encoding="utf-8")
-    return brand_css() + desk + board_css() + TABLE_UI_CSS
+    model_ui = (_STATIC / "model_ui.css").read_text(encoding="utf-8")
+    return brand_css() + desk + model_ui + board_css() + TABLE_UI_CSS
 
 
 def shell_js() -> str:
