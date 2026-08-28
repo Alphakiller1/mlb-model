@@ -1439,7 +1439,36 @@ body.desk-app .chase-header { display: none !important; }
 #main .prop-play { display: inline-flex; align-items: baseline; gap: 5px; flex-wrap: wrap; }
 #main .prop-play__line { font-variant-numeric: tabular-nums; }
 
-/* Matchup report chrome */
+/* Matchup report chrome.
+ * Opening a card drills into the breakdown: the slate board hides and the report
+ * takes the page. Scrolling to #matchupDetail under nine tall cards lost the fight
+ * with show()'s window.scrollTo(0,0) — the footer looked dead. */
+#v-matchups.is-drilled > .bd { display: none; }
+#v-matchups:not(.is-drilled) > .matchup-detail { display: none; }
+.matchup-detail__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+.matchup-back {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-2);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font: 600 12px var(--font-ui);
+}
+.matchup-back:hover { color: var(--ink); border-color: var(--line-strong); }
+.matchup-detail__game {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
 .matchup-report { margin-top: 4px; }
 .matchup-report[hidden] { display: none !important; }
 .gamepick { border: 0; background: none; color: inherit; font: inherit; padding: 0; cursor: pointer; text-align: left; }
