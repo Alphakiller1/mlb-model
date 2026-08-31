@@ -124,6 +124,7 @@ jobs:
             echo "ODDS_API_KEY not set; skipping odds fetch (props + sharp stay empty)"
           fi
       - name: Fetch PrizePicks pick'em lines
+        if: ${{ false }} # DraftKings-only production line policy.
         run: |
           # PrizePicks sits behind DataDome, which answers automated clients with a
           # geo.captcha-delivery.com interstitial instead of data. As of 2026-08-07 it blocks
@@ -149,6 +150,7 @@ jobs:
             echo "PrizePicks: live fetch blocked (DataDome) — using committed snapshot"
           fi
       - name: Fetch Underdog pick'em lines
+        if: ${{ false }} # DraftKings-only production line policy.
         run: |
           # Underdog over/under lines — free, second pick'em source. Same snapshot pattern as
           # PrizePicks (datacenter IPs may be blocked): committed snapshot is the base; a live
@@ -168,6 +170,7 @@ jobs:
             echo "Underdog: live fetch blocked — using committed snapshot"
           fi
       - name: Fetch Sleeper pick'em lines
+        if: ${{ false }} # DraftKings-only production line policy.
         run: |
           # Sleeper lines/available + players/mlb (id->name) — free, third pick'em source. Same
           # snapshot pattern; a live fetch (both endpoints) upgrades it when it returns real lines.
@@ -185,6 +188,11 @@ jobs:
           else
             echo "Sleeper: live fetch blocked — using committed snapshot"
           fi
+      - name: Enforce DraftKings-only line sources
+        run: |
+          rm -f _deploy_data/prizepicks_lines.json \
+            _deploy_data/underdog_lines.json \
+            _deploy_data/sleeper_lines.json
       - name: Build static research dashboard
         env:
           MLBMODEL_CACHE_DIR: _deploy_data
