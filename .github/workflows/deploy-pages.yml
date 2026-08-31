@@ -65,7 +65,7 @@ jobs:
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           MLBMODEL_CACHE_DIR: _deploy_data
-          ODDS_BOOKMAKERS: fanduel
+          ODDS_BOOKMAKERS: draftkings
           ODDS_REGIONS: us
           # Warehouse creds so market.collect PUBLISHES sharp signals/observations on
           # every scheduled build. Without these, point-in-time observation accrual only
@@ -96,13 +96,13 @@ jobs:
             # there's any real budget left.
             if [ "$REMAINING" -ge 20 ]; then
               # F5 requires per-event additional-market calls. Fetch it only with enough
-              # headroom for a full slate; core FanDuel ML/run line/total always comes first.
+              # headroom for a full slate; core DraftKings ML/run line/total always comes first.
               if [ "$REMAINING" -ge 80 ]; then
                 export ODDS_F5_ENABLED=1
-                echo "FanDuel F5 live pricing enabled."
+                echo "DraftKings F5 live pricing enabled."
               else
                 export ODDS_F5_ENABLED=0
-                echo "FanDuel F5 fetch skipped at $REMAINING credits; preserving core game lines."
+                echo "DraftKings F5 fetch skipped at $REMAINING credits; preserving core game lines."
               fi
               bash scripts/retry.sh 3 python -m mlbmodel.market.collect --data-dir _deploy_data \
                 || echo "WARNING: game odds fetch failed after retries; sharp board stays empty"

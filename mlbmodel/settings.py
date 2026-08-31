@@ -63,7 +63,7 @@ ODDS_API_BASE = "https://api.the-odds-api.com/v4"
 ODDS_SPORT_KEY = "baseball_mlb"
 ODDS_REGIONS = os.getenv("ODDS_REGIONS", "us,eu")
 # A comma-separated bookmaker allow-list.  Leaving this empty preserves the
-# consensus workflow; setting it to ``fanduel`` makes every stored price and
+# consensus workflow; setting it to a single key such as ``draftkings`` makes every stored price and
 # de-vig calculation FanDuel-only.
 ODDS_BOOKMAKERS = os.getenv("ODDS_BOOKMAKERS", "")
 ODDS_PROP_REGIONS = os.getenv("ODDS_PROP_REGIONS", "us")
