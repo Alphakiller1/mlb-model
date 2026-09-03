@@ -89,6 +89,16 @@ MIN_USAGE_PCT = 3.0
 MIN_COVERAGE_PCT = 55.0
 MIN_TEAMS_FOR_RANK = 20
 RATING_SPREAD = 15.0
+# Pitches an arm must have thrown before its usage shares mean anything. The season mix table
+# carries arms with as few as 8 pitches, and a "70% four-seam" read off 8 pitches is noise
+# dressed as a game plan.
+MIN_ARSENAL_PITCHES = 150.0
+# The 14-day table is the better read of a current plan, but only once it is a real sample —
+# roughly two starts. Below this the season arsenal is kept instead.
+MIN_RECENT_PITCHES = 200.0
+# Unclassified / pitchout codes carried by the mix tables. They have no league row to score
+# against, so they would silently eat arsenal coverage.
+SKIP_ARSENAL_PITCH_TYPES = {"PO", "UN", "UNK", "IN", "AB", "NP", ""}
 
 _LEAGUE_KEY = "LGE"
 
@@ -181,6 +191,7 @@ class ArsenalRatingEngine:
         self._hand: dict[tuple[str, str], dict] = {}
         self.hand_window: tuple[str, str] = ("", "")
         self._arsenals: dict[str, list[tuple[str, float, str]]] = {}
+        self._arsenal_by_team: dict[tuple[str, str], list[tuple[str, float, str]]] = {}
         self._load_mix()
         self._load_hand()
         self._load_arsenals()
@@ -241,32 +252,62 @@ class ArsenalRatingEngine:
                 self.hand_window = (str(row.get("window_start") or ""),
                                     str(row.get("window_end") or ""))
 
-    def _load_arsenals(self) -> None:
-        """Prefer the 14-day arsenal; fall back per pitcher to the season table."""
-        for filename in ("pitch_mix_pitcher.csv", "pitch_mix_pitcher_l14.csv"):
-            frame = self.repo.load(filename)
-            if frame is None or frame.empty:
+    def _read_arsenals(self, filename: str, min_pitches: float) -> dict[int, dict]:
+        """One arsenal per MLB id, keyed by id — never by name.
+
+        Grouping by name here is what merged the two Yunior Martes (CIN 628708 and SFG
+        805074) into a single seven-pitch arsenal whose usage summed to 200%.
+        """
+        frame = self.repo.load(filename)
+        if frame is None or frame.empty:
+            return {}
+        arms: dict[int, dict] = {}
+        for row in frame.to_dict("records"):
+            player_id = int(_number(row.get("player_id")) or 0)
+            key = norm_name(row.get("full_name"))
+            if not player_id or not key:
                 continue
-            grouped: dict[str, list[tuple[str, float, str]]] = {}
-            for row in frame.to_dict("records"):
-                usage = _number(row.get("pitch_pct")) or 0.0
-                pitch = str(row.get("pitch_type") or "").upper()
-                if usage < MIN_USAGE_PCT or not pitch:
-                    continue
-                key = norm_name(row.get("full_name"))
-                if not key:
-                    continue
-                grouped.setdefault(key, []).append(
-                    (pitch, usage, str(row.get("pitch_name") or pitch))
-                )
-            # Later file wins per pitcher, so the L14 arsenal replaces the season one only
-            # for arms that actually have recent rows.
-            for key, mix in grouped.items():
-                self._arsenals[key] = sorted(mix, key=lambda item: -item[1])
+            arm = arms.setdefault(player_id, {
+                "key": key, "team": str(row.get("team_abbr") or "").upper(),
+                "mix": [], "pitches": 0.0,
+            })
+            arm["pitches"] += _number(row.get("pitches")) or 0.0
+            usage = _number(row.get("pitch_pct")) or 0.0
+            pitch = str(row.get("pitch_type") or "").upper()
+            if usage < MIN_USAGE_PCT or pitch in SKIP_ARSENAL_PITCH_TYPES:
+                continue
+            arm["mix"].append((pitch, usage, str(row.get("pitch_name") or pitch)))
+        return {
+            player_id: arm for player_id, arm in arms.items()
+            if arm["mix"] and arm["pitches"] >= min_pitches
+        }
+
+    def _load_arsenals(self) -> None:
+        """Prefer the 14-day arsenal, per pitcher, once it is a real sample."""
+        arms = self._read_arsenals("pitch_mix_pitcher.csv", MIN_ARSENAL_PITCHES)
+        arms.update(self._read_arsenals("pitch_mix_pitcher_l14.csv", MIN_RECENT_PITCHES))
+        by_name: dict[str, list[dict]] = {}
+        for arm in arms.values():
+            arm["mix"] = sorted(arm["mix"], key=lambda item: -item[1])
+            by_name.setdefault(arm["key"], []).append(arm)
+            if arm["team"]:
+                self._arsenal_by_team[(arm["key"], arm["team"])] = arm["mix"]
+        for key, matching in by_name.items():
+            # A name shared by two arms is resolvable only by team; leaving it out of the
+            # name index makes an unresolved lookup report "no read" instead of a blend.
+            if len(matching) == 1:
+                self._arsenals[key] = matching[0]["mix"]
 
     # ── scoring ────────────────────────────────────────────────────────────────────
-    def arsenal(self, pitcher_name: str) -> list[tuple[str, float, str]]:
-        return self._arsenals.get(norm_name(pitcher_name), [])
+    def arsenal(self, pitcher_name: str,
+                pitcher_team: str | None = None) -> list[tuple[str, float, str]]:
+        """The starter's pitch mix. `pitcher_team` disambiguates shared names."""
+        key = norm_name(pitcher_name)
+        if pitcher_team:
+            by_team = self._arsenal_by_team.get((key, str(pitcher_team).upper()))
+            if by_team:
+                return by_team
+        return self._arsenals.get(key, [])
 
     def _prior(self, team: str, pitch: str, axis: str) -> float | None:
         league = (self._league.get(pitch) or {}).get(axis)
@@ -307,9 +348,10 @@ class ArsenalRatingEngine:
             return None
         return num / covered, league_num / covered, covered
 
-    def rate(self, team: str, pitcher_name: str) -> ArsenalRead | None:
+    def rate(self, team: str, pitcher_name: str,
+             pitcher_team: str | None = None) -> ArsenalRead | None:
         team = str(team or "").upper()
-        arsenal = self.arsenal(pitcher_name)
+        arsenal = self.arsenal(pitcher_name, pitcher_team)
         if not self.ok or not arsenal or team not in self._club:
             return None
 

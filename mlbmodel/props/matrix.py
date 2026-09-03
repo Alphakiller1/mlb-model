@@ -58,6 +58,17 @@ REST_OUTS_WEIGHT = -0.031
 # Slope is the tell: at 0.60 a projection is spread ~1.7x wider than its predictive content
 # supports, which is what produced double-digit "edges" against the market.
 RATE_SHRINK_BF = {"k": 113.0, "bb": 193.0, "h": 461.0}
+# Earned runs are shrunk on OUTS, not batters faced, because that is the denominator the
+# rate lives on. Swept on the holdout (scripts/fit_er_and_outs.py): 0 outs -> R2 -0.0889,
+# 120 -> +0.0093, 248 -> +0.0156, 400 -> +0.0152, 700 -> +0.0113, 1200 -> +0.0058. 248 is
+# both the optimum and exactly what mlbmodel.props.challenger fitted independently.
+ER_SHRINK_OUTS = 248.0
+# Outs gained per run of gap between a pitcher's FIP-shaped skill and his actual ERA. The
+# factor study saw this alone at +0.29%; it was left out then because a four-factor stack
+# overfitted, but on its own alongside the BABIP term it takes Outs from R2 +0.1418 to
+# +0.1463 and RMSE 3.7442 to 3.7344 on the holdout.
+ERA_GAP_OUTS_WEIGHT = 0.0586
+ERA_GAP_CLIP = 2.5
 
 # Final spread calibration, applied after shrinkage and the matchup terms.
 #
@@ -79,6 +90,29 @@ RATE_SHRINK_BF = {"k": 113.0, "bb": 193.0, "h": 461.0}
 # totals are close to unpredictable, and halving what little spread remains is what finally
 # moves that market from negative R2 to positive.
 SPREAD_CALIBRATION = {"k": 0.970, "bb": 0.490, "h": 1.000, "outs": 0.731}
+
+# Markets where the BOOK'S OWN LINE is the better point forecast, measured on the settled
+# ledger against point-in-time rebuilt projections (scripts/model_vs_market.py):
+#
+#     market   n    MAE line   MAE model   winner
+#     K        82     2.067      1.838     model
+#     BB       35     1.157      0.932     model
+#     Outs     68     2.941      3.051     MARKET
+#
+# Outs is the book's market and it is not close to an accident: a posted line prices bullpen
+# plans, pitch-count limits, injury management and how a manager has been using this arm —
+# none of which reaches a projection built from box scores. Beating the league mean (this
+# model does, R2 +0.176) is not the same as beating the line, and only the second one is an
+# edge. Markets listed here still project and still display; they cannot be presented as
+# actionable value, because the measurement says the disagreement is our error rather than
+# the book's. Re-measure as the ledger fills; drop a market from this set the moment it
+# earns its way out.
+MARKET_OUTFORECASTS_MODEL = frozenset({"outs"})
+
+
+def market_is_actionable(market: str) -> bool:
+    """False where the book's line has been measured to beat this model's projection."""
+    return str(market or "").strip().lower() not in MARKET_OUTFORECASTS_MODEL
 # A pitcher with no game log at all still needs a denominator; this is a conservative floor
 # rather than an estimate, and it shrinks such an arm hard toward league.
 MIN_RATE_SAMPLE_BF = 0.0
@@ -173,6 +207,53 @@ def shrink_rate(
     weight = sample / (sample + strength)
     league_pct = league_rate * 100.0
     return league_pct + (rate_pct - league_pct) * weight
+
+
+def league_er_per_out(game_logs: list[dict]) -> float:
+    """Pooled league earned runs per out — the prior a thin ER sample regresses to."""
+    earned = 0.0
+    outs = 0.0
+    for row in game_logs:
+        innings = row.get("IP")
+        try:
+            number = float(innings)
+            runs = float(row.get("ER"))
+        except (TypeError, ValueError):
+            continue
+        whole = int(number)
+        partial = round((number - whole) * 10)
+        outs += whole * 3 + (partial if partial in (1, 2) else 0)
+        earned += runs
+    return earned / outs if outs > 0 else 0.156
+
+
+def earned_run_rate(
+    prior_earned: float | None,
+    prior_outs: float | None,
+    league_rate: float,
+) -> float:
+    """Earned runs per out, regressed toward league by the outs behind it.
+
+    The engine used to build this from `0.70*shrunk_FIP + 0.30*ERA`, which scored R2 -0.0274
+    on the holdout — worse than projecting the league rate over the same outs (-0.0113). None
+    of those three choices had ever been scored. This construction reaches +0.0156.
+    """
+    earned = max(0.0, float(prior_earned or 0.0))
+    outs = max(0.0, float(prior_outs or 0.0))
+    return (earned + ER_SHRINK_OUTS * league_rate) / (outs + ER_SHRINK_OUTS)
+
+
+def era_gap_outs_delta(skill_era: float | None, actual_era: float | None) -> float:
+    """Outs to add for the gap between FIP-shaped skill and results so far.
+
+    Positive gap means the ERA is BELOW the skill behind it — he has been getting away with
+    something — and the fitted weight is positive, so such a pitcher goes slightly LONGER
+    next time. That is the progression half of the same signal the BABIP term carries.
+    """
+    if skill_era is None or actual_era is None:
+        return 0.0
+    gap = _clip(float(skill_era) - float(actual_era), -ERA_GAP_CLIP, ERA_GAP_CLIP)
+    return ERA_GAP_OUTS_WEIGHT * gap
 
 
 def league_outs(game_logs: list[dict]) -> float:

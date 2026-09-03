@@ -32,6 +32,7 @@ import csv
 import datetime as dt
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 from collections import defaultdict
@@ -96,15 +97,24 @@ PITCH_NAMES = {
 SKIP_PITCH_TYPES = {"IN", "PO", "AB", "UN", "", "NP"}
 
 
-def _get(url: str, timeout: int = 30, retries: int = 3) -> dict:
+def _get(url: str, timeout: int = 30, retries: int = 4) -> dict:
+    """GET with exponential backoff.
+
+    These are counting stats: a game that silently fails to fetch understates a club's PA
+    without any visible symptom. So a failure here is raised rather than skipped, and the
+    caller aborts the whole build and keeps the previous CSVs — but back off first, because
+    the sweep runs a dozen requests at a time and an immediate retry just deepens the hole.
+    """
     last: Exception | None = None
-    for _ in range(retries):
+    for attempt in range(retries):
         try:
             request = urllib.request.Request(url, headers=UA)
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 return json.loads(response.read().decode())
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
             last = exc
+            if attempt < retries - 1:
+                time.sleep(0.5 * 2 ** attempt)
     raise RuntimeError(f"MLB Stats API failed after {retries} tries: {url}") from last
 
 

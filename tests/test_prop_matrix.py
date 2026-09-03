@@ -198,12 +198,24 @@ def test_days_rest_parsing():
     assert matrix.days_rest("garbage", "2026-08-31") is None
 
 
-def test_earned_runs_have_no_matrix_term():
-    """Measured: every factor tested scored negative on ER. Adding one back needs evidence."""
+def test_earned_runs_have_no_matchup_weight():
+    """Measured: every opponent factor tested scored negative on ER.
+
+    Shrinkage constants are fine — ER_SHRINK_OUTS is how the pitcher's OWN rate is regressed.
+    What must not come back is an opponent/matchup WEIGHT, so this bans that shape only.
+    """
+    # Constants are named <source>_<target>_WEIGHT, so the target market is the second-to-last
+    # segment. ERA_GAP_OUTS_WEIGHT targets OUTS and is fine; anything targeting ER is not.
     exported = {name for name in dir(matrix) if name.isupper()}
-    assert not any("ER_" in name or name.endswith("_ER_WEIGHT") for name in exported), (
-        "ER is not predictable beyond self-history — see docs/PROP-MATRIX-FINDINGS.md"
+    offenders = [
+        name for name in exported
+        if name.endswith("_WEIGHT") and name.split("_")[-2] == "ER"
+    ]
+    assert not offenders, (
+        f"ER carries no matchup signal — see docs/PROP-MATRIX-FINDINGS.md; found {offenders}"
     )
+    from mlbmodel.props.model import OPPONENT_ER_DAMPING
+    assert OPPONENT_ER_DAMPING == 0.0
 
 
 # ------------------------------------------------------------------- pitch-mix matchup term
@@ -409,3 +421,113 @@ def test_opponent_quality_cannot_reach_earned_runs():
 def test_pitch_mix_scale_is_the_holdout_optimum():
     from mlbmodel.props.model import PITCH_MIX_K_SCALE
     assert PITCH_MIX_K_SCALE == 40.0
+
+
+# --------------------------------------------------------------------- earned runs
+def test_earned_run_rate_regresses_a_thin_sample():
+    league = 0.156
+    assert matrix.earned_run_rate(0.0, 0.0, league) == pytest.approx(league)
+    # A pitcher who has allowed nothing over 30 outs is not a 0.00 ERA pitcher.
+    thin = matrix.earned_run_rate(0.0, 30.0, league)
+    assert 0.8 * league < thin < league
+
+
+def test_earned_run_rate_keeps_a_large_sample():
+    league = 0.156
+    heavy = matrix.earned_run_rate(60.0, 600.0, league)   # 0.10 per out over 600 outs
+    assert 0.10 < heavy < league, "600 outs should pull well away from league"
+
+
+def test_earned_run_shrinkage_is_on_outs_not_batters():
+    """The rate lives on outs; using the batters-faced strength would under-regress it."""
+    assert matrix.ER_SHRINK_OUTS == 248.0
+    assert matrix.ER_SHRINK_OUTS != matrix.RATE_SHRINK_BF["k"]
+
+
+def test_blended_era_construction_is_gone():
+    """0.70*skill + 0.30*ERA scored R2 -0.0274, worse than the league rate over same outs."""
+    import inspect
+    from mlbmodel.props import model
+    source = inspect.getsource(model.PitcherProjectionEngine.project)
+    # Match the assignment, not the word: the comment explaining its removal mentions it.
+    assert "blended_era =" not in source
+    assert "blended_era /" not in source
+
+
+# --------------------------------------------------------------------- ERA-vs-skill gap
+def test_era_gap_pushes_a_lucky_pitcher_longer():
+    """Gap = skill - actual ERA. Positive means results are BETTER than the skill behind them."""
+    lucky = matrix.era_gap_outs_delta(4.50, 3.00)     # skill 4.50, ERA 3.00 -> gap +1.5
+    unlucky = matrix.era_gap_outs_delta(3.00, 4.50)
+    assert lucky > 0 > unlucky
+    assert matrix.era_gap_outs_delta(4.0, 4.0) == pytest.approx(0.0)
+    assert matrix.era_gap_outs_delta(None, 4.0) == 0.0
+    assert matrix.era_gap_outs_delta(4.0, None) == 0.0
+
+
+def test_era_gap_is_clipped():
+    extreme = matrix.era_gap_outs_delta(12.0, 1.0)
+    bounded = matrix.era_gap_outs_delta(matrix.ERA_GAP_CLIP + 1.0, 1.0)
+    assert extreme == pytest.approx(bounded)
+
+
+def test_era_gap_stays_a_small_correction():
+    """At the clip it is worth a fraction of an out, not an inning."""
+    assert abs(matrix.era_gap_outs_delta(10.0, 1.0)) < 1.0
+
+
+def test_league_er_per_out_reads_innings_notation():
+    logs = [{"IP": 6.0, "ER": 3}, {"IP": 6.0, "ER": 3}]   # 6 ER over 36 outs
+    assert matrix.league_er_per_out(logs) == pytest.approx(6 / 36)
+    assert 0.05 < matrix.league_er_per_out([]) < 0.30
+
+
+# ------------------------------------------------- measured market-skill gate (Outs)
+def test_outs_is_gated_because_the_book_out_forecasts_the_model():
+    """Measured on the settled ledger: MAE line 2.941 vs model 3.051 on 68 starts.
+
+    Beating the league mean is not beating the line, and only the second is an edge. A posted
+    outs line prices bullpen plans and pitch-count limits that never reach a box-score model.
+    """
+    assert not matrix.market_is_actionable("Outs")
+    assert not matrix.market_is_actionable("outs")
+
+
+def test_markets_the_model_wins_stay_actionable():
+    """K: MAE 1.838 vs line 2.067. BB: 0.932 vs 1.157. Both earned their place."""
+    for market in ("K", "BB", "H", "ER", "PP_Fantasy"):
+        assert matrix.market_is_actionable(market), market
+
+
+def test_gated_market_reports_no_edge_but_still_projects():
+    from mlbmodel.market.props import PropOddsBoard, PropQuote, market_report
+    quote = PropQuote(
+        game="AAA@BBB", player="Test Arm", prop="Outs", line=16.5, side="over",
+        best_odds=-110, best_book="dk", no_vig_probability=0.50, hold=0.04,
+        book_count=2, sharp_probability=0.50, soft_probability=0.50, fetched_at="now",
+    )
+    pitcher = {
+        "pitcher": "Test Arm",
+        "projections": {"Outs": {"mean": 19.0, "sd": 3.0}},
+    }
+    reports = market_report(pitcher, PropOddsBoard([quote]))
+    assert len(reports) == 1
+    row = reports[0]
+    assert row["state"] == "NO EDGE"
+    assert row["market_outforecasts_model"] is True
+    # The projection and its probability are still published — only the verdict is withheld.
+    assert row["model_probability"] > 0.5
+    assert "out-forecasts" in row["reason"]
+
+
+def test_ungated_market_still_produces_a_verdict():
+    from mlbmodel.market.props import PropOddsBoard, PropQuote, market_report
+    quote = PropQuote(
+        game="AAA@BBB", player="Test Arm", prop="K", line=5.5, side="over",
+        best_odds=-110, best_book="dk", no_vig_probability=0.50, hold=0.04,
+        book_count=2, sharp_probability=0.50, soft_probability=0.50, fetched_at="now",
+    )
+    pitcher = {"pitcher": "Test Arm", "projections": {"K": {"mean": 7.0, "sd": 2.2}}}
+    row = market_report(pitcher, PropOddsBoard([quote]))[0]
+    assert row["state"] != "NO EDGE"
+    assert not row["market_outforecasts_model"]

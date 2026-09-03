@@ -8,6 +8,8 @@ import pytest
 
 from mlbmodel.baseball.arsenal_rating import (
     AXES,
+    MIN_ARSENAL_PITCHES,
+    MIN_RECENT_PITCHES,
     SHRINK_PA,
     WEIGHTS,
     ArsenalRatingEngine,
@@ -68,13 +70,33 @@ def _mix_frame() -> pd.DataFrame:
 
 
 def _arsenal_frame() -> pd.DataFrame:
+    """Season mix table. Fred is the clean case; the rest are the edges that bit in prod."""
     return pd.DataFrame([
-        {"full_name": "Fastballer, Fred", "pitch_type": "FF", "pitch_pct": 70.0,
-         "pitch_name": "4-Seam Fastball"},
-        {"full_name": "Fastballer, Fred", "pitch_type": "SL", "pitch_pct": 30.0,
-         "pitch_name": "Slider"},
-        {"full_name": "Rare, Randy", "pitch_type": "FF", "pitch_pct": 2.0,
-         "pitch_name": "4-Seam Fastball"},
+        # 70/30 across two pitch types, comfortably over the pitch floor.
+        {"player_id": 1, "full_name": "Fastballer, Fred", "team_abbr": "AAA",
+         "pitch_type": "FF", "pitch_pct": 70.0, "pitches": 700, "pitch_name": "4-Seam Fastball"},
+        {"player_id": 1, "full_name": "Fastballer, Fred", "team_abbr": "AAA",
+         "pitch_type": "SL", "pitch_pct": 30.0, "pitches": 300, "pitch_name": "Slider"},
+        # One pitch at 2% usage — under MIN_USAGE_PCT, so nothing survives to score.
+        {"player_id": 2, "full_name": "Rare, Randy", "team_abbr": "BBB",
+         "pitch_type": "FF", "pitch_pct": 2.0, "pitches": 900, "pitch_name": "4-Seam Fastball"},
+        # Real usage shares, but off 40 pitches — under MIN_ARSENAL_PITCHES.
+        {"player_id": 3, "full_name": "Debut, Danny", "team_abbr": "CCC",
+         "pitch_type": "FF", "pitch_pct": 75.0, "pitches": 30, "pitch_name": "4-Seam Fastball"},
+        {"player_id": 3, "full_name": "Debut, Danny", "team_abbr": "CCC",
+         "pitch_type": "SL", "pitch_pct": 25.0, "pitches": 10, "pitch_name": "Slider"},
+        # Two different arms sharing a name, as the real table holds two Yunior Martes.
+        {"player_id": 4, "full_name": "Twin, Terry", "team_abbr": "DDD",
+         "pitch_type": "FF", "pitch_pct": 100.0, "pitches": 800, "pitch_name": "4-Seam Fastball"},
+        {"player_id": 5, "full_name": "Twin, Terry", "team_abbr": "EEE",
+         "pitch_type": "SL", "pitch_pct": 100.0, "pitches": 800, "pitch_name": "Slider"},
+        # Unclassified codes have no league row; they must be dropped, not left to eat coverage.
+        {"player_id": 6, "full_name": "Junky, Jim", "team_abbr": "FFF",
+         "pitch_type": "FF", "pitch_pct": 60.0, "pitches": 600, "pitch_name": "4-Seam Fastball"},
+        {"player_id": 6, "full_name": "Junky, Jim", "team_abbr": "FFF",
+         "pitch_type": "SL", "pitch_pct": 25.0, "pitches": 250, "pitch_name": "Slider"},
+        {"player_id": 6, "full_name": "Junky, Jim", "team_abbr": "FFF",
+         "pitch_type": "UNK", "pitch_pct": 15.0, "pitches": 150, "pitch_name": "Unknown"},
     ])
 
 
@@ -212,6 +234,61 @@ def test_thin_arsenal_coverage_yields_no_rating(engine):
     assert engine.rate("NOPE", "Fred Fastballer") is None
 
 
+def test_arsenal_needs_a_real_pitch_sample(engine):
+    """Usage shares off 40 pitches are noise dressed as a game plan."""
+    assert MIN_ARSENAL_PITCHES > 40
+    assert engine.arsenal("Danny Debut") == []
+    assert engine.rate("HOT", "Danny Debut") is None
+
+
+def test_shared_names_never_blend_into_one_arsenal(engine):
+    """The real mix table holds two Yunior Martes; grouping by name summed them to 200%."""
+    # Ambiguous on name alone -> refuse rather than invent a chimera.
+    assert engine.arsenal("Terry Twin") == []
+    assert engine.rate("HOT", "Terry Twin") is None
+    # The pitcher's team resolves it exactly, and each arm keeps its own single pitch.
+    ddd = engine.arsenal("Terry Twin", "DDD")
+    eee = engine.arsenal("Terry Twin", "EEE")
+    assert [pitch for pitch, _, _ in ddd] == ["FF"]
+    assert [pitch for pitch, _, _ in eee] == ["SL"]
+    for mix in (ddd, eee):
+        assert sum(usage for _, usage, _ in mix) == pytest.approx(100.0)
+    assert engine.rate("HOT", "Terry Twin", "DDD") is not None
+
+
+def test_unscoreable_pitch_codes_are_dropped_not_counted_as_coverage(engine):
+    """UNK has no league row, so leaving it in would quietly shrink coverage to 85%."""
+    assert engine.arsenal("Jim Junky", "FFF") == [
+        ("FF", 60.0, "4-Seam Fastball"), ("SL", 25.0, "Slider")
+    ]
+    read = engine.rate("HOT", "Jim Junky", "FFF")
+    assert read.coverage_pct == pytest.approx(85.0)
+
+
+def test_recent_arsenal_overrides_the_season_one_only_on_a_real_sample():
+    def frame(pitches):
+        return pd.DataFrame([
+            {"player_id": 1, "full_name": "Fastballer, Fred", "team_abbr": "AAA",
+             "pitch_type": "SL", "pitch_pct": 100.0, "pitches": pitches,
+             "pitch_name": "Slider"},
+        ])
+
+    def build(recent):
+        return ArsenalRatingEngine(StubRepo({
+            "team_pitch_type_splits.csv": _mix_frame(),
+            "team_hand_splits.csv": _hand_frame(),
+            "pitch_mix_pitcher.csv": _arsenal_frame(),
+            "pitch_mix_pitcher_l14.csv": recent,
+        }))
+
+    # A one-start L14 sample must not overwrite a 1,000-pitch season arsenal.
+    thin = build(frame(MIN_RECENT_PITCHES - 1))
+    assert [pitch for pitch, _, _ in thin.arsenal("Fred Fastballer")] == ["FF", "SL"]
+    # Two starts' worth does.
+    fat = build(frame(MIN_RECENT_PITCHES))
+    assert [pitch for pitch, _, _ in fat.arsenal("Fred Fastballer")] == ["SL"]
+
+
 def test_engine_reports_not_ok_without_the_splits_file():
     engine = ArsenalRatingEngine(StubRepo({}))
     assert engine.ok is False
@@ -298,3 +375,14 @@ def test_engine_is_built_once_per_repository():
         "pitch_mix_pitcher.csv": _arsenal_frame(),
     })
     assert _arsenal_engine_for(repo) is _arsenal_engine_for(repo)
+
+
+def test_pitch_breakdown_explains_the_rating(engine):
+    """`pitches` is the drill-down behind a rating — which pitch is driving it."""
+    read = engine.rate("HOT", "Fred Fastballer")
+    assert [row["pitch_type"] for row in read.pitches] == ["FF", "SL"]
+    assert [row["usage_pct"] for row in read.pitches] == [70.0, 30.0]
+    for row in read.pitches:
+        assert row["woba"] > row["league_woba"]  # HOT is above league on every pitch
+        assert row["pa"] > 0
+        assert set(row) >= {"pitch_name", "avg", "iso", "k_pct"}

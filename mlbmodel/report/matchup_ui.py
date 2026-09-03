@@ -795,11 +795,15 @@ def _ordinal(number) -> str:
     return f"{value}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(value % 10, 'th') }"
 
 
-def _arsenal_block(engine, team: str, sp_name: str, esc) -> str:
-    """0-100 rating of this offense against the pitch types this starter actually throws."""
+def _arsenal_block(engine, team: str, sp_name: str, sp_team: str, esc) -> str:
+    """0-100 rating of this offense against the pitch types this starter actually throws.
+
+    `sp_team` is passed so a name shared by two arms resolves to the right one — the mix
+    table holds two Yunior Martes.
+    """
     from mlbmodel.baseball.arsenal_rating import AXES, CONTEXT_AXES
 
-    read = engine.rate(team, sp_name) if engine is not None else None
+    read = engine.rate(team, sp_name, sp_team) if engine is not None else None
     if read is None:
         return ('<p class="mut">No arsenal read — this starter has no pitch-mix rows, or too '
                 'little of his arsenal resolves against this lineup.</p>')
@@ -914,8 +918,8 @@ def matchup_context_html(r, gd, repo, esc) -> str:
         ),
         _breakdown_section_row(
             "Arsenal rating",
-            _arsenal_block(arsenal, gd.away, gd.home_sp, esc),
-            _arsenal_block(arsenal, gd.home, gd.away_sp, esc),
+            _arsenal_block(arsenal, gd.away, gd.home_sp, gd.home, esc),
+            _arsenal_block(arsenal, gd.home, gd.away_sp, gd.away, esc),
         ),
         _breakdown_section_row(
             "Posted lineup",

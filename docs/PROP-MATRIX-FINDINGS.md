@@ -221,3 +221,57 @@ leaves holdout R² identical to four decimals at every value from 0 to 1. Four i
 methods now agree that per-start earned runs carry no opponent signal, so the channel is
 computed and displayed but contributes nothing. Weather, umpire and travel are untouched —
 they are physical, were never tested here, and pass through at full weight.
+
+## Earned runs — the baseline itself was never scored
+
+ER carries no matchup term (measured four ways). But its *baseline* had never been tested
+either. The engine built it from `blended_era/9 × IP`, where `blended_era = 0.70·skill_era +
+0.30·ERA` and `skill_era` is a FIP/xFIP blend shrunk by `starts/(starts+6)` — three constants,
+none of them scored. On the holdout (`scripts/fit_er_and_outs.py`):
+
+| construction | R² | slope |
+|---|---|---|
+| shipped: 0.70·shrunk FIP + 0.30·ERA | **−0.0274** | 0.729 |
+| shrunk FIP only, no ERA | −0.0332 | 0.508 |
+| *league mean over the same outs* | *−0.0113* | 0.356 |
+| ER/out shrunk at 120 outs | +0.0093 | 0.591 |
+| **ER/out shrunk at 248 outs (shipped)** | **+0.0156** | **0.719** |
+| ER/out shrunk at 700 outs | +0.0113 | 0.719 |
+
+**The shipped construction was worse than the league mean.** The fix is the same per-rate
+shrinkage every other market got, on outs rather than batters faced — and 248 outs is both the
+sweep optimum and exactly what `challenger.FITTED` arrived at independently.
+
+## Outs — the ERA-vs-skill gap belongs after all
+
+The factor study saw this worth +0.29% alone but left it out because a four-factor stack
+overfitted. Tested on its own alongside the BABIP term it earns its place: R² +0.1418 →
+**+0.1463**, RMSE 3.7442 → 3.7344, at +0.0586 outs per run of gap. It is the progression half
+of the same idea — a pitcher whose ERA sits below the skill behind it goes slightly longer.
+
+## The decisive test: does the projection beat the book's own line?
+
+Everything above scores the model against the league mean, which is a low bar. This scores it
+against the number the book posted, on the same starts, from the settled ledger with
+point-in-time rebuilt projections (`scripts/model_vs_market.py`):
+
+| market | n | MAE line | MAE original | **MAE rebuilt** | winner |
+|---|---|---|---|---|---|
+| **K** | 82 | 2.067 | 1.940 | **1.838** | **model** |
+| **BB** | 35 | 1.157 | 0.804 | **0.932** | **model** |
+| **Outs** | 68 | **2.941** | 3.056 | 3.051 | **MARKET** |
+
+**Outs is the book's market.** A posted outs line prices bullpen plans, pitch-count limits,
+injury management and how a manager has been using this arm — none of which reaches a
+projection built from box scores. The model beats the league mean on Outs (R² +0.176) and
+still loses to the line, which is the whole distinction: *beating the mean is not beating the
+market, and only the second one is an edge.*
+
+`matrix.MARKET_OUTFORECASTS_MODEL` gates that. Outs still projects and still displays its
+probability; it just cannot render as actionable value, because the measurement says a
+disagreement there is our error rather than the book's. On the live slate this suppressed 62
+quotes and moved the actionable claimed edge from a median 9.1pts to **8.1pts**, with the
+share above 10 points falling from 47% to **34%**.
+
+Re-measure as the ledger fills, and drop a market from that set the moment it earns its way
+out.

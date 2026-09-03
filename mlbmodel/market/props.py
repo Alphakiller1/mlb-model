@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 
 from mlbmodel import settings
 from mlbmodel.market.probability import p_over_exact
+from mlbmodel.props import matrix
 from mlbmodel.market import usage
 from mlbmodel.market.prizepicks import normalize_name
 from mlbmodel.market.oddsmath import (
@@ -295,6 +296,9 @@ def market_report(
         # and the under must not silently absorb it.
         p_over, p_push = p_over_exact(quote.line, projection)
         model_probability = p_over if quote.side == "over" else 1 - p_over - p_push
+        # Where the book's line has been measured to out-forecast this model, the projection
+        # still shows but cannot be sold as value — see matrix.MARKET_OUTFORECASTS_MODEL.
+        actionable = matrix.market_is_actionable(quote.prop)
         assessment = assess_value(
             model_probability,
             quote.best_odds,
@@ -318,8 +322,14 @@ def market_report(
                 "edge": assessment.edge,
                 "ev": assessment.ev_per_unit,
                 "fair_odds": assessment.fair_odds,
-                "state": assessment.action,
-                "reason": assessment.reason,
+                "state": assessment.action if actionable else "NO EDGE",
+                "market_outforecasts_model": not actionable,
+                "reason": (
+                    assessment.reason if actionable else
+                    "The posted line out-forecasts this model on this market "
+                    "(measured on the settled ledger), so a disagreement here is "
+                    "read as model error, not value"
+                ),
                 "sharp_divergence": quote.sharp_divergence,
                 "fetched_at": quote.fetched_at,
             }

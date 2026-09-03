@@ -255,6 +255,7 @@ class PitcherProjectionEngine:
         )
         self.league_rates = matrix.league_rates(self.game_logs)
         self.league_outs = matrix.league_outs(self.game_logs)
+        self.league_er_per_out = matrix.league_er_per_out(self.game_logs)
         slate = repo.slate()
         self.slate_date = (
             str(slate.iloc[0].get("Slate_Date"))
@@ -389,6 +390,14 @@ class PitcherProjectionEngine:
         hits, walks, homers, strikeouts, runs = (
             float(numeric[column].sum()) for column in ("H", "BB", "HR", "K", "R")
         )
+        earned = float(pd.to_numeric(frame.get("ER"), errors="coerce").sum())
+        outs_total = float(
+            sum(
+                (value or 0.0) * 3
+                for value in (_innings(row.get("IP")) for row in logs)
+                if value is not None
+            )
+        )
         batters = float(numeric["batters_faced"].sum())
         balls_in_play = batters - strikeouts - homers - walks
         babip = (hits - homers) / balls_in_play if balls_in_play > 0 else None
@@ -416,6 +425,8 @@ class PitcherProjectionEngine:
             "recent_ip": float(np.mean(recent_innings)) if len(recent_innings) else None,
             "ip_sd": float(np.std(innings)) if len(innings) >= 3 else 1.0,
             "bf": batters,
+            "er_total": earned,
+            "outs_total": outs_total,
             # `logs` is sorted by date in `_logs`, so the last row is the previous start.
             "last_start": str(logs[-1].get("date") or "") or None,
         }
@@ -743,6 +754,10 @@ class PitcherProjectionEngine:
         )
         shrink = starts / (starts + 6) if starts > 0 else 0.0
         skill_era = 4.20 + (skill_era - 4.20) * shrink
+        # `blended_era` (0.70*skill + 0.30*ERA) is gone: it drove earned runs to R2 -0.0274
+        # on the holdout, worse than projecting the league rate over the same outs. The ERA
+        # is still read, but now only to size the progression term on Outs.
+        era = _number(profile.get("ERA")) or skill_era
 
         season_k = (_percent(profile.get("K_pct")) or LG_K * 100)
         season_bb = (_percent(profile.get("BB_pct")) or LG_BB * 100)
@@ -790,7 +805,12 @@ class PitcherProjectionEngine:
         regression_outs = matrix.regression_outs_delta(log_factors.get("babip"))
         rest_days = matrix.days_rest(log_factors.get("last_start"), self.slate_date)
         rest_outs = matrix.rest_outs_delta(rest_days)
-        expected_ip = baseline_ip + (regression_outs + rest_outs) / 3.0
+        # The other half of the same signal: FIP-shaped skill minus actual ERA. Shipped
+        # alongside BABIP because together they beat either alone (R2 +0.1418 -> +0.1463).
+        era_gap_outs = matrix.era_gap_outs_delta(
+            skill_era, era
+        )
+        expected_ip = baseline_ip + (regression_outs + rest_outs + era_gap_outs) / 3.0
         # Hard sanity bound: no MLB starter projects beyond ~7 IP, and a bad/garbage
         # avg_IP from a thin profile (e.g. a swingman with one long relief outing) would
         # otherwise sail past the 8.2-out sample clip and manufacture a near-certain
@@ -855,15 +875,22 @@ class PitcherProjectionEngine:
         # (and the batters-faced-driven K/BB/H) shrink against a strong posted lineup.
         ip_factor = _clip(1 - (run_factor - 1) * 0.45, 0.94, 1.06)
         outing_ip = _clip(expected_ip * ip_factor, 2.5, 7.0)
-        era = _number(profile.get("ERA")) or skill_era
-        blended_era = skill_era * 0.70 + era * 0.30
         # ER stays on the UNSHORTENED workload. Multiplying the shortened outing by the
         # run factor would net out to only ~55% of the run-environment signal (a tough
         # lineup both raises the rate and trims the innings), silently re-calibrating a
         # market that already has a grading/CLV history. The hook comes after the damage,
         # so ER accrues at the elevated rate over a normal workload.
-        er_mean = max(0.2, blended_era / 9 * expected_ip * run_factor)
-        f5_mean = max(0.1, blended_era / 9 * min(5.0, expected_ip) * run_factor)
+        # Earned runs per out, regressed toward league by the outs behind it. The old
+        # `0.70*shrunk_FIP + 0.30*ERA` blend scored R2 -0.0274 on the holdout — worse than
+        # projecting the league rate over the same outs (-0.0113). None of those three
+        # constants had ever been scored. This construction reaches +0.0156.
+        er_rate = matrix.earned_run_rate(
+            log_factors.get("er_total"),
+            log_factors.get("outs_total"),
+            self.league_er_per_out,
+        )
+        er_mean = max(0.2, er_rate * expected_ip * 3 * run_factor)
+        f5_mean = max(0.1, er_rate * min(5.0, expected_ip) * 3 * run_factor)
 
         coverage, missing = context_coverage(context)
         confidence = confidence_from_coverage(coverage, starts)
@@ -998,6 +1025,8 @@ class PitcherProjectionEngine:
                 ),
                 "opponent_k_strikeouts": round(opponent_k_strikeouts, 3),
                 "regression_outs": round(regression_outs, 3),
+                "era_gap_outs": round(era_gap_outs, 3),
+                "er_rate_per_out": round(er_rate, 4),
                 "babip_to_date": (
                     round(float(log_factors["babip"]), 3)
                     if log_factors.get("babip") is not None else None
