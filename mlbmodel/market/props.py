@@ -30,6 +30,13 @@ API_MARKETS = {
     "pitcher_outs": "Outs",
 }
 
+# K and BB are the two markets where the rebuilt projection has beaten the
+# sportsbook line on the settled ledger. They are the minimum useful live-price
+# tier when quota is tight. ER can be added with more headroom; Outs is omitted
+# from edge-priced refreshes because the market has out-forecast this model.
+EDGE_API_MARKETS = ("pitcher_strikeouts", "pitcher_walks")
+EXTENDED_EDGE_API_MARKETS = (*EDGE_API_MARKETS, "pitcher_earned_runs")
+
 
 @dataclass(frozen=True)
 class PropQuote:
@@ -195,7 +202,12 @@ def build_prop_board(
     return PropOddsBoard(quotes)
 
 
-def fetch_prop_payloads(cache_path: Path | None = None) -> tuple[list[dict], str]:
+def fetch_prop_payloads(
+    cache_path: Path | None = None,
+    *,
+    slate_date: str | None = None,
+    markets: tuple[str, ...] | None = None,
+) -> tuple[list[dict], str]:
     if not settings.ODDS_API_KEY:
         raise RuntimeError("ODDS_API_KEY is not configured")
     # Props are the expensive fetch (one call per game), so guard before the event list.
@@ -209,14 +221,25 @@ def fetch_prop_payloads(cache_path: Path | None = None) -> tuple[list[dict], str
     )
     with urllib.request.urlopen(event_url, timeout=30) as response:
         events = json.loads(response.read().decode("utf-8"))
+    # The event list includes future slates. Additional markets are billed per
+    # event, so filtering after the requests burns credits on games the report
+    # immediately discards. Bound paid calls to the active Eastern-date slate.
+    events = filter_events_for_slate(events, slate_date)
     payloads = []
-    markets = ",".join(API_MARKETS)
+    market_keys = tuple(dict.fromkeys(markets or tuple(API_MARKETS)))
+    invalid_markets = sorted(set(market_keys) - set(API_MARKETS))
+    if not market_keys or invalid_markets:
+        raise ValueError(
+            "prop markets must be a non-empty subset of API_MARKETS; invalid="
+            + ",".join(invalid_markets)
+        )
+    requested_markets = ",".join(market_keys)
     regions = getattr(settings, "ODDS_PROP_REGIONS", "us")
     for event in events:
         query_params = {
             "apiKey": settings.ODDS_API_KEY,
             "regions": regions,
-            "markets": markets,
+            "markets": requested_markets,
             "oddsFormat": "american",
             "dateFormat": "iso",
         }
@@ -248,11 +271,16 @@ def load_prop_board(
     fetch: bool = False,
     cache_path: Path | None = None,
     slate_date: str | None = None,
+    markets: tuple[str, ...] | None = None,
 ) -> PropOddsBoard:
     path = cache_path or settings.CACHE_DIR / "prop_odds_latest.json"
     if fetch:
         try:
-            payloads, fetched = fetch_prop_payloads(path)
+            payloads, fetched = fetch_prop_payloads(
+                path,
+                slate_date=slate_date,
+                markets=markets,
+            )
             payloads = filter_events_for_slate(payloads, slate_date)
             return build_prop_board(payloads, fetched)
         except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
@@ -349,10 +377,25 @@ def main() -> None:  # pragma: no cover
         description="Refresh paired pitcher-prop prices from The Odds API."
     )
     parser.add_argument("--cache")
+    parser.add_argument(
+        "--slate-date",
+        help="Eastern-date slate (YYYY-MM-DD); paid event calls are limited to this date",
+    )
+    parser.add_argument(
+        "--markets",
+        help="Comma-separated API market keys; defaults to every supported market",
+    )
     args = parser.parse_args()
+    markets = (
+        tuple(key.strip() for key in args.markets.split(",") if key.strip())
+        if args.markets
+        else None
+    )
     board = load_prop_board(
         fetch=True,
         cache_path=Path(args.cache) if args.cache else None,
+        slate_date=args.slate_date,
+        markets=markets,
     )
     print(
         f"pitcher prop sides={len(board.quotes)}"

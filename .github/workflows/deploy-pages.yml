@@ -123,13 +123,35 @@ jobs:
               echo "ODDS_LIVE_FETCH_SKIPPED=1" >> "$GITHUB_ENV"
             fi
 
-            # Player props (~50 credits) — only when the month's budget is healthy so no single
-            # build can exhaust the key. Below the floor, props show model projections only.
-            if [ "$REMAINING" -ge 150 ]; then
-              bash scripts/retry.sh 3 python -m mlbmodel.market.props --cache _deploy_data/prop_odds_latest.json \
+            # Prop calls are billed by market per game. The collector filters to this exact
+            # Eastern-date slate before making paid event calls. Prioritize K and BB because
+            # those projections beat the sportsbook line on the settled ledger; add ER only
+            # with extra headroom. Do not buy Outs pricing while the book out-forecasts us there.
+            # Every tier keeps ten credits plus the core game-line request in reserve.
+            SLATE_DATE=$(python -c "import json; print(json.load(open('_deploy_data/mlbma_sync.json'))['slate_date'])")
+            GAME_COUNT=$(python -c "import json; print(json.load(open('_deploy_data/mlbma_sync.json'))['game_count'])")
+            EDGE_PROP_MARKETS=$(python -c "from mlbmodel.market.props import EDGE_API_MARKETS; print(','.join(EDGE_API_MARKETS))")
+            EXTENDED_PROP_MARKETS=$(python -c "from mlbmodel.market.props import EXTENDED_EDGE_API_MARKETS; print(','.join(EXTENDED_EDGE_API_MARKETS))")
+            EDGE_MARKET_COUNT=$(python -c "from mlbmodel.market.props import EDGE_API_MARKETS; print(len(EDGE_API_MARKETS))")
+            EXTENDED_MARKET_COUNT=$(python -c "from mlbmodel.market.props import EXTENDED_EDGE_API_MARKETS; print(len(EXTENDED_EDGE_API_MARKETS))")
+            EDGE_REQUIRED=$((GAME_COUNT * EDGE_MARKET_COUNT + 13))
+            EXTENDED_REQUIRED=$((GAME_COUNT * EXTENDED_MARKET_COUNT + 13))
+            if [ "$REMAINING" -ge "$EXTENDED_REQUIRED" ]; then
+              PROP_MARKETS="$EXTENDED_PROP_MARKETS"
+              echo "DraftKings prop refresh: extended K/BB/ER tier for $GAME_COUNT games."
+            elif [ "$REMAINING" -ge "$EDGE_REQUIRED" ]; then
+              PROP_MARKETS="$EDGE_PROP_MARKETS"
+              echo "DraftKings prop refresh: quota-efficient K/BB edge tier for $GAME_COUNT games."
+            else
+              PROP_MARKETS=""
+            fi
+            if [ -n "$PROP_MARKETS" ]; then
+              bash scripts/retry.sh 3 python -m mlbmodel.market.props \
+                --cache _deploy_data/prop_odds_latest.json --slate-date "$SLATE_DATE" \
+                --markets "$PROP_MARKETS" \
                 || echo "WARNING: prop odds fetch failed after retries; props stay NO MARKET"
             else
-              echo "Skipping prop-odds fetch — only $REMAINING credits left (props need ~50); showing model projections. Upgrade the Odds API plan for always-on props."
+              echo "Skipping prop-odds fetch — $REMAINING credits is below the slate-specific $EDGE_REQUIRED K/BB floor; showing model projections."
             fi
           else
             echo "ODDS_API_KEY not set; skipping odds fetch (props + sharp stay empty)"
