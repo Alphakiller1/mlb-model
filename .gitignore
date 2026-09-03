@@ -34,3 +34,7 @@ model_leans_latest.json
 # a failed warehouse write stays replayable (scripts/replay_leans.py), not to be versioned.
 data/lean_snapshots/
 deployment_data/lean_snapshots/
+# Local grading ledger (mlbmodel/local_grading.py). Regenerated on every run and it
+# grows each time, so versioning it only produces churn and merge conflicts.
+data/prediction_ledger.csv
+deployment_data/prediction_ledger.csv
