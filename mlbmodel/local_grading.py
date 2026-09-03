@@ -30,6 +30,22 @@ def _number(value):
         return None
 
 
+def _outs_from_innings(value) -> float | None:
+    """MLB innings notation -> outs. 6.1 is six and ONE THIRD innings, i.e. 19 outs.
+
+    Multiplying by three instead treats it as 6.1 innings and returns 18.3. 35% of starts end
+    on a fractional inning, the mean shortfall is 0.38 outs and the worst case is 1.4, which
+    flips the graded side on about 2.9% of (start, half-point line) pairs — a real error rate
+    written straight into the record the model is judged by.
+    """
+    number = _number(value)
+    if number is None:
+        return None
+    whole = int(number)
+    third = round((number - whole) * 10)
+    return float(whole * 3 + (third if third in (1, 2) else 0))
+
+
 def _norm(value: object) -> str:
     return "".join(char for char in str(value or "").lower() if char.isalnum())
 
@@ -137,9 +153,21 @@ def grade_pending(data_dir: str | Path) -> dict[str, int]:
         if stat is None:
             continue
         key = row["market"]
+        if key == "F5_ER":
+            # `sp_game_log.f5_er` is the TEAM's earned runs through five innings, not the
+            # starter's: on 19% of starts it exceeds his full-game ER outright (Scherzer
+            # 2.0 IP / 2 ER / f5_er 6; Verlander 3.2 IP / 5 ER / f5_er 8), because it counts
+            # the bullpen's runs after he was pulled. The board projects the STARTER's F5
+            # earned runs, so grading it against this column scores a different quantity and
+            # manufactures error where there is none. `mlbmodel.leans.grade` already voids
+            # this market for the same reason; the two graders must not disagree.
+            frame.at[idx, "status"] = "void"
+            frame.at[idx, "void_reason"] = "unsupported_market"
+            voided += 1
+            continue
         actual = {"K": _number(stat.get("K")), "BB": _number(stat.get("BB")),
-                  "ER": _number(stat.get("ER")), "Outs": (_number(stat.get("IP")) or 0) * 3,
-                  "F5_ER": _number(stat.get("f5_er"))}.get(key)
+                  "ER": _number(stat.get("ER")),
+                  "Outs": _outs_from_innings(stat.get("IP"))}.get(key)
         line = _number(row["line"])
         if actual is None or line is None or row["selection"] not in {"over", "under"}:
             frame.at[idx, "status"] = "void"

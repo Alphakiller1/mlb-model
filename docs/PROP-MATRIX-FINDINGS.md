@@ -275,3 +275,70 @@ share above 10 points falling from 47% to **34%**.
 
 Re-measure as the ledger fills, and drop a market from that set the moment it earns its way
 out.
+
+## The simulation's own shape constants — never checked until now
+
+Fixing the pricing made this urgent. Prices used to be a normal refitted to `(mean, sd)`, so
+only two moments of the simulation reached the board. They are now read straight off the
+simulated distribution, which means **every shape constant in the sampler is priced directly**.
+None had been scored (`scripts/validate_sim_shape.py`).
+
+**Batters faced was modelled as a fixed ratio, and it is not one.** The sampler drew
+`innings × normal(4.25, 0.16)`. The realised ratio depends heavily on outing length — 5.60
+batters per inning under 4 IP, 4.50 from 4–6, 3.86 at 6+ — because a short outing is short
+*because* of baserunners. The spread was understated 5.7× as well.
+
+The clean parameterisation is `bf = outs + baserunners`, because baserunners allowed has mean
+**6.33**, sd **2.57**, and a correlation with outs recorded of only **−0.039**: a starter allows
+about six and a third baserunners whether he goes four innings or seven. Against 3,790 starts,
+the old form scores RMSE 3.218 and this one **2.566**. This drives K/BB/H sampling.
+
+**Innings spread was clipped too tightly.** Realised per-pitcher innings sd runs median 1.101,
+p90 1.507; the 1.35 ceiling clipped 19% of pitchers — understating outing-length uncertainty
+for exactly the volatile arms where it matters. Ceiling raised to 1.60.
+
+**Outs priced 23% too confidently.** A simulated sd is conditional on the projected mean being
+correct; a price needs the *predictive* sd, which also carries the projection's own error:
+
+| market | sim sd | holdout RMSE | ratio | |
+|---|---|---|---|---|
+| K | 2.17 | 2.260 | 1.04 | ok |
+| BB | 1.35 | 1.328 | 0.99 | ok |
+| H | 2.15 | 1.976 | 0.92 | already conservative |
+| **Outs** | **3.00** | **3.684** | **1.23** | **too tight** |
+
+Only outing length was materially under-dispersed, and an independent route agrees — backing
+sigma out of the pre-rebuild ledger's own prices gave 3.14 against a realised 3.91, a ratio of
+1.245. `OUTS_SIGMA_INFLATION = 1.24` corrects it; all four markets now sit at 0.90–1.02. **A
+sigma that is too tight does not bias the projection, it makes every probability drawn from it
+overconfident** — which is how a board manufactures edge it has not earned.
+
+Cumulative effect on actionable claimed edge across the three rounds:
+
+| | median | p90 | share >10pts |
+|---|---|---|---|
+| original engine | 9.5pts | 20.5 | 46% |
+| + matrix rebuild + market gate | 8.1pts | 16.6 | 34% |
+| **+ shape fixes** | **7.2pts** | **16.0** | **34%** |
+
+**Deliberately not changed:** the earned-run overdispersion shape, `gamma(4.5)`. The marginal
+ER distribution implies ~4.0, but that marginal includes between-pitcher variance which the
+model already carries separately in `er_mean`; inferring the conditional shape from it would
+double-count. Left alone rather than changed on a flawed inference.
+
+## Two grading bugs found in the same function
+
+`mlbmodel/local_grading.py` (added upstream while this work was in progress) had both:
+
+**It graded F5 earned runs against a team statistic.** `sp_game_log.f5_er` is the TEAM's earned
+runs through five innings, not the starter's — on **19% of starts it exceeds his full-game ER
+outright** (Scherzer 2.0 IP / 2 ER / f5_er 6; Verlander 3.2 IP / 5 ER / f5_er 8), because it
+counts the bullpen after he was pulled. The board projects the *starter's* F5 earned runs, so
+this scored a different quantity and manufactured error where there was none.
+`mlbmodel.leans.grade` already voids that market for exactly this reason; the two graders now
+agree.
+
+**It converted innings to outs with `IP × 3`.** MLB notation `6.1` means six and *one third*
+innings — 19 outs, not 18.3. 35% of starts end on a fractional inning, the mean shortfall is
+0.38 outs and the worst case 1.4, which flips the graded side on **2.9%** of (start, half-point
+line) pairs. That is a real error rate written into the record the model is judged by.

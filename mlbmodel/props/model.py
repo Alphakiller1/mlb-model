@@ -901,13 +901,29 @@ class PitcherProjectionEngine:
         iterations = 30000
         ip_samples = rng.normal(
             outing_ip,
-            max(0.65, min(1.35, log_factors.get("ip_sd") or 1.0)),
+            # Realised per-pitcher innings sd: median 1.101, p90 1.507. The old 1.35 ceiling
+            # clipped 19% of pitchers, understating outing-length uncertainty for exactly
+            # the volatile arms where it matters most.
+            max(0.65, min(1.60, log_factors.get("ip_sd") or 1.0))
+            * matrix.OUTS_SIGMA_INFLATION,
             iterations,
         )
         ip_samples = np.clip(ip_samples, 1.0, 8.2)
+        # Batters faced = outs recorded + baserunners allowed. See matrix.BASERUNNERS_MEAN:
+        # baserunners are near-independent of outing length (r = -0.039), whereas the old
+        # fixed ratio of 4.25 batters per inning was badly length-dependent and understated
+        # the spread 5.7x.
         bf_samples = np.maximum(
             3,
-            np.rint(ip_samples * rng.normal(4.25, 0.16, iterations)).astype(int),
+            np.rint(
+                ip_samples * 3
+                + np.maximum(
+                    0.0,
+                    rng.normal(
+                        matrix.BASERUNNERS_MEAN, matrix.BASERUNNERS_SD, iterations
+                    ),
+                )
+            ).astype(int),
         )
         # Rate uncertainty is the posterior concentration behind the shrunk mean: the batters
         # this pitcher has actually faced, plus the market's shrinkage strength. Using a flat

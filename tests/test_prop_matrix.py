@@ -531,3 +531,63 @@ def test_ungated_market_still_produces_a_verdict():
     row = market_report(pitcher, PropOddsBoard([quote]))[0]
     assert row["state"] != "NO EDGE"
     assert not row["market_outforecasts_model"]
+
+
+# ------------------------------------------------------- local grading correctness
+def test_outs_conversion_reads_mlb_innings_notation():
+    """`IP * 3` treats 6.1 as 6.1 innings. It is six and ONE THIRD — 19 outs, not 18.3."""
+    from mlbmodel.local_grading import _outs_from_innings
+    assert _outs_from_innings(6.0) == 18
+    assert _outs_from_innings(6.1) == 19
+    assert _outs_from_innings(6.2) == 20
+    assert _outs_from_innings(5.2) == 17
+    assert _outs_from_innings(None) is None
+    # The naive form under-counts by up to 1.4 outs, which flips graded sides.
+    assert _outs_from_innings(6.2) != 6.2 * 3
+
+
+def test_local_grading_voids_f5_er_like_the_canonical_grader():
+    """sp_game_log.f5_er is the TEAM's runs through five, not the starter's.
+
+    On 19% of starts it exceeds his full-game ER outright. mlbmodel.leans.grade already voids
+    this market; the two graders must not disagree about what is gradeable.
+    """
+    import inspect
+    from mlbmodel import local_grading
+    source = inspect.getsource(local_grading.grade_pending)
+    assert '"F5_ER": _number(stat.get("f5_er"))' not in source
+    assert "unsupported_market" in source
+
+
+# ----------------------------------------------------------- simulation shape constants
+def test_batters_faced_is_outs_plus_baserunners_not_a_fixed_ratio():
+    """Measured: baserunners correlate -0.039 with outs, so the ratio form was wrong.
+
+    `innings x 4.25` implies 4.25 batters per inning at every length, but the realised ratio
+    runs 5.60 under 4 IP and 3.86 at 6+, because a short outing is short BECAUSE of
+    baserunners. Old RMSE 3.218 against the log; this form 2.566.
+    """
+    assert 5.0 < matrix.BASERUNNERS_MEAN < 8.0
+    assert 1.5 < matrix.BASERUNNERS_SD < 4.0
+    import inspect
+    from mlbmodel.props import model
+    source = inspect.getsource(model.PitcherProjectionEngine.project)
+    assert "4.25, 0.16" not in source, "the fixed batters-per-inning ratio must not come back"
+    assert "BASERUNNERS_MEAN" in source
+
+
+def test_outs_sigma_is_inflated_to_the_predictive_spread():
+    """A simulated sd is conditional on the mean being right; a price needs the total error.
+
+    Measured at 1.23 (sim 3.00 vs holdout RMSE 3.684) and independently at 1.245 by backing
+    sigma out of the pre-rebuild ledger's own prices.
+    """
+    assert 1.10 < matrix.OUTS_SIGMA_INFLATION < 1.40
+
+
+def test_only_outs_needed_inflating():
+    """K, BB and H already matched their predictive error (ratios 1.04, 0.99, 0.92)."""
+    exported = {name for name in dir(matrix) if name.endswith("_SIGMA_INFLATION")}
+    assert exported == {"OUTS_SIGMA_INFLATION"}, (
+        "inflating a market whose sigma already matches would make it under-confident"
+    )

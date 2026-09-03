@@ -89,6 +89,38 @@ ERA_GAP_CLIP = 2.5
 # The BB figure looks brutal on top of a 193-batter shrinkage, and it should: per-start walk
 # totals are close to unpredictable, and halving what little spread remains is what finally
 # moves that market from negative R2 to positive.
+# Batters faced beyond the outs recorded — i.e. baserunners allowed. Measured across 3,790
+# starts: mean 6.33, sd 2.57, and correlation with outs recorded of only -0.039. A starter
+# allows about six and a third baserunners whether he goes four innings or seven, which is why
+# `bf = outs + baserunners` is the right shape and `bf = innings x 4.25` is not.
+#
+# The old form sampled `innings x normal(4.25, 0.16)`, a fixed RATIO. But the realised ratio
+# depends heavily on how long the outing was — 5.60 batters per inning under 4 IP, 4.50 from
+# 4-6, 3.86 at 6+ — because a short outing is short precisely BECAUSE of baserunners. It also
+# understated the spread by 5.7x. Against the log: old RMSE 3.218, this form 2.566.
+#
+# This drives the K/BB/H sampling, and since prices are now read straight off the simulated
+# distribution rather than a normal refitted to two moments, its shape reaches the board.
+# The simulation's spread is conditional on the projected mean being CORRECT. A price needs
+# the predictive spread, which also carries the projection's own error. Checked per market
+# against the shipped construction's holdout RMSE:
+#
+#     market   sim sd   holdout RMSE   ratio
+#     K         2.17        2.260      1.04   ok
+#     BB        1.35        1.328      0.99   ok
+#     H         2.15        1.976      0.92   already conservative
+#     Outs      3.00        3.684      1.23   TOO TIGHT
+#
+# Only outing length is materially under-dispersed, and an independent route agrees: backing
+# the sigma out of the pre-rebuild ledger's own prices gave 3.14 against a realised 3.91, a
+# ratio of 1.245. Applied to the innings sampler, whose spread is what Outs inherits.
+# A sigma that is too tight does not bias the projection — it makes every probability drawn
+# from it too confident, which is how a board manufactures edge it has not earned.
+OUTS_SIGMA_INFLATION = 1.24
+
+BASERUNNERS_MEAN = 6.33
+BASERUNNERS_SD = 2.57
+
 SPREAD_CALIBRATION = {"k": 0.970, "bb": 0.490, "h": 1.000, "outs": 0.731}
 
 # Markets where the BOOK'S OWN LINE is the better point forecast, measured on the settled
