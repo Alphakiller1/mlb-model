@@ -1,6 +1,7 @@
 """Matchup report panels — banner, context splits, advantage, F5, pitcher decks."""
 from __future__ import annotations
 
+import datetime as dt
 import html
 import json
 import urllib.request
@@ -639,6 +640,197 @@ def _posted_lineup_block(features: dict, source, esc) -> str:
     )
 
 
+_ENGINE_ATTR = "_arsenal_engine_cache"
+_UNSET = object()
+
+
+def _arsenal_engine_for(repo):
+    """One engine per repository — it folds every team-by-pitch cell on construction.
+
+    Cached on the repo instance rather than by data directory: the caller's repo is the one
+    that must be read (a stub repo in a test, a `_deploy_data` repo on the runner), and
+    rebuilding a DataRepository from a path would silently fall back to the default data
+    directory when the stub has none.
+    """
+    cached = getattr(repo, _ENGINE_ATTR, _UNSET)
+    if cached is not _UNSET:
+        return cached
+    from mlbmodel.baseball.arsenal_rating import ArsenalRatingEngine
+
+    try:
+        engine = ArsenalRatingEngine(repo)
+        engine = engine if engine.ok else None
+    except Exception:  # noqa: BLE001 — a short or missing splits file hides two panels,
+        engine = None  # it must never take the whole matchup card down with it.
+    try:
+        setattr(repo, _ENGINE_ATTR, engine)
+    except AttributeError:
+        pass
+    return engine
+
+
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def _pretty_date(value) -> str:
+    """'2026-08-01' -> 'Aug 1'. Built by hand: strftime's no-pad flag is %-d on Linux and
+    %#d on Windows, and this module renders on both."""
+    text = str(value or "")[:10]
+    try:
+        day = dt.date.fromisoformat(text)
+    except ValueError:
+        return text
+    return f"{_MONTHS[day.month - 1]} {day.day}"
+
+
+def _hand_window_days(engine) -> int:
+    """Length of the hand-split window, read from the data rather than assumed."""
+    default = 30
+    if engine is None:
+        return default
+    start, end = engine.hand_window
+    try:
+        return max(1, (dt.date.fromisoformat(str(end)[:10])
+                       - dt.date.fromisoformat(str(start)[:10])).days)
+    except ValueError:
+        return default
+
+
+def _hand_row(row: dict | None, label: str, *, facing: bool, muted: bool = False) -> str:
+    if not row:
+        return ""
+    cells = "".join(
+        f"<td>{_metric_cells(row.get(key), ctx, digits=digits)}</td>"
+        for key, ctx, digits in (
+            ("k_pct", "bat_k_pct", 1), ("bb_pct", "bat_bb_pct", 1), ("avg", "bat_avg", 3),
+            ("slg", "bat_slg", 3), ("woba", "bat_woba", 3),
+        )
+    )
+    classes = " ".join(filter(None, [
+        "matchup-hand-row",
+        "matchup-hand-row--facing" if facing else "",
+        "matchup-hand-row--league" if muted else "",
+    ]))
+    marker = '<span class=matchup-hand-row__dot aria-hidden=true></span>' if facing else ""
+    return f'<tr class="{classes}"><td class=mut>{marker}{e(label)}</td>{cells}</tr>'
+
+
+def _hand_split_block(engine, team: str, opposing_sp: str, faced_hand: str, esc) -> str:
+    """Team offense vs LHP and vs RHP over the recent window, facing hand marked.
+
+    Both hands are always shown. A club's line against the hand it is NOT facing tonight is
+    the only thing that says whether the line it IS facing is a platoon split or just the
+    club's level, and a card that hid it would invite reading noise as a platoon edge.
+    """
+    if engine is None:
+        return '<p class="mut">Recent hand splits unavailable.</p>'
+    hand = str(faced_hand or "").upper()[:1]
+    rows = ""
+    for code in ("R", "L"):
+        rows += _hand_row(engine.hand_split(team, code), f"vs {code}HP", facing=(code == hand))
+    if hand in {"L", "R"}:
+        rows += _hand_row(engine.league_hand_split(hand), f"MLB vs {hand}HP",
+                          facing=False, muted=True)
+    if not rows:
+        return '<p class="mut">Recent hand splits unavailable.</p>'
+
+    # Every plate appearance against that hand, relievers included — so the PA counts are
+    # well past the ~28 starts a "games started by a lefty" split would have given.
+    counts = []
+    for code in ("R", "L"):
+        row = engine.hand_split(team, code)
+        pa = _opt_int((row or {}).get("pa"))
+        if pa:
+            counts.append(f"{pa:,} PA vs {code}HP")
+    start, end = engine.hand_window
+    if start and end:
+        counts.append(f"{_pretty_date(start)} – {_pretty_date(end)}")
+    tag = (f'<div class=matchup-breakdown__mix-tag>facing {esc(opposing_sp)}'
+           f'{esc(f" ({hand}HP)") if hand else ""}</div>')
+    header = "<th>Split</th><th>K%</th><th>BB%</th><th>AVG</th><th>SLG</th><th>wOBA</th>"
+    return (tag + _split_table(header, rows, empty_cols=6)
+            + f'<p class="mut matchup-hand-meta">{esc(" · ".join(counts))}</p>')
+
+
+def _arsenal_axis_row(read, axis: str, esc) -> str:
+    from mlbmodel.baseball.arsenal_rating import AXIS_DIGITS, AXIS_SUFFIX, AXIS_LABEL
+
+    axis_read = read.axes.get(axis)
+    if axis_read is None:
+        return ""
+    digits, suffix = AXIS_DIGITS[axis], AXIS_SUFFIX.get(axis, "")
+    value = f"{axis_read.team_value:.{digits}f}{suffix}"
+    league = f"{axis_read.league_value:.{digits}f}{suffix}"
+    rank = (f"{_ordinal(axis_read.rank)}" if axis_read.rank else "—")
+    return (
+        f'<tr><td class=mut>{esc(AXIS_LABEL[axis])}</td>'
+        f'<td>{val_chip_html(axis_read.score, "osi", digits=0, display_text=value)}</td>'
+        f'<td class=mut>{esc(league)}</td>'
+        f'<td class=num>{esc(rank)}</td></tr>'
+    )
+
+
+def _arsenal_verdict_html(verdict: str) -> str:
+    """Offense-perspective pill.
+
+    NOT `pitch_mix_verdict_html`: that board's lane belongs to the PITCHER, so it paints a
+    "Pitcher" edge green. This lane is the batting team, so the same word has to read red.
+    """
+    key = str(verdict or "").strip().lower()
+    if key == "lineup":
+        return '<span class="pill pos">Edge lineup</span>'
+    if key == "pitcher":
+        return '<span class="pill neg">Edge arsenal</span>'
+    return '<span class="pill mut">Neutral</span>'
+
+
+def _ordinal(number) -> str:
+    try:
+        value = int(number)
+    except (TypeError, ValueError):
+        return "—"
+    if 10 <= value % 100 <= 20:
+        return f"{value}th"
+    return f"{value}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(value % 10, 'th') }"
+
+
+def _arsenal_block(engine, team: str, sp_name: str, esc) -> str:
+    """0-100 rating of this offense against the pitch types this starter actually throws."""
+    from mlbmodel.baseball.arsenal_rating import AXES, CONTEXT_AXES
+
+    read = engine.rate(team, sp_name) if engine is not None else None
+    if read is None:
+        return ('<p class="mut">No arsenal read — this starter has no pitch-mix rows, or too '
+                'little of his arsenal resolves against this lineup.</p>')
+
+    rank = f"{_ordinal(read.rank)} of {read.teams_ranked}" if read.rank else "unranked"
+    strip = (
+        f'<div class=matchup-breakdown__mix-tag>vs {esc(sp_name)} mix</div>'
+        '<div class="arsenal-rating__strip">'
+        f'{val_chip_html(read.rating, "osi", digits=0)}'
+        f'<span class="arsenal-rating__rank">{esc(rank)}</span>'
+        f'{_arsenal_verdict_html(read.verdict)}'
+        "</div>"
+    )
+    rows = "".join(_arsenal_axis_row(read, axis, esc) for axis in AXES)
+    rows += "".join(
+        _arsenal_axis_row(read, axis, esc).replace(
+            "<tr>", '<tr class="arsenal-rating__context">', 1
+        )
+        for axis in CONTEXT_AXES
+    )
+    header = "<th>Axis</th><th>Team</th><th>MLB</th><th>Rk</th>"
+    start, end = read.window
+    meta = " · ".join(filter(None, [
+        f"{read.coverage_pct:.0f}% of arsenal covered",
+        f"{read.pa:,} PA" if read.pa else "",
+        f"{_pretty_date(start)} – {_pretty_date(end)}" if start and end else "",
+    ]))
+    return (strip + _split_table(header, rows, empty_cols=4)
+            + f'<p class="mut matchup-hand-meta">{esc(meta)}</p>')
+
+
 def _breakdown_team_head(team: str, sp_name: str, side: str, esc) -> str:
     from mlbmodel.report.matchup import _logo
 
@@ -664,6 +856,7 @@ def matchup_context_html(r, gd, repo, esc) -> str:
     home_sp_hand = _sp_metric_split(repo, gd.home_sp, "hand")
     away_sp_loc = _sp_metric_split(repo, gd.away_sp, "location")
     home_sp_loc = _sp_metric_split(repo, gd.home_sp, "location")
+    arsenal = _arsenal_engine_for(repo)
 
     live_lineups = (getattr(gd, "live_context", None) or {}).get("lineups") or {}
     pitchers = {row.get("team"): row for row in r.get("pitchers", []) if row.get("team")}
@@ -713,6 +906,17 @@ def matchup_context_html(r, gd, repo, esc) -> str:
             _split_table(lineup_ha_hdr, _lineup_ha_rows(away_prof), empty_cols=4),
             _split_table(lineup_ha_hdr, _lineup_ha_rows(home_prof), empty_cols=4),
         ),
+        # Each lane is the BATTING team, so it is scored against the OTHER side's starter.
+        _breakdown_section_row(
+            f"Offense vs hand · L{_hand_window_days(arsenal)}",
+            _hand_split_block(arsenal, gd.away, gd.home_sp, getattr(gd, "home_hand", ""), esc),
+            _hand_split_block(arsenal, gd.home, gd.away_sp, getattr(gd, "away_hand", ""), esc),
+        ),
+        _breakdown_section_row(
+            "Arsenal rating",
+            _arsenal_block(arsenal, gd.away, gd.home_sp, esc),
+            _arsenal_block(arsenal, gd.home, gd.away_sp, esc),
+        ),
         _breakdown_section_row(
             "Posted lineup",
             _posted_lineup_block(
@@ -741,7 +945,11 @@ def matchup_context_html(r, gd, repo, esc) -> str:
     return f"""<div class=ca-board>{section_head("Matchup breakdown", icon="matchups")}<div class=body>
   <div class=matchup-breakdown-sym>
     {"".join(rows)}
-    <p class="pitch-mix-legend pitch-mix-legend--sym">Δ K% = whiff/chase edge · Δ runs = contact shift (green = fewer runs allowed)</p>
+    <p class="pitch-mix-legend pitch-mix-legend--sym">Δ K% = whiff/chase edge · Δ runs = contact shift (green = fewer runs allowed)<br>
+    Offense vs hand = every PA against that hand, relievers included. Arsenal rating = measured form
+    against this starter's pitch types (run creation .26 · power .36 · average .25 · walks .13, ranked
+    against all 30 clubs facing the same mix) — a descriptive read, not a projection: the pitch-specific
+    part of it does not persist out of sample.</p>
   </div>
 </div></div>"""
 

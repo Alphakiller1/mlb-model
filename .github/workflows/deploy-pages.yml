@@ -61,6 +61,17 @@ jobs:
           # before applying the API budget guard, otherwise a low-credit build can silently
           # discard valid FanDuel lines and serve an older slate.
           python scripts/seed_odds_snapshot.py --deploy-dir _deploy_data --candidate-dir data
+      - name: Build PA-level hand + pitch-type splits
+        run: |
+          # MLB Stats API play-by-play — free, no key, ~40s for the 120-day sweep. Feeds the
+          # "Offense vs hand" and "Arsenal rating" panels in the matchup breakdown.
+          #
+          # NOT a hub dataset: sync_mlbma never writes these two files, so the committed
+          # deployment_data copies are the only fallback. Non-fatal on purpose — a statsapi
+          # blip should hide two panels, not freeze the live site on a stale slate.
+          bash scripts/retry.sh 2 python -m mlbmodel.sources.build_hand_pitch_splits \
+            --days 30 --mix-days 120 --out _deploy_data \
+            || echo "WARNING: split build failed; falling back to the committed snapshot"
       - name: Fetch live odds (props + game lines for sharp-money board)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}

@@ -190,6 +190,16 @@ _CONTEXT_DEFAULTS: dict[str, dict[str, float | bool]] = {
     "hr9": {"mean": 1.20, "std": 0.28, "hi": False},
     "kpct": {"mean": 22.5, "std": 4.5, "hi": True},
     "bbpct": {"mean": 8.0, "std": 1.8, "hi": False},
+    # Offense-side twins of kpct/bbpct: the same number reads the opposite way from the
+    # batter's box, so a lineup's K% must never be graded on the pitcher context.
+    # Means and spreads are the measured 30-day team distributions from team_hand_splits.
+    "bat_k_pct": {"mean": 22.0, "std": 3.1, "hi": False},
+    "bat_bb_pct": {"mean": 8.9, "std": 1.5, "hi": True},
+    "bat_avg": {"mean": 0.243, "std": 0.022, "hi": True},
+    "bat_obp": {"mean": 0.317, "std": 0.023, "hi": True},
+    "bat_slg": {"mean": 0.393, "std": 0.048, "hi": True},
+    "bat_iso": {"mean": 0.150, "std": 0.035, "hi": True},
+    "bat_woba": {"mean": 0.314, "std": 0.026, "hi": True},
     "park": {"mean": 1.00, "std": 0.08, "hi": True},
     "clv": {"mean": 0.0, "std": 2.5, "hi": True},
     "team_runs": {"mean": 4.40, "std": 1.35, "hi": True},

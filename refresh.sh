@@ -14,25 +14,30 @@ fi
 
 export MLBMA_DATA_DIR="$DATA"
 
-echo "==> 1/7 synchronize MLBMA features, slate, and live game context"
+echo "==> 1/8 synchronize MLBMA features, slate, and live game context"
 "$PYTHON" -m mlbmodel.sources.sync_mlbma --out "$DATA"
 
-echo "==> 2/7 ingest recent finals and update empirical anchors"
+echo "==> 2/8 build PA-level team hand + pitch-type splits"
+# MLB Stats API play-by-play; no key, ~40s for a 120-day sweep. Non-fatal: the report
+# degrades to hiding those two breakdown panels rather than failing the whole refresh.
+"$PYTHON" -m mlbmodel.sources.build_hand_pitch_splits --days 30 --mix-days 120 --out "$DATA"   || echo "WARNING: hand/pitch-type split build failed; keeping the existing CSVs"
+
+echo "==> 3/8 ingest recent finals and update empirical anchors"
 "$PYTHON" -m mlbmodel.sources.build_game_results --days 14 --out "$DATA"
 
-echo "==> 3/7 seed teams and games"
+echo "==> 4/8 seed teams and games"
 "$PYTHON" -m mlbmodel.sources.seed_warehouse --data-dir "$DATA"
 
-echo "==> 4/7 collect paired game odds and sharp-vs-soft observations"
+echo "==> 5/8 collect paired game odds and sharp-vs-soft observations"
 "$PYTHON" -m mlbmodel.market.collect --data-dir "$DATA"
 
-echo "==> 5/7 refresh paired pitcher-prop prices"
+echo "==> 6/8 refresh paired pitcher-prop prices"
 "$PYTHON" -m mlbmodel.market.props --cache "$DATA/prop_odds_latest.json"
 
-echo "==> 6/7 settle eligible sharp observations"
+echo "==> 7/8 settle eligible sharp observations"
 "$PYTHON" -m mlbmodel.market.settle
 
-echo "==> 7/7 enforce the executable-entry promotion gate"
+echo "==> 8/8 enforce the executable-entry promotion gate"
 "$PYTHON" -m mlbmodel.quant.promotion_gate --env "$ENV"
 
 echo "==> refresh complete"

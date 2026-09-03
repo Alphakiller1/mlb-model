@@ -222,7 +222,7 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-2);
   margin: 14px 0 8px;
 }
 
@@ -316,7 +316,7 @@
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-2);
   font-style: normal;
 }
 .prop-proj-strip--inline b {
@@ -593,7 +593,7 @@
   font-weight: 800;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-2);
 }
 .pitch-mix-net__sep { color: var(--muted); font-weight: 700; }
 .pitch-mix-net__meta { margin-left: auto; }
@@ -699,7 +699,7 @@
   font-weight: 800;
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-2);
 }
 .matchup-proj-card .v { font: 800 var(--mm-text-lg) var(--display); color: var(--ink); }
 .matchup-context-stack {
@@ -767,7 +767,7 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-2);
   text-align: center;
   margin-bottom: 6px;
 }
@@ -799,6 +799,58 @@
 }
 .matchup-breakdown-sym .table-scroll {
   overflow: visible;
+}
+/* Offense vs hand — the row for the hand actually being faced tonight carries the accent;
+   the other hand and the league line stay quiet so the eye lands on the live one. */
+.matchup-hand-row--facing > td {
+  background: color-mix(in srgb, var(--ca-brand) 9%, transparent);
+}
+.matchup-hand-row--facing > td:first-child {
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: inset 2px 0 0 var(--ca-brand);
+}
+.matchup-hand-row__dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--ca-brand);
+  vertical-align: middle;
+}
+.matchup-hand-row--league > td {
+  opacity: 0.72;
+}
+.matchup-hand-meta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+.matchup-breakdown__lane--home .matchup-hand-meta {
+  text-align: right;
+}
+.arsenal-rating__strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.matchup-breakdown__lane--home .arsenal-rating__strip {
+  justify-content: flex-end;
+}
+.arsenal-rating__rank {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+/* Strikeouts sit below the four scored axes: shown for context, not part of the rating. */
+.arsenal-rating__context > td {
+  border-top: 1px dashed var(--border-soft);
+  opacity: 0.78;
 }
 .matchup-breakdown__lane--home .matchup-bullpen-strip {
   text-align: right;
@@ -849,7 +901,7 @@
   font-weight: 800;
   letter-spacing: .07em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-2);
   margin-bottom: 4px;
 }
 .matchup-context-block--wide { grid-column: 1 / -1; }
