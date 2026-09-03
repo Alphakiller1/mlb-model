@@ -366,6 +366,20 @@ def write_lean_snapshot(rows: list[dict], path: Path | None = None) -> Path:
         "rows": rows,
     }
     dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    # Also keep a per-slate copy. `model_leans_latest.json` is overwritten every run, so a
+    # warehouse write that fails is unrecoverable once the next build starts — which is how
+    # a 336-lean slate ended up existing only as a file nobody could replay. These accumulate
+    # and are what `scripts/replay_leans.py` reads.
+    slate_dates = {str(row.get("slate_date") or "") for row in rows} - {""}
+    if len(slate_dates) == 1:
+        archive = dest.parent / "lean_snapshots"
+        try:
+            archive.mkdir(parents=True, exist_ok=True)
+            (archive / f"{slate_dates.pop()}.json").write_text(
+                json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+            )
+        except OSError as exc:  # never let archiving break a build
+            log.warning("lean snapshot archive failed: %s", exc)
     return dest
 
 

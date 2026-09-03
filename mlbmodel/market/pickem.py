@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 
 from mlbmodel.market import prizepicks
-from mlbmodel.market.probability import p_over_line_erf, p_over_line_normal
+from mlbmodel.market.probability import p_over_exact
 from mlbmodel import settings
 
 log = logging.getLogger(__name__)
@@ -92,12 +92,14 @@ def _load_cache(path: Path | None) -> list[dict]:
     return list(payload.get("lines") or payload.get("rows") or [])
 
 
-def _p_over(mean: float, sd: float, line: float) -> float:
-    return p_over_line_normal(line, mean, sd)
+def _p_over(projection: dict, line: float) -> float:
+    """P(over) from the simulated distribution; see market.probability.p_over_exact.
 
-
-def _p_over_erf(line: float, mean: float, sd: float) -> float:
-    return p_over_line_erf(line, mean, sd)
+    Pick'em lines are half-points, so push is zero and the under is the complement. These
+    used to refit a normal to (mean, sd), which overstated the Over on every skewed market.
+    """
+    over, push = p_over_exact(line, projection)
+    return over / (over + (1.0 - over - push)) if (over + push) < 1.0 else over
 
 
 def pickem_market_reports(
@@ -120,8 +122,7 @@ def pickem_market_reports(
             if not line_obj or not proj:
                 continue
             line = float(line_obj["line"])
-            mean, sd = proj.get("mean"), proj.get("sd")
-            p_over = _p_over_erf(line, mean, sd or 0)
+            p_over = _p_over(proj, line)
             lean = "OVER" if p_over >= 0.5 else "UNDER"
             edge_pts = abs(p_over - 0.5) * 100
             model_probability = p_over if lean == "OVER" else 1 - p_over
@@ -167,8 +168,8 @@ def build_pickem_rows_from_boards(
                 line, proj = lines.get(key), projections.get(key)
                 if not line or not proj:
                     continue
-                mean, sd = proj.get("mean"), proj.get("sd")
-                p_over = _p_over_erf(line["line"], mean, sd or 0)
+                mean = proj.get("mean")
+                p_over = _p_over(proj, line["line"])
                 lean = "OVER" if p_over >= 0.5 else "UNDER"
                 prop = prizepicks.STAT_LABEL.get(key, key)
                 rows.append({
@@ -221,10 +222,9 @@ def build_pickem_rows(
                 continue
             dist = (pitcher.get("projections") or {}).get(prop) or {}
             mean = dist.get("mean")
-            sd = dist.get("sd")
             if mean is None:
                 continue
-            p_over = _p_over(float(mean), float(sd or 1.0), float(line))
+            p_over = _p_over(dist, float(line))
             lean = "OVER" if p_over >= 0.5 else "UNDER"
             book = str(report.get("best_book") or "sportsbook").lower()
             rows.append({

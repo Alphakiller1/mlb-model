@@ -113,12 +113,13 @@ def _pitch_row(pitch: dict, *, compact: bool) -> str:
         else ""
     )
     whiff_col = f"<td>{whiff_cell}</td>" if not compact else ""
+    # There is no OPS column here any more. It rendered `lineup_ops`, which was set to
+    # the opponent's xwOBA — the identical number the "Opp xwOBA" column shows one cell
+    # to its right — so the board displayed the same value twice under two different
+    # headers, one of them wrong.
     ba_ops_cols = ""
     if not compact:
-        ba_ops_cols = (
-            f'<td>{val_chip_html(pitch.get("lineup_ba"), "rate", digits=3)}</td>'
-            f'<td>{val_chip_html(pitch.get("lineup_ops"), "woba", digits=3)}</td>'
-        )
+        ba_ops_cols = f'<td>{val_chip_html(pitch.get("lineup_ba"), "rate", digits=3)}</td>' 
     return (
         f'<tr><td><b>{e(str(pitch.get("pitch") or ""))}</b>'
         f'<span class="mut pitch-name-meta">{float(pitch.get("usage_pct") or 0):.0f}% usage</span></td>'
@@ -151,13 +152,13 @@ def pitch_mix_board_html(
         '<p class="pitch-mix-legend">'
         "<b>Δ K%</b> = whiff/chase edge · "
         "<b>Δ runs</b> = contact shift (green = fewer runs allowed) · "
-        "Opp BA/OPS = how the lineup hits this pitch type.</p>"
+        "Opp BA = how the lineup hits this pitch type.</p>"
         if show_legend else ""
     )
     board_cls = "pitch-mix-board pitch-mix-board--compact" if compact else "pitch-mix-board"
     xwoba_head = "xwOBA" if compact else "Opp xwOBA"
     whiff_head = "" if compact else "<th>Whiff</th>"
-    ba_ops_head = "" if compact else "<th>BA</th><th>OPS</th>"
+    ba_ops_head = "" if compact else "<th>BA</th>"
     title_block = (
         '<div class="ca-subhead">Pitch mix vs opposing lineup</div>'
         if show_title else ""

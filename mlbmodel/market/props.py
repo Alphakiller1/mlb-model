@@ -12,7 +12,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from mlbmodel import settings
-from mlbmodel.baseball.model import normal_cdf
+from mlbmodel.market.probability import p_over_exact
 from mlbmodel.market import usage
 from mlbmodel.market.prizepicks import normalize_name
 from mlbmodel.market.oddsmath import (
@@ -289,10 +289,11 @@ def market_report(
         projection = projections.get(quote.prop)
         if not projection:
             continue
-        mean = float(projection["mean"])
-        standard_deviation = max(0.2, float(projection["sd"]))
-        p_over = 1 - normal_cdf((quote.line - mean) / standard_deviation)
-        model_probability = p_over if quote.side == "over" else 1 - p_over
+        # Price the distribution the simulation actually drew, not a normal refitted to its
+        # first two moments. On a half-point line push is zero; on a whole number it is not,
+        # and the under must not silently absorb it.
+        p_over, p_push = p_over_exact(quote.line, projection)
+        model_probability = p_over if quote.side == "over" else 1 - p_over - p_push
         assessment = assess_value(
             model_probability,
             quote.best_odds,

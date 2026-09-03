@@ -25,7 +25,7 @@ from __future__ import annotations
 import html
 
 from mlbmodel.market import prizepicks
-from mlbmodel.market.probability import p_over_line_erf
+from mlbmodel.market.probability import p_over_exact
 from mlbmodel.report.html_fmt import edge_grade as _edge_grade, lean_dir_html, prob_chip_html
 from mlbmodel.report.matchup import _headshot, _logo
 from mlbmodel.report.pitch_mix_ui import pitch_mix_board_html
@@ -46,8 +46,10 @@ _BREAKEVEN_NOTE = (
 )
 
 
-def _p_over(line, mean, sd):
-    return p_over_line_erf(line, mean, sd or 0)
+def _p_over(line, projection):
+    """P(over) from the simulated distribution — see market.probability.p_over_exact."""
+    over, _push = p_over_exact(line, projection)
+    return over
 
 
 def _prop_label(prop_key: str) -> str:
@@ -224,7 +226,7 @@ def _pickem_plays(row: dict, sources: list[tuple[str, dict]]) -> list[dict]:
             line_obj, proj = lines.get(key), projections.get(key)
             if not line_obj or not proj:
                 continue
-            p_over = _p_over(line_obj["line"], proj.get("mean"), proj.get("sd") or 0)
+            p_over = _p_over(line_obj["line"], proj)
             side = "OVER" if p_over >= 0.5 else "UNDER"
             model = p_over if side == "OVER" else 1 - p_over
             odds_type = str(line_obj.get("odds_type") or "standard")

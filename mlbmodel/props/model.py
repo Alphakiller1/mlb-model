@@ -23,11 +23,13 @@ from mlbmodel.baseball.context import (
     weather_run_factor,
 )
 from mlbmodel.baseball.metrics import (
+    LEAGUE_LHB_SHARE,
     opponent_offense_strength,
     pitcher_allowed_skill_adjustment,
     sp_split_skill_adjustment,
 )
 from mlbmodel.baseball.model import model_probabilities
+from mlbmodel.props import matrix
 from mlbmodel.baseball.repository import DataRepository
 from mlbmodel.report.game_keys import parse_game_key
 from mlbmodel.sources.sync_mlbma import matchup_keys
@@ -44,6 +46,33 @@ PP_WIN_PROB = 0.40
 LG_XWOBA = 0.320
 SKIP_PITCH_TYPES = {"UNK", "PO", "EP", "FA"}
 ORDER_WEIGHTS = np.array([1.10, 1.08, 1.07, 1.05, 1.02, 0.99, 0.96, 0.93, 0.90])
+# Pitch-mix adjustment scales. Unchanged from the original engine ON PURPOSE: the only change
+# is WHAT they multiply. The score used to be the pitcher's arsenal quality plus the
+# opponent's response; now it is the opponent's response alone.
+#
+# Measured on 3,790 starts (scripts/pitch_mix_audit.py), with the pitcher's own season K rate
+# held constant — which the engine has already applied to `k_rate` before this term is added:
+#
+#     component            share of total sd   partial corr with realised K rate
+#     pitcher's own stuff        94%                        +0.0027
+#     opponent lineup            30%                        +0.0858
+#     total (what shipped)      100%                        +0.0375
+#
+# The pitcher half correlates +0.708 with his own season K rate, so adding it counted the
+# same skill twice and inflated the spread of every K projection — and it dropped the
+# combined signal to less than half of what the opponent half carries alone. It is dead
+# weight at best. The scales are NOT re-fitted here: the only data available for that is the
+# season-aggregate pitch mix, which already knows how these starts ended, and a weight fitted
+# on it would be fitted to hindsight. Keeping x16 shrinks the term ~3.3x, which is the
+# conservative direction.
+PITCH_MIX_K_SCALE = 16.0
+PITCH_MIX_ER_SCALE = 1.8
+# How much of the opponent-quality run factor reaches earned runs. JUDGMENT, not a fit:
+# every opponent factor tested against per-start ER scored negative out of sample (best
+# -0.01%, scripts/factor_study.py) and the challenger engine independently fitted an opponent
+# weight of 0.00 for hits/HR/ER. Half weight keeps the channel alive for the forward sample
+# the restored ledger will produce, while halving the unsupported spread it was adding.
+OPPONENT_ER_DAMPING = 0.50
 
 
 def _number(value: Any) -> float | None:
@@ -117,24 +146,61 @@ class Distribution:
     p50: float
     p90: float
     standard_deviation: float
+    # The shape the simulation actually produced. `pmf` for integer counting stats,
+    # `quantiles` (a 101-point percentile grid) for continuous ones like fantasy score.
+    # Without one of these the board can only refit a symmetric normal to (mean, sd),
+    # which overstates P(Over) on every right-skewed market — see market.probability.
+    pmf: dict[int, float] | None = None
+    quantiles: list[float] | None = None
 
     def as_dict(self) -> dict:
-        return {
+        payload = {
             "mean": round(self.mean, 2),
             "p10": round(self.p10, 1),
             "p50": round(self.p50, 1),
             "p90": round(self.p90, 1),
             "sd": round(self.standard_deviation, 2),
         }
+        if self.pmf:
+            payload["pmf"] = {
+                str(value): round(probability, 6)
+                for value, probability in sorted(self.pmf.items())
+            }
+        elif self.quantiles:
+            payload["q"] = [round(value, 2) for value in self.quantiles]
+        return payload
+
+
+# Probability mass below this is dropped from a stored PMF: it keeps the board payload small
+# without moving any line price (the trimmed tail is renormalised at pricing time).
+_PMF_FLOOR = 1e-5
 
 
 def _distribution(samples: np.ndarray) -> Distribution:
+    samples = np.asarray(samples)
+    integral = np.all(samples == np.rint(samples))
+    pmf: dict[int, float] | None = None
+    quantiles: list[float] | None = None
+    if integral:
+        values, counts = np.unique(samples.astype(np.int64), return_counts=True)
+        total = float(counts.sum())
+        pmf = {
+            int(value): float(count) / total
+            for value, count in zip(values, counts, strict=True)
+            if count / total >= _PMF_FLOOR
+        }
+    else:
+        quantiles = [
+            float(value) for value in np.quantile(samples, np.linspace(0.0, 1.0, 101))
+        ]
     return Distribution(
         mean=float(np.mean(samples)),
         p10=float(np.quantile(samples, 0.10)),
         p50=float(np.quantile(samples, 0.50)),
         p90=float(np.quantile(samples, 0.90)),
         standard_deviation=float(np.std(samples)),
+        pmf=pmf,
+        quantiles=quantiles,
     )
 
 
@@ -172,6 +238,59 @@ class PitcherProjectionEngine:
             self.team_mix_by_team.setdefault(team, []).append(row)
         self.sp_metric_splits = _rows(repo.load("sp_metric_splits.csv"))
         self.pitch_baselines = self._pitch_baselines()
+        # Source-matched baselines: each opponent table is scored against its own.
+        self.batter_pitch_baselines = self._mix_baselines(self.batter_mix)
+        self.pitcher_pitch_baselines = self._mix_baselines(self.pitcher_mix)
+        self.bats_by_id, self.bats_by_name = self._batter_hands(repo)
+        self.opponent_k_rates, self.league_k_rate = matrix.opponent_strikeout_rates(
+            self.game_logs
+        )
+        self.league_rates = matrix.league_rates(self.game_logs)
+        slate = repo.slate()
+        self.slate_date = (
+            str(slate.iloc[0].get("Slate_Date"))
+            if slate is not None and not slate.empty and "Slate_Date" in slate.columns
+            else None
+        )
+
+    @staticmethod
+    def _batter_hands(repo: DataRepository) -> tuple[dict[int, str], dict[str, str]]:
+        """MLB id / name -> batting hand, for weighting a starter's platoon splits."""
+        by_id: dict[int, str] = {}
+        by_name: dict[str, str] = {}
+        for row in _rows(repo.load("player_registry.csv")):
+            bats = str(row.get("bats") or "").strip().upper()[:1]
+            if bats not in {"L", "R", "S"}:
+                continue
+            player_id = int(_number(row.get("player_id")) or 0)
+            if player_id:
+                by_id[player_id] = bats
+            name = _norm(row.get("full_name"))
+            if name:
+                by_name[name] = bats
+        return by_id, by_name
+
+    def _lhb_share(self, lineup: dict, pitcher_hand: str) -> float | None:
+        """Share of the posted lineup that bats left-handed against THIS starter.
+
+        A switch hitter bats left against a right-hander and right against a left-hander,
+        which is the whole point of being one — counting him by his listed side would
+        understate the platoon a righty actually faces. Returns None when too little of the
+        lineup resolves, so the caller can fall back to the league share rather than to a
+        number invented from two players.
+        """
+        players = (lineup or {}).get("players") or []
+        hands = []
+        for player in players:
+            player_id = int(_number(player.get("player_id")) or 0)
+            bats = self.bats_by_id.get(player_id) or self.bats_by_name.get(
+                _norm(player.get("player"))
+            )
+            if bats:
+                hands.append("L" if bats == "S" and pitcher_hand == "R" else bats)
+        if len(hands) < 6:
+            return None
+        return sum(1 for hand in hands if hand == "L") / len(hands)
 
     def _preferred_mix(self, recent: str, season: str, key: str) -> list[dict]:
         recent_rows = _rows(self.repo.load(recent))
@@ -188,9 +307,21 @@ class PitcherProjectionEngine:
             if (_norm(row.get(key)), _pitch_type(row.get("pitch_type"))) not in recent_keys
         ]
 
-    def _pitch_baselines(self) -> dict[str, dict[str, float]]:
+    @staticmethod
+    def _mix_baselines(rows: list[dict]) -> dict[str, dict[str, float]]:
+        """Per-pitch-type league means for one mix table.
+
+        Each mix table has to be compared against a baseline drawn from ITSELF. The three
+        tables sit on visibly different scales — mean whiff rate is 19.2 in the pitcher mix,
+        20.6 in team batting and 22.8 in the individual-batter mix, and xwOBA differs by ~30
+        points between batter and team rows — because they aggregate different populations
+        over different denominators. Scoring a posted lineup (batter rows) against a team-mix
+        baseline therefore shifted the same pitcher/opponent matchup by up to 2.15 K-rate
+        points purely on whether MLB had posted the lineup yet, against a real signal whose
+        whole standard deviation is ~0.15.
+        """
         grouped: dict[str, dict[str, list[tuple[float, float]]]] = {}
-        for row in self.team_mix:
+        for row in rows:
             pitch = _pitch_type(row.get("pitch_type"))
             if pitch in SKIP_PITCH_TYPES:
                 continue
@@ -211,6 +342,9 @@ class PitcherProjectionEngine:
             }
             for pitch, metrics in grouped.items()
         }
+
+    def _pitch_baselines(self) -> dict[str, dict[str, float]]:
+        return self._mix_baselines(self.team_mix)
 
     def _profile(self, name: str, team: str) -> dict | None:
         candidates = self.profile_by_name.get(_norm(name), [])
@@ -235,7 +369,7 @@ class PitcherProjectionEngine:
         if not logs:
             return {
                 "babip": None, "lob": None, "k_trend": 0.0, "bb_trend": 0.0,
-                "recent_ip": None, "ip_sd": 1.0, "bf": 0.0,
+                "recent_ip": None, "ip_sd": 1.0, "bf": 0.0, "last_start": None,
             }
         frame = pd.DataFrame(logs)
         numeric = {
@@ -273,7 +407,24 @@ class PitcherProjectionEngine:
             "recent_ip": float(np.mean(recent_innings)) if len(recent_innings) else None,
             "ip_sd": float(np.std(innings)) if len(innings) >= 3 else 1.0,
             "bf": batters,
+            # `logs` is sorted by date in `_logs`, so the last row is the previous start.
+            "last_start": str(logs[-1].get("date") or "") or None,
         }
+
+    @staticmethod
+    def _batter_score(row: dict) -> float | None:
+        """One hitter's offensive score, used for BOTH the lineup and its club baseline.
+
+        Blends the created metrics the way the board does — OSI carrying most of the weight,
+        with ABQ (at-bat quality) and RCV (run conversion) alongside — and falls back to OSI
+        alone when the components are missing, so a thin row still contributes.
+        """
+        score = _number(row.get("projOSI")) or _number(row.get("OSI"))
+        abq = _number(row.get("ABQ")) or _number(row.get("abq"))
+        rcv = _number(row.get("RCV")) or _number(row.get("rcv"))
+        if score is not None and abq is not None and rcv is not None:
+            return 0.55 * score + 0.25 * abq + 0.20 * rcv
+        return score
 
     def _lineup_strength(
         self,
@@ -287,10 +438,17 @@ class PitcherProjectionEngine:
             if str(row.get("team") or "").upper() == team
             and str(row.get("split_type") or "") == split
         ]
+        # The lineup and its baseline MUST be scored by the same formula. The baseline used to
+        # be pure projOSI while each hitter was scored 0.55*projOSI + 0.25*ABQ + 0.20*RCV, so
+        # the two sides sat on different scales and every posted lineup came out below its own
+        # club baseline — on the 2026-08-31 slate the gap was negative for all 24 sides
+        # (SFG -5.0, ATL -2.1, SDP -1.9, CIN -1.2 ...). A posted nine is a club's best
+        # available hitters; it cannot be systematically worse than the roster it comes from.
+        # The factor was therefore below 1.0 for everyone, damping every run projection, and
+        # what variation it had was formula mismatch rather than lineup quality.
         baseline = _weighted(
             [
-                (_number(row.get("projOSI")) or _number(row.get("OSI")) or 50.0,
-                 max(1.0, _number(row.get("PA")) or 1.0))
+                (self._batter_score(row) or 50.0, max(1.0, _number(row.get("PA")) or 1.0))
                 for row in team_rows
             ]
         ) or 50.0
@@ -307,11 +465,7 @@ class PitcherProjectionEngine:
             )
             if row is None:
                 continue
-            score = _number(row.get("projOSI")) or _number(row.get("OSI"))
-            abq = _number(row.get("ABQ")) or _number(row.get("abq"))
-            rcv = _number(row.get("RCV")) or _number(row.get("rcv"))
-            if score is not None and abq is not None and rcv is not None:
-                score = 0.55 * score + 0.25 * abq + 0.20 * rcv
+            score = self._batter_score(row)
             if score is None:
                 continue
             weight = float(ORDER_WEIGHTS[min(index, len(ORDER_WEIGHTS) - 1)])
@@ -335,7 +489,15 @@ class PitcherProjectionEngine:
             "factor": round(factor, 4),
         }
 
-    def _lineup_pitch_rows(self, lineup: dict, team: str) -> tuple[list[dict], int]:
+    def _lineup_pitch_rows(
+        self, lineup: dict, team: str
+    ) -> tuple[list[dict], int, str]:
+        """Opponent pitch-type rows, plus which table they came from.
+
+        The source matters: a posted lineup is aggregated from individual-batter rows, the
+        fallback is the club's team-batting row, and the two tables sit on different scales.
+        The caller uses this flag to pick a matching baseline.
+        """
         players = (lineup or {}).get("players") or []
         by_pitch: dict[str, dict[str, list[tuple[float, float]]]] = {}
         matched = 0
@@ -358,7 +520,7 @@ class PitcherProjectionEngine:
                     if value is not None:
                         metrics[column].append((value, order_weight * sample))
         if matched < 6:
-            return self.team_mix_by_team.get(team, []), matched
+            return self.team_mix_by_team.get(team, []), matched, "team"
         output = []
         for pitch, metrics in by_pitch.items():
             output.append(
@@ -367,7 +529,7 @@ class PitcherProjectionEngine:
                     **{column: _weighted(values) for column, values in metrics.items()},
                 }
             )
-        return output, matched
+        return output, matched, "lineup"
 
     def _pitch_matchup(
         self,
@@ -376,47 +538,59 @@ class PitcherProjectionEngine:
         lineup: dict,
     ) -> dict:
         pitcher_rows = self.pitcher_mix_by_name.get(_norm(pitcher_name), [])
-        lineup_rows, matched = self._lineup_pitch_rows(lineup, opponent)
+        lineup_rows, matched, source = self._lineup_pitch_rows(lineup, opponent)
         lineup_by_pitch = {
             _pitch_type(row.get("pitch_type")): row for row in lineup_rows
         }
+        # Each side is scored against a baseline built from its OWN table (see _mix_baselines).
+        opponent_baselines = (
+            self.batter_pitch_baselines if source == "lineup" else self.pitch_baselines
+        )
+        pitcher_baselines = self.pitcher_pitch_baselines
         detail = []
-        total_score = 0.0
+        opponent_score = 0.0
+        pitcher_score = 0.0
         coverage = 0.0
         for pitcher in pitcher_rows:
             pitch = _pitch_type(pitcher.get("pitch_type"))
             usage = _number(pitcher.get("pitch_pct")) or 0.0
             opponent_row = lineup_by_pitch.get(pitch)
-            baseline = self.pitch_baselines.get(pitch)
+            opponent_base = opponent_baselines.get(pitch)
+            pitcher_base = pitcher_baselines.get(pitch)
             if (
                 pitch in SKIP_PITCH_TYPES
                 or usage < 3
                 or not opponent_row
-                or not baseline
+                or not opponent_base
+                or not pitcher_base
             ):
                 continue
             weight = usage / 100
             coverage += weight
-            pitcher_whiff = _number(pitcher.get("whiff_rate")) or baseline["whiff_rate"]
-            lineup_whiff = _number(opponent_row.get("whiff_rate")) or baseline["whiff_rate"]
-            pitcher_xwoba = _number(pitcher.get("xwoba")) or baseline["xwoba"]
-            lineup_xwoba = _number(opponent_row.get("xwoba")) or baseline["xwoba"]
-            pitcher_chase = _number(pitcher.get("chase_rate")) or baseline["chase_rate"]
-            lineup_chase = _number(opponent_row.get("chase_rate")) or baseline["chase_rate"]
-            whiff_edge = (
-                (pitcher_whiff - baseline["whiff_rate"])
-                + (lineup_whiff - baseline["whiff_rate"])
-            ) / 100
-            contact_edge = (
-                (baseline["xwoba"] - pitcher_xwoba)
-                + (baseline["xwoba"] - lineup_xwoba)
-            )
-            chase_edge = (
-                (pitcher_chase - baseline["chase_rate"])
-                + (lineup_chase - baseline["chase_rate"])
-            ) / 100
-            score = weight * (0.42 * whiff_edge + 0.43 * contact_edge + 0.15 * chase_edge)
-            total_score += score
+            pitcher_whiff = _number(pitcher.get("whiff_rate")) or pitcher_base["whiff_rate"]
+            lineup_whiff = _number(opponent_row.get("whiff_rate")) or opponent_base["whiff_rate"]
+            pitcher_xwoba = _number(pitcher.get("xwoba")) or pitcher_base["xwoba"]
+            lineup_xwoba = _number(opponent_row.get("xwoba")) or opponent_base["xwoba"]
+            pitcher_chase = _number(pitcher.get("chase_rate")) or pitcher_base["chase_rate"]
+            lineup_chase = _number(opponent_row.get("chase_rate")) or opponent_base["chase_rate"]
+
+            def _half(whiff, xwoba, chase, base):
+                """One side's edge on this pitch, signed positive = good for the pitcher.
+
+                The same formula serves both sides: a pitcher with a high whiff rate and a
+                low xwOBA allowed is good, and a lineup that whiffs a lot and produces a low
+                xwOBA is also good for him.
+                """
+                return weight * (
+                    0.42 * (whiff - base["whiff_rate"]) / 100
+                    + 0.43 * (base["xwoba"] - xwoba)
+                    + 0.15 * (chase - base["chase_rate"]) / 100
+                )
+
+            opponent_part = _half(lineup_whiff, lineup_xwoba, lineup_chase, opponent_base)
+            pitcher_part = _half(pitcher_whiff, pitcher_xwoba, pitcher_chase, pitcher_base)
+            opponent_score += opponent_part
+            pitcher_score += pitcher_part
             detail.append(
                 {
                     "pitch": str(pitcher.get("pitch_name") or pitch),
@@ -429,20 +603,20 @@ class PitcherProjectionEngine:
                     "lineup_ba": (
                         round(ba, 3) if (ba := _number(opponent_row.get("batting_avg"))) is not None else None
                     ),
-                    "lineup_ops": (
-                        round(ops, 3)
-                        if (ops := _number(opponent_row.get("xwoba"))) is not None
-                        else round(lineup_xwoba * 2.8, 3)
-                    ),
-                    "k_delta": round(score * 16, 2),
-                    "er_factor_delta": round(-score * 1.8, 3),
-                    "edge": direction_label(score),
-                    "score": round(score, 4),
+                    # Only the opponent half moves the projection; the pitcher half is
+                    # context, because the engine already applies his own K rate directly.
+                    "k_delta": round(opponent_part * PITCH_MIX_K_SCALE, 2),
+                    "er_factor_delta": round(-opponent_part * PITCH_MIX_ER_SCALE, 3),
+                    "pitcher_context_score": round(pitcher_part, 4),
+                    "edge": direction_label(opponent_part),
+                    "score": round(opponent_part, 4),
                 }
             )
         detail.sort(key=lambda row: abs(row["score"]), reverse=True)
         if coverage < 0.35:
-            total_score = 0.0
+            opponent_score = 0.0
+            pitcher_score = 0.0
+        total_score = opponent_score
         return {
             "score": round(total_score, 4),
             "coverage_pct": round(min(1.0, coverage) * 100),
@@ -452,9 +626,18 @@ class PitcherProjectionEngine:
                 if matched >= 6
                 else "opponent team pitch-type results"
             ),
-            "k_rate_delta": round(_clip(total_score * 16, -2.5, 2.5), 2),
-            "er_factor": round(_clip(1 - total_score * 1.8, 0.90, 1.10), 4),
+            "k_rate_delta": round(
+                _clip(total_score * PITCH_MIX_K_SCALE, -2.5, 2.5), 2
+            ),
+            "er_factor": round(
+                _clip(1 - total_score * PITCH_MIX_ER_SCALE, 0.90, 1.10), 4
+            ),
             "verdict": direction_label(total_score),
+            # Kept for the board: how good this arsenal is in the abstract. It is NOT in the
+            # adjustment — see PITCH_MIX_K_SCALE for why.
+            "pitcher_arsenal_score": round(pitcher_score, 4),
+            "opponent_response_score": round(opponent_score, 4),
+            "baseline_source": source,
             "pitches": detail,
         }
 
@@ -558,6 +741,14 @@ class PitcherProjectionEngine:
         recent_bb = _percent((l14 or {}).get("BB%")) or season_bb
         k_rate = season_k * (1 - recent_weight) + recent_k * recent_weight
         bb_rate = season_bb * (1 - recent_weight) + recent_bb * recent_weight
+        # Regress the pitcher's own rates toward league by how many batters back them. Only
+        # `skill_era` used to be shrunk (starts/(starts+6)); K, BB and H went in raw, which is
+        # most of why the board's projections were spread ~1.7x wider than their predictive
+        # content justified. Matchup terms are added AFTER this — they are not sample-limited
+        # estimates of this pitcher and must not be regressed toward the league.
+        rate_bf = log_factors.get("bf") or 0.0
+        k_rate = matrix.shrink_rate(k_rate, "k", rate_bf, self.league_rates["k"])
+        bb_rate = matrix.shrink_rate(bb_rate, "bb", rate_bf, self.league_rates["bb"])
         k_rate += _clip(log_factors["k_trend"] * 0.25, -1.5, 1.5)
         bb_rate += _clip(log_factors["bb_trend"] * 0.20, -1.0, 1.0)
 
@@ -566,9 +757,31 @@ class PitcherProjectionEngine:
         )
         pitch_matchup = self._pitch_matchup(pitcher_name, opponent, lineup)
         k_rate += pitch_matchup["k_rate_delta"]
-        expected_ip = _number(profile.get("avg_IP")) or 5.3
+
+        # --- fitted matrix: opponent strikeout propensity (mlbmodel.props.matrix) ---
+        # The pitch-mix term above is a pitch-type whiff/xwOBA read; measured across a live
+        # slate it correlates -0.01 with how often the opposing club ACTUALLY strikes out, so
+        # this is new information rather than the same signal twice. Converted from strikeouts
+        # to the engine's per-batter rate using the workload it is about to project.
+        opponent_k_strikeouts, opponent_k_index = matrix.opponent_k_delta(
+            opponent, self.opponent_k_rates, self.league_k_rate
+        )
+        baseline_ip = _number(profile.get("avg_IP")) or 5.3
         if log_factors.get("recent_ip") is not None:
-            expected_ip = expected_ip * 0.65 + log_factors["recent_ip"] * 0.35
+            baseline_ip = baseline_ip * 0.65 + log_factors["recent_ip"] * 0.35
+        expected_bf = max(12.0, _clip(baseline_ip, 2.5, 7.0) * 4.25)
+        k_rate += _clip(opponent_k_strikeouts / expected_bf * 100, -3.0, 3.0)
+
+        # --- fitted matrix: regression/progression and rest, both on the Outs channel ---
+        # This is where the REGRESSION / PROGRESSION state finally moves a number. It has
+        # always been computed and printed as a board label, then thrown away — an ablation
+        # on 2026-08-31 confirmed zeroing it changed every projection by exactly 0.000.
+        # Fitted, its home is Outs, not ER: a pitcher who has been lucky on balls in play
+        # regresses, gives up more contact, and gets pulled earlier.
+        regression_outs = matrix.regression_outs_delta(log_factors.get("babip"))
+        rest_days = matrix.days_rest(log_factors.get("last_start"), self.slate_date)
+        rest_outs = matrix.rest_outs_delta(rest_days)
+        expected_ip = baseline_ip + (regression_outs + rest_outs) / 3.0
         # Hard sanity bound: no MLB starter projects beyond ~7 IP, and a bad/garbage
         # avg_IP from a thin profile (e.g. a swingman with one long relief outing) would
         # otherwise sail past the 8.2-out sample clip and manufacture a near-certain
@@ -584,21 +797,47 @@ class PitcherProjectionEngine:
             if lineup.get("status") == "confirmed"
             else self._injury_factor(injuries, self.batter_by_name)
         )
-        run_factor = (
-            lineup_strength["factor"]
-            * pitch_matchup["er_factor"]
-            * weather_run_factor(context.get("weather"))
+        # The run factor is split into two channels, because they carry different evidence.
+        #
+        # ENVIRONMENT (weather, umpire, travel) is physical and was never tested here — the SP
+        # game log carries no weather or plate-umpire history — so it passes through at full
+        # strength.
+        #
+        # OPPONENT QUALITY (posted lineup, pitch-mix response, club offensive indices, platoon,
+        # injuries) is the part two independent measurements put at approximately zero for
+        # earned runs: every opponent factor in scripts/factor_study.py scored negative on ER
+        # (best -0.01%), and mlbmodel.props.challenger fitted an opponent weight of exactly
+        # 0.00 for hits, homers and earned runs. Per-start ER is sequencing noise.
+        #
+        # It is damped rather than deleted. Even at zero predictive value it would still be
+        # doing harm, because spread without signal is what manufactures phantom edges — the
+        # same disease as the pitch-mix pitcher half. But the terms tested were team-level
+        # proxies rather than these exact indices, so removing them outright would claim more
+        # than the measurement supports. OPPONENT_ER_DAMPING is a JUDGMENT, not a fit; the
+        # restored lean ledger is what will let it be fitted properly.
+        environment_factor = (
+            weather_run_factor(context.get("weather"))
             * umpire_run_factor(context.get("umpire"))
             * travel_offense_factor(travel)
-            * injury_factor
         )
         opp_ctx = game.home_context if side == "away" else game.away_context
         opp_osi = game.home_osi if side == "away" else game.away_osi
         opp_strength = opponent_offense_strength(opp_ctx, opp_osi)
-        run_factor *= pitcher_allowed_skill_adjustment(profile, opp_strength)
-        run_factor *= sp_split_skill_adjustment(
-            profile, self.sp_metric_splits, pitcher_hand
+        lhb_share = self._lhb_share(lineup, pitcher_hand)
+        platoon_factor = sp_split_skill_adjustment(
+            profile,
+            self.sp_metric_splits,
+            LEAGUE_LHB_SHARE if lhb_share is None else lhb_share,
         )
+        opponent_factor = (
+            lineup_strength["factor"]
+            * pitch_matchup["er_factor"]
+            * injury_factor
+            * pitcher_allowed_skill_adjustment(profile, opp_strength)
+            * platoon_factor
+        )
+        damped_opponent_factor = 1.0 + (opponent_factor - 1.0) * OPPONENT_ER_DAMPING
+        run_factor = environment_factor * damped_opponent_factor
         # Outing length responds to the posted lineup: the same run environment that
         # raises expected ER also raises pitch counts and shortens the start, so Outs
         # (and the batters-faced-driven K/BB/H) shrink against a strong posted lineup.
@@ -631,17 +870,23 @@ class PitcherProjectionEngine:
             3,
             np.rint(ip_samples * rng.normal(4.25, 0.16, iterations)).astype(int),
         )
-        effective_bf = max(60.0, float(log_factors.get("bf") or starts * 22))
+        # Rate uncertainty is the posterior concentration behind the shrunk mean: the batters
+        # this pitcher has actually faced, plus the market's shrinkage strength. Using a flat
+        # +25 (as before) with a mean shrunk at strength 461 would claim far more certainty
+        # about a hit rate than the estimate supports.
+        observed_bf = max(0.0, float(log_factors.get("bf") or starts * 22))
         k_probability = _clip(k_rate / 100, 0.05, 0.48)
         bb_probability = _clip(bb_rate / 100, 0.02, 0.22)
+        k_concentration = observed_bf + matrix.RATE_SHRINK_BF["k"]
+        bb_concentration = observed_bf + matrix.RATE_SHRINK_BF["bb"]
         k_draw = rng.beta(
-            k_probability * effective_bf + LG_K * 25,
-            (1 - k_probability) * effective_bf + (1 - LG_K) * 25,
+            k_probability * k_concentration,
+            (1 - k_probability) * k_concentration,
             iterations,
         )
         bb_draw = rng.beta(
-            bb_probability * effective_bf + LG_BB * 25,
-            (1 - bb_probability) * effective_bf + (1 - LG_BB) * 25,
+            bb_probability * bb_concentration,
+            (1 - bb_probability) * bb_concentration,
             iterations,
         )
         strikeouts = rng.binomial(bf_samples, k_draw)
@@ -652,12 +897,22 @@ class PitcherProjectionEngine:
         f5_er = rng.poisson(f5_lambda)
         outs = np.rint(ip_samples * 3)
         # Hits allowed: a per-batter hit rate (the pitcher's empirical H/BF, else league) drawn
-        # like K/BB, then sampled over batters faced.
+        # like K/BB, then sampled over batters faced. Shrunk hardest of the three markets —
+        # a per-start hit rate is mostly batted-ball noise and needs ~461 batters faced before
+        # it earns half weight, against 113 for strikeouts. Unshrunk this market projected
+        # with slope 0.64; shrunk it comes in at 0.99.
         h_rate = log_factors.get("h_rate")
-        h_probability = _clip(h_rate if h_rate is not None else LG_H, 0.10, 0.36)
+        h_percent = matrix.shrink_rate(
+            (h_rate if h_rate is not None else self.league_rates["h"]) * 100,
+            "h",
+            log_factors.get("bf") or 0.0,
+            self.league_rates["h"],
+        )
+        h_probability = _clip(h_percent / 100, 0.10, 0.36)
+        h_concentration = observed_bf + matrix.RATE_SHRINK_BF["h"]
         h_draw = rng.beta(
-            h_probability * effective_bf + LG_H * 25,
-            (1 - h_probability) * effective_bf + (1 - LG_H) * 25,
+            h_probability * h_concentration,
+            (1 - h_probability) * h_concentration,
             iterations,
         )
         hits = rng.binomial(bf_samples, h_draw)
@@ -712,7 +967,27 @@ class PitcherProjectionEngine:
             "k_rate": round(k_rate, 2),
             "bb_rate": round(bb_rate, 2),
             "run_factor": round(run_factor, 4),
+            "environment_factor": round(environment_factor, 4),
+            "opponent_factor": round(opponent_factor, 4),
+            "opponent_factor_damped": round(damped_opponent_factor, 4),
             "ip_factor": round(ip_factor, 4),
+            # Every fitted matrix term, in the units it moved the projection, so a number on
+            # the board can always be traced back to the factor that produced it (STD-14).
+            "matrix": {
+                "opponent_k_index": (
+                    round(opponent_k_index, 3) if opponent_k_index is not None else None
+                ),
+                "opponent_k_strikeouts": round(opponent_k_strikeouts, 3),
+                "regression_outs": round(regression_outs, 3),
+                "babip_to_date": (
+                    round(float(log_factors["babip"]), 3)
+                    if log_factors.get("babip") is not None else None
+                ),
+                "rest_days": rest_days,
+                "rest_outs": round(rest_outs, 3),
+                "lhb_share": round(lhb_share, 3) if lhb_share is not None else None,
+                "platoon_factor": round(platoon_factor, 4),
+            },
             "team_win_prob": (
                 round(win_probability, 3) if win_probability is not None else None
             ),

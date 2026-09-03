@@ -11,6 +11,18 @@ a wager instruction, and nothing here promises profit.**
   bullpen quality/workload, weather, umpire, travel/rest, pitch-mix response) with
   exact sequential factor lineage — every probability can show which factor moved it.
   Pitcher props come from 30,000-draw distributions with pitch-by-pitch opponent response.
+- **Prop pricing.** Over/under probabilities are read off the simulated distribution
+  itself (an exact PMF for counting stats, a percentile grid for fantasy scores), not
+  from a normal refitted to its mean and standard deviation. Pitcher counts are
+  right-skewed — earned runs carry a skew near 1.1 — so a symmetric fit overstates
+  P(Over) by up to 7 points at the central line, which is larger than any real edge.
+- **Prop matrix.** The matchup terms carried on top of a pitcher's own shrunk history
+  are the ones that survived out-of-sample testing on 894 held-out starts: opponent
+  strikeout propensity on K, and batted-ball regression plus days of rest on Outs.
+  Earned runs and walks carry **no** matchup term, because none tested positive.
+  What was tested and rejected — ballpark, home/away, the blended OSI/ABQ composites —
+  is recorded with its measurement in `docs/PROP-MATRIX-FINDINGS.md` rather than
+  silently omitted.
 - **Markets.** Book-level paired de-vig; raw implied probabilities are never labeled
   vig-free. Sharp-vs-soft divergence is observed point-in-time with executable entry prices.
 - **Value states.** `BET` can only be produced by a strategy that has passed the

@@ -29,3 +29,8 @@ mlb_model_run_log.txt
 _live_data/
 _deploy_data/
 model_leans_latest.json
+
+# Per-slate lean ledger snapshots. Runtime output that accumulates every build; they exist so
+# a failed warehouse write stays replayable (scripts/replay_leans.py), not to be versioned.
+data/lean_snapshots/
+deployment_data/lean_snapshots/

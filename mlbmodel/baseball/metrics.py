@@ -100,26 +100,109 @@ def offense_depth_factor(
     return detail["factor"], detail
 
 
-def platoon_metric_factor(context: TeamContext, opposing_hand: str) -> float:
-    """Handedness-specific ABQ/RCV/OBR platoon splits when available."""
+# Weight applied to offence readings that re-measure hitters the primary index already
+# covers. Measured across the 30 team profiles, the depth composite correlates -0.75 with
+# the primary OSI delta — it is acting as regression to the mean, so it is left at full
+# weight. The posted lineup and the situational-trend detectors are different: they score
+# the same nine hitters and the same recent form the composite's L7/L14 term already reads,
+# so at full weight they double-count.
+#
+# JUDGMENT, NOT A FIT: unlike the starter constants in mlbmodel.props.challenger, this
+# cannot yet be fitted, because the warehouse holds no point-in-time team profiles to
+# backtest the game model against. It is set to damp the known overlap without erasing the
+# signal, and should be re-fit once a forward sample of stored game predictions exists.
+SECONDARY_SIGNAL_WEIGHT = 0.60
+
+
+def _factor_to_index_delta(factor: float) -> float:
+    """Invert a run multiplier back into the OSI index points that produced it."""
+    scale = settings.OSI_RUN_SENSITIVITY / 100 * (1 - settings.REGRESSION_TO_MEAN)
+    if scale <= 0:
+        return 0.0
+    return (factor - 1.0) / scale
+
+
+def combined_offense_factor(
+    context: TeamContext,
+    slate_osi: float | None,
+    opposing_hand: str,
+    *,
+    lineup_factor: float = 1.0,
+    trend_factor: float = 1.0,
+) -> tuple[float, list[tuple[str, float]]]:
+    """One run multiplier for everything that measures *this lineup's quality today*.
+
+    The engine previously multiplied five separate offence factors together — season OSI,
+    the ABQ/RCV/PALS/projOSI depth composite, a handedness factor, the handedness metric
+    splits, the posted lineup, and situational trends. Those are not independent readings;
+    they are six views of the same nine hitters, built from overlapping inputs. Each is
+    individually clipped to a few percent, but compounding correlated terms inflates the
+    spread far beyond what the underlying signal supports, and that shows up in the ledger
+    as the model's confidence being anti-correlated with its results: leans claiming a 4–7
+    point edge settled at 21.7%, and the 0.6–0.7 win-probability bucket came in at 0.222.
+
+    Because every one of these terms is derived from a 50-centred index via the same
+    sensitivity, the correct combination is to sum the index deltas ONCE and convert ONCE.
+    Multiplying the already-converted factors is the error. This returns that single
+    multiplier plus each contributor's share of the resulting run delta, so the report can
+    still attribute the move honestly.
+
+    `platoon_factor` is deliberately absent: the slate's OSI is already the split against
+    the opposing starter's hand (`scrape_matchups.get_team_osi` picks the vs-RHP or vs-LHP
+    table), so a separate handedness multiplier re-applied a signal the primary term
+    already carried, and measured exactly 1.0000 (sd 0.0001) across a slate.
+    """
+    primary = slate_osi if slate_osi is not None else (context.osi or LEAGUE_AVG)
+    contributions: list[tuple[str, float]] = [("season offense", primary - LEAGUE_AVG)]
+
+    composite, _ = composite_offense_score(context, slate_osi)
+    depth_delta = composite - primary
+    if abs(depth_delta) >= 0.15:
+        contributions.append(("offense depth", depth_delta))
+
+    platoon_delta = _platoon_index_delta(context, opposing_hand)
+    if platoon_delta:
+        contributions.append(("platoon metrics", platoon_delta))
+
+    for name, factor in (("posted lineup", lineup_factor), ("situational trends", trend_factor)):
+        if factor != 1.0:
+            contributions.append(
+                (name, _factor_to_index_delta(factor) * SECONDARY_SIGNAL_WEIGHT)
+            )
+
+    total_delta = sum(delta for _, delta in contributions)
+    raw = _clip(
+        1 + total_delta / 100 * settings.OSI_RUN_SENSITIVITY, *settings.OFF_FACTOR_CLIP
+    )
+    return _regress(raw), contributions
+
+
+def _platoon_index_delta(context: TeamContext, opposing_hand: str) -> float:
+    """Handedness split of ABQ/RCV/OBR, as index points against the season average."""
     suffix = "lhp" if opposing_hand == "L" else "rhp"
-    metrics = (
-        getattr(context, f"abq_vs_{suffix}", None),
-        getattr(context, f"rcv_vs_{suffix}", None),
-        getattr(context, f"obr_vs_{suffix}", None),
-    )
-    values = [value for value in metrics if value is not None]
+    values = [
+        value
+        for value in (
+            getattr(context, f"abq_vs_{suffix}", None),
+            getattr(context, f"rcv_vs_{suffix}", None),
+            getattr(context, f"obr_vs_{suffix}", None),
+        )
+        if value is not None
+    ]
     if not values:
-        return 1.0
-    platoon_avg = sum(values) / len(values)
-    season_avg = _season_metric_avg(context)
-    if season_avg is None:
-        return metric_run_factor(platoon_avg, sensitivity=MODEL_SENSITIVITIES["platoon_metric"])
-    return _clip(
-        1 + (platoon_avg - season_avg) * MODEL_SENSITIVITIES["platoon_delta"],
-        0.97,
-        1.03,
-    )
+        return 0.0
+    season = _season_metric_avg(context)
+    if season is None:
+        return 0.0
+    # Damped: the handedness split is a slice of the same season sample it is compared to,
+    # so it is a weaker reading than its raw gap suggests.
+    return (sum(values) / len(values) - season) * 0.35
+
+
+# `platoon_metric_factor` was removed 2026-08-30 and replaced by `_platoon_index_delta`,
+# which contributes to the single offense conversion instead of being multiplied in as its
+# own factor. Multiplying it compounded with the ABQ/RCV/OBR already inside the depth
+# composite it was being compared against.
 
 
 def _season_metric_avg(context: TeamContext) -> float | None:
@@ -190,51 +273,143 @@ def team_pitching_score_factor(pitching_score: float | None) -> float:
     return _regress(_clip(1 - (pitching_score - LEAGUE_AVG) * sensitivity, 0.95, 1.05))
 
 
+# League-average share of plate appearances taken by left-handed batters. Used only when the
+# opposing lineup is not posted yet, so the platoon term degrades to the league split rather
+# than silently vanishing.
+LEAGUE_LHB_SHARE = 0.42
+# `sp_metric_splits.csv` stores splits long-form: one row per (pitcher, dimension, value).
+_BATTER_HAND_DIMENSION = "batter_hand"
+_LHB_VALUES = {"LHH", "LHB", "L", "VS_LHB", "VS_LHH"}
+_RHB_VALUES = {"RHH", "RHB", "R", "VS_RHB", "VS_RHH"}
+
+
+def _split_hand(row: dict) -> str | None:
+    """Which batter hand a `sp_metric_splits` row describes, or None if it is not a hand split.
+
+    The file is long-form — `split_dimension` / `split_value` — but earlier revisions of this
+    lookup asked for a `split` / `split_type` column that has never existed in it, so the
+    match failed for every pitcher on every slate and the platoon term was a constant 1.0
+    league-wide. Both spellings are accepted here so a schema change cannot silently disable
+    the factor again; `tests/test_sp_platoon.py` asserts the file actually resolves.
+    """
+    dimension = str(row.get("split_dimension") or "").strip().lower()
+    raw = row.get("split_value")
+    if raw is None:
+        raw = row.get("split") or row.get("split_type")
+    value = str(raw or "").strip().upper()
+    if dimension and dimension != _BATTER_HAND_DIMENSION:
+        return None
+    if value in _LHB_VALUES:
+        return "L"
+    if value in _RHB_VALUES:
+        return "R"
+    return None
+
+
+def _player_key(value) -> str:
+    """Normalise an MLB id for comparison across files.
+
+    `sp_metric_splits.csv` stores `pitcher_id` as float64 (pandas promotes the column because
+    some split rows carry no id), so it stringifies as "434378.0" while `sp_profiles.csv`
+    gives "434378". Comparing the raw strings matched nothing on any slate — the third
+    independent reason this lookup was returning a constant 1.0.
+    """
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return ""
+    return "" if number != number else str(int(number))  # NaN != NaN
+
+
+# Batters faced at which a handedness split earns half weight against the pitcher's own
+# season line. FIP is a K/BB/HR composite, and those components stabilise at ~113, ~193 and
+# ~923 batters faced respectively (mlbmodel.props.challenger.FITTED), so a FIP-shaped split
+# sits in the low hundreds. JUDGMENT, not a fit — but the direction is not optional: without
+# it a one-start split saturates the factor at its clip.
+SPLIT_SHRINK_BF = 250.0
+_BF_PER_INNING = 4.3
+
+
+def _split_sample_bf(row: dict) -> float:
+    """Batters faced behind a handedness split row: starts x avg innings x batters/inning."""
+    starts = _number(row.get("starts")) or 0.0
+    innings = _number(row.get("avg_IP")) or 0.0
+    return max(0.0, starts * innings * _BF_PER_INNING)
+
+
+def _split_factor(profile: dict, row: dict) -> float:
+    """Platoon factor from one split row, shrunk toward the pitcher's own season line.
+
+    The split is a small sample by construction — half a pitcher's batters, sometimes a
+    single start. Unshrunk it saturates: Justin Verlander's vs-LHH row on 2026-08-31 was one
+    start and 2.33 innings (~10 batters) showing a 10.40 FIP against a 7.75 season FIP, which
+    pinned the factor at its 1.06 ceiling. Four unrelated starters returned byte-identical
+    factors because all four were clipped, which is the signature of noise, not platoon skill.
+    """
+    season_fip = _number(profile.get("FIP")) or settings.LEAGUE_FIP
+    split_fip = _number(row.get("FIP"))
+    split_k = _percent(row.get("K%")) or _percent(row.get("K_pct"))
+    season_k = _percent(profile.get("K_pct"))
+    weight = _split_sample_bf(row) / (_split_sample_bf(row) + SPLIT_SHRINK_BF)
+    factor = 1.0
+    if split_fip and season_fip:
+        shrunk_fip = season_fip + (split_fip - season_fip) * weight
+        factor *= _clip(shrunk_fip / season_fip, 0.92, 1.08)
+    if split_k is not None and season_k is not None:
+        shrunk_k = season_k + (split_k - season_k) * weight
+        factor *= _clip(1 - (shrunk_k - season_k) * 0.004, 0.97, 1.03)
+    return _clip(factor, 0.94, 1.06)
+
+
 def sp_split_skill_adjustment(
     profile: dict | None,
     split_rows: list[dict],
-    opposing_hand: str,
+    lhb_share: float | str | None,
 ) -> float:
-    """Handedness metric splits (K%, BB%, HR9, FIP) from sp_metric_splits."""
+    """Platoon skill factor: the pitcher's own vs-LHB/vs-RHB splits, weighted by the lineup.
+
+    ``lhb_share`` is the fraction of the opposing lineup that bats left-handed (switch
+    hitters count as left against a right-hander and vice versa). A pitcher's split is a
+    property of the *batters he faces*, so keying it on his own throwing hand — which this
+    did before — asks the wrong question: it looked up a lefty's record against left-handed
+    batters regardless of whether the club posting against him started one lefty or six.
+    A bare hand string is still accepted for older callers and resolves to the league share.
+    """
     if not profile or not split_rows:
         return 1.0
-    pitcher_id = str(profile.get("pitcher_id") or "")
-    split_key = "vs_LHB" if opposing_hand == "L" else "vs_RHB"
-    row = next(
-        (
-            candidate
-            for candidate in split_rows
-            if str(candidate.get("pitcher_id") or "") == pitcher_id
-            and str(candidate.get("split") or candidate.get("split_type") or "")
-            .upper()
-            .startswith(split_key[:5])
-        ),
-        None,
-    )
-    if row is None:
-        row = next(
-            (
-                candidate
-                for candidate in split_rows
-                if str(candidate.get("pitcher_name") or "").lower()
-                == str(profile.get("pitcher_name") or "").lower()
-                and split_key[:5] in str(candidate.get("split") or "").upper()
-            ),
-            None,
-        )
-    if row is None:
+    if isinstance(lhb_share, str) or lhb_share is None:
+        share = LEAGUE_LHB_SHARE
+    else:
+        share = _clip(float(lhb_share), 0.0, 1.0)
+    pitcher_id = _player_key(profile.get("pitcher_id"))
+    name = str(profile.get("pitcher_name") or "").strip().lower()
+    by_hand: dict[str, dict] = {}
+    for candidate in split_rows:
+        hand = _split_hand(candidate)
+        if hand is None or hand in by_hand:
+            continue
+        candidate_id = _player_key(candidate.get("pitcher_id"))
+        if candidate_id and pitcher_id:
+            same_pitcher = candidate_id == pitcher_id
+        else:
+            # Some split rows carry no id at all; fall back to the name for those only.
+            same_pitcher = (
+                bool(name)
+                and str(candidate.get("pitcher_name") or "").strip().lower() == name
+            )
+        if same_pitcher:
+            by_hand[hand] = candidate
+    if not by_hand:
         return 1.0
-
-    season_fip = _number(profile.get("FIP")) or settings.LEAGUE_FIP
-    split_fip = _number(row.get("FIP")) or season_fip
-    split_k = _percent(row.get("K%")) or _percent(row.get("K_pct"))
-    season_k = _percent(profile.get("K_pct"))
-    factor = 1.0
-    if split_fip and season_fip:
-        factor *= _clip(split_fip / season_fip, 0.92, 1.08)
-    if split_k is not None and season_k is not None:
-        factor *= _clip(1 - (split_k - season_k) * 0.004, 0.97, 1.03)
-    return _regress(_clip(factor, 0.94, 1.06))
+    versus_left = _split_factor(profile, by_hand["L"]) if "L" in by_hand else None
+    versus_right = _split_factor(profile, by_hand["R"]) if "R" in by_hand else None
+    if versus_left is None:
+        blended = versus_right
+    elif versus_right is None:
+        blended = versus_left
+    else:
+        blended = share * versus_left + (1 - share) * versus_right
+    return _regress(_clip(float(blended), 0.94, 1.06))
 
 
 def bullpen_platoon_adjustment(row: dict | None, opposing_hand: str) -> float:
