@@ -37,6 +37,7 @@ from mlbmodel.report.html_fmt import desk_pagehead
 from mlbmodel.leans.closing import build_price_index, update_closing_odds
 from mlbmodel.leans.decision_calibration import thresholds_from_leans
 from mlbmodel.leans.record import collect_leans, record_leans
+from mlbmodel.local_grading import grade_pending as grade_local_predictions, record_run as record_local_predictions
 from mlbmodel.market.pickem import (
     build_pickem_rows,
     build_pickem_rows_from_boards,
@@ -74,7 +75,7 @@ log = logging.getLogger(__name__)
 __all__ = ["_NAV", "_props", "build_app", "main"]
 
 
-def build_app(featured_game, *, fetch=True, data_dir=None):
+def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None):
     repo = DataRepository(data_dir)
     reader = SupabaseReader()
     cache_dir = Path(data_dir) if data_dir else settings.CACHE_DIR
@@ -282,6 +283,13 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
                 "model_mean": (pitcher.get("projections") or {}).get(report.get("prop"), {}).get("mean"),
             })
 
+    # Always retain local, gradeable projections even when Supabase credentials
+    # are unavailable.  This is intentionally independent of lean thresholds.
+    if sd:
+        local_grade = grade_local_predictions(cache_dir)
+        local_written = record_local_predictions(cache_dir, str(sd)[:10], model_by_pk, pkmap, flat_props)
+        log.info("local prediction ledger: recorded=%s graded=%s pending=%s", local_written, local_grade["graded"], local_grade["pending"])
+
     clv_result = reader.get(
         "prediction_market_snapshots?settled=eq.true&won=not.is.null"
         "&entry_prob=not.is.null&implied_probability=not.is.null"
@@ -359,7 +367,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None):
             pitchers, prop_prices, pp_board, ud_board, sl_board,
             pickem_snapshots=pickem_snapshots, slate_date=str(sd or "")[:10] or None,
         ),
-        "results": _results(reader),
+        "results": _results(reader, audit_asset_dir=audit_asset_dir),
         "research": _research(reader, gate, f5_board, clv_summary),
     }
     nav_items = [(k, lbl, f"show('{k}')") for k, lbl in _NAV]
@@ -424,7 +432,12 @@ def main():  # pragma: no cover
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
-        build_app(args.game, fetch=not args.no_fetch, data_dir=args.data_dir),
+        build_app(
+            args.game,
+            fetch=not args.no_fetch,
+            data_dir=args.data_dir,
+            audit_asset_dir=out.parent / "assets",
+        ),
         encoding="utf-8",
     )
     published = publish_assets(out.parent)

@@ -40,4 +40,6 @@ def test_pitch_mix_board_shows_net_drivers_and_legend():
     assert "Δ runs" in html
     assert "pitch-mix-board" in html
     assert "table-scroll" not in html
+    assert "<thead><tr>" in html
+    assert "</thead><tbody>" in html
     assert pitch_mix_net_html({}) == ""

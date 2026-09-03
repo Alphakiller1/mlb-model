@@ -524,9 +524,12 @@ def matchup_banner_html(r: dict, esc) -> str:
 
 def _split_table(headers: str, rows: str, *, empty_cols: int = 4) -> str:
     body = rows or f'<tr><td class=mut colspan={empty_cols}>No split data.</td></tr>'
+    metric_cols = max(1, empty_cols - 1)
     return (
         f'<div class=table-scroll><table class=matchup-split-table>'
-        f'<tr>{headers}</tr>{body}</table></div>'
+        f'<colgroup><col class=matchup-split-table__label>'
+        f'<col class=matchup-split-table__metric span={metric_cols}></colgroup>'
+        f'<thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div>'
     )
 
 
@@ -589,10 +592,16 @@ def _lineup_ha_rows(prof) -> str:
 def _bullpen_block(prof: dict, pen_factor, pen_features: dict, esc) -> str:
     workload = pen_features.get("pitches_1d", "—")
     return (
-        f'<div class=matchup-bullpen-strip>'
-        f'<div><span class=k>Run factor</span>{_metric_cells(pen_factor, "park", invert=True, digits=3)}</div>'
-        f'<div><span class=k>High-lev ERA</span>{_metric_cells(prof.get("bullpen_high_lev_era"), "era", invert=True)}</div>'
-        f'<div><span class=k>Workload</span><span class=mut>{esc(str(workload))} pitches yesterday</span></div>'
+        f'<div class="matchup-info-grid matchup-info-grid--bullpen">'
+        f'<div class=matchup-info-card><span class=k>Run factor</span>'
+        f'<div class=matchup-info-card__value>{_metric_cells(pen_factor, "park", invert=True, digits=3)}</div>'
+        f'<span class=matchup-info-card__meta>Expected scoring effect</span></div>'
+        f'<div class=matchup-info-card><span class=k>High-leverage ERA</span>'
+        f'<div class=matchup-info-card__value>{_metric_cells(prof.get("bullpen_high_lev_era"), "era", invert=True)}</div>'
+        f'<span class=matchup-info-card__meta>Late-inning performance</span></div>'
+        f'<div class=matchup-info-card><span class=k>Recent workload</span>'
+        f'<div class=matchup-info-card__value>{esc(str(workload))}</div>'
+        f'<span class=matchup-info-card__meta>pitches yesterday</span></div>'
         f'</div>'
     )
 
@@ -600,7 +609,12 @@ def _bullpen_block(prof: dict, pen_factor, pen_features: dict, esc) -> str:
 def _posted_lineup_block(features: dict, source, esc) -> str:
     status = str(features.get("status") or "unavailable")
     if status not in {"confirmed", "projected"}:
-        return '<div class=matchup-bullpen-strip><div><span class=k>Status</span><span class=mut>Not posted yet</span></div></div>'
+        return (
+            '<div class="matchup-info-grid matchup-info-grid--single">'
+            '<div class=matchup-info-card><span class=k>Lineup status</span>'
+            '<div class=matchup-info-card__value>Not posted yet</div>'
+            '<span class=matchup-info-card__meta>Using team-level baseline</span></div></div>'
+        )
     pill = "pos" if status == "confirmed" else "warnc"
     projected = features.get("projected_osi")
     baseline = features.get("team_baseline_osi")
@@ -610,13 +624,17 @@ def _posted_lineup_block(features: dict, source, esc) -> str:
         _metric_cells(factor, "park", digits=3) if factor is not None else "—"
     )
     return (
-        f'<div class=matchup-bullpen-strip>'
-        f'<div><span class=k>Status</span><span class="pill {pill}">{esc(status)}</span></div>'
-        f'<div><span class=k>Order OSI</span>'
-        f'{_metric_cells(projected, "osi", digits=0) if projected is not None else "<span class=c-na>—</span>"}'
-        f'<span class=mut> vs {esc(str(baseline if baseline is not None else "—"))} team base</span></div>'
-        f'<div><span class=k>Run factor</span>{factor_html}'
-        f'<span class=mut> · {matched}/9 matched{" · " + esc(str(source)) if source else ""}</span></div>'
+        f'<div class="matchup-info-grid matchup-info-grid--lineup">'
+        f'<div class=matchup-info-card><span class=k>Lineup status</span>'
+        f'<div class=matchup-info-card__value><span class="pill {pill}">{esc(status)}</span></div>'
+        f'<span class=matchup-info-card__meta>{esc(str(source)) if source else "Model lineup"}</span></div>'
+        f'<div class=matchup-info-card><span class=k>Order strength (OSI)</span>'
+        f'<div class=matchup-info-card__value>'
+        f'{_metric_cells(projected, "osi", digits=0) if projected is not None else "<span class=c-na>—</span>"}</div>'
+        f'<span class=matchup-info-card__meta>Team baseline: {esc(str(baseline if baseline is not None else "—"))}</span></div>'
+        f'<div class=matchup-info-card><span class=k>Projected run factor</span>'
+        f'<div class=matchup-info-card__value>{factor_html}</div>'
+        f'<span class=matchup-info-card__meta>{matched} of 9 batters matched</span></div>'
         f'</div>'
     )
 
@@ -816,13 +834,16 @@ def f5_section_html(r, gd, repo, esc) -> str:
         hand = gd.home_hand if team == gd.away else gd.away_hand
         rec = _l10_record(repo, team, hand)
         return (
-            f'<div class=f5-team-col><div class=f5-team-head><b>{esc(team)}</b>'
-            f'<span class=mut>L10 {esc(_l10_record(repo, team))}</span>'
-            f'<span class=mut>vs {esc(hand)}HP {esc(rec)}</span></div>'
-            f'<div class=f5-run-line>{val_chip_html(runs_mean, "team_runs", digits=2, suffix=" runs")}</div>'
-            f'<div class=f5-sp-line><span class=mut>{esc(sp_name)}</span>'
-            f'<span class=mut>R thru 5 · last 5</span></div>'
-            f'<div class=f5-inn1-row>{"".join(cells)}</div></div>'
+            f'<div class=f5-team-col>'
+            f'<div class=f5-team-head><b class=f5-team-name>{esc(team)}</b>'
+            f'<div class=f5-team-splits><span>L10 {esc(_l10_record(repo, team))}</span>'
+            f'<span>vs {esc(hand)}HP {esc(rec)}</span></div></div>'
+            f'<div class=f5-team-projection><span class=f5-label>Projected runs</span>'
+            f'<div class=f5-run-line>{val_chip_html(runs_mean, "team_runs", digits=2, suffix=" runs")}</div></div>'
+            f'<div class=f5-starter><span class=f5-label>Starting pitcher</span>'
+            f'<b>{esc(sp_name)}</b><span class=mut>Runs allowed through 5 · last 5 starts</span></div>'
+            f'<div class=f5-inn1-row aria-label="Runs allowed through five innings in last five starts">'
+            f'{"".join(cells)}</div></div>'
         )
 
     away_runs = proj["home_f5"]["mean"]
@@ -831,9 +852,10 @@ def f5_section_html(r, gd, repo, esc) -> str:
   <div class=f5-proj-grid>
     {inn1_strip(gd.away, gd.away_sp, away_inn1, away_runs)}
     <div class=f5-mid-col>
-      <span class=k>F5 total</span>
-      <span class=v>{val_chip_html(proj["total_mean"], "game_total", digits=2)}</span>
-      <span class=mut>{away_runs:.2f} + {home_runs:.2f}</span>
+      <span class=f5-label>Combined projection</span>
+      <strong>F5 total</strong>
+      <span class=f5-total-value>{val_chip_html(proj["total_mean"], "game_total", digits=2)}</span>
+      <span class=f5-equation>{esc(gd.away)} {away_runs:.2f} <i>+</i> {esc(gd.home)} {home_runs:.2f}</span>
     </div>
     {inn1_strip(gd.home, gd.home_sp, home_inn1, home_runs)}
   </div>

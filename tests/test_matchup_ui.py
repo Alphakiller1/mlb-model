@@ -10,6 +10,7 @@ from mlbmodel.report.matchup_ui import (
     matchup_context_html,
     run_impacts_html,
 )
+from mlbmodel.report.shell import shell_css
 
 
 def test_league_avg_html_yellow_class():
@@ -24,6 +25,13 @@ def test_short_factor_trims_team_prefix():
 
 def test_short_markets_readable():
     assert "·" in _short_markets("Away runs / Total / ML")
+
+
+def test_shell_bundles_matchup_component_layouts():
+    css = shell_css()
+    assert ".f5-proj-grid" in css
+    assert 'grid-template-areas: "away total home"' in css
+    assert ".matchup-breakdown-sym" in css
 
 
 def test_run_impacts_no_trust_column():
@@ -99,6 +107,35 @@ def test_matchup_breakdown_symmetric_columns():
     assert "Pitcher R/L" in panel
     assert "vs BOS" in panel
     assert "vs NYY" in panel
+    assert "matchup-info-grid" in panel
+    assert "matchup-info-card" in panel
+    assert "Lineup status" in panel
+    assert "High-leverage ERA" in panel
+    assert "pitches yesterday" in panel
+
+
+def test_loaded_shell_css_contains_matchup_layout_rules():
+    from mlbmodel.report.shell import shell_css
+
+    css = shell_css()
+    assert ".matchup-breakdown__row" in css
+    assert ".matchup-info-grid" in css
+    assert ".matchup-info-card__meta" in css
+    assert ".pitch-mix-board" in css
+
+
+def test_split_tables_share_one_explicit_header_and_body_grid():
+    from mlbmodel.report.matchup_ui import _split_table
+
+    table = _split_table(
+        "<th>Split</th><th>FIP</th><th>K%</th><th>HR/9</th><th>OPS</th>",
+        "<tr><td>vs LHB</td><td>4.5</td><td>17.1%</td><td>1.6</td><td>.700</td></tr>",
+        empty_cols=5,
+    )
+    assert "<thead><tr>" in table
+    assert "</thead><tbody>" in table
+    assert "matchup-split-table__label" in table
+    assert "matchup-split-table__metric span=4" in table
 
 
 def test_matchup_banner_symmetric_no_duplicate_fg():

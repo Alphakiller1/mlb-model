@@ -1,5 +1,6 @@
 from mlbmodel.market.props import PropOddsBoard
 from mlbmodel.report.app import _props
+from mlbmodel.report.views import prediction_audit_html
 
 
 def test_props_view_one_toggle_card_per_pitcher_with_clear_play():
@@ -75,3 +76,45 @@ def test_props_view_uses_one_canonical_game_for_both_starters():
     assert rendered.count("Away Starter") == 1
     assert rendered.count("Home Starter") == 1
     assert "pitcher-prop-card" in rendered
+
+
+def test_prediction_audit_reports_all_game_f5_and_prop_rows():
+    rows = [
+        {
+            "slate_date": "2026-08-24", "recorded_at": "2026-08-24T16:00:00Z",
+            "game_pk": 1, "source": "matchup", "market": "runline",
+            "selection": "NYY", "line": -1.5, "model_prob": 0.58,
+            "entry_odds": 140, "realized_value": 3, "settled": True,
+            "won": True, "run_id": "game-run",
+        },
+        {
+            "slate_date": "2026-08-24", "recorded_at": "2026-08-24T16:01:00Z",
+            "game_pk": 1, "source": "f5", "market": "f5_total",
+            "selection": "under", "line": 4.5, "model_prob": 0.55,
+            "entry_odds": -110, "settled": False,
+            "ungraded_reason": "awaiting linescore", "run_id": "f5-run",
+        },
+        {
+            "slate_date": "2026-08-24", "recorded_at": "2026-08-24T16:02:00Z",
+            "game_pk": 1, "source": "projection", "market": "k",
+            "selection": "model:cole", "model_value": 7.2, "realized_value": 8,
+            "pitcher_name": "Gerrit Cole", "settled": True, "won": None,
+            "run_id": "prop-run",
+        },
+    ]
+
+    rendered = prediction_audit_html(rows)
+    assert "All game and F5 prediction runs (2)" in rendered
+    assert "All player-prop prediction runs (1)" in rendered
+    assert "runline NYY -1.5" in rendered
+    assert "f5_total under 4.5" in rendered
+    assert "Gerrit Cole" in rendered
+    assert "GRADED" in rendered
+    assert "AWAITING" in rendered
+
+    lazy = prediction_audit_html(rows, external_asset_url="assets/prediction-audit.json")
+    assert "Load complete history" in lazy
+    assert "prediction-audit.json" in lazy
+    assert "renderPredictionAudit" in lazy
+    assert "results-game-audit-body" in lazy
+    assert "results-prop-audit-body" in lazy

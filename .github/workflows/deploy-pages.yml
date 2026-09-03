@@ -56,10 +56,17 @@ jobs:
           # (its most likely failure mode) fails the whole deploy and freezes the live site
           # on a stale slate. Retry with backoff so a blip becomes a short delay, not a miss.
           bash scripts/retry.sh 3 python -m mlbmodel.sources.sync_mlbma --out _deploy_data
+          # Local/manual refreshes write to data/, while Pages historically seeded only from
+          # deployment_data/. Promote whichever committed odds snapshot is actually freshest
+          # before applying the API budget guard, otherwise a low-credit build can silently
+          # discard valid FanDuel lines and serve an older slate.
+          python scripts/seed_odds_snapshot.py --deploy-dir _deploy_data --candidate-dir data
       - name: Fetch live odds (props + game lines for sharp-money board)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           MLBMODEL_CACHE_DIR: _deploy_data
+          ODDS_BOOKMAKERS: draftkings
+          ODDS_REGIONS: us
           # Warehouse creds so market.collect PUBLISHES sharp signals/observations on
           # every scheduled build. Without these, point-in-time observation accrual only
           # happened when refresh.sh was run manually — and the promotion gate's OOS
@@ -88,6 +95,15 @@ jobs:
             # Game-line board (~6 credits) — powers Markets/decision board. Refresh whenever
             # there's any real budget left.
             if [ "$REMAINING" -ge 20 ]; then
+              # F5 requires per-event additional-market calls. Fetch it only with enough
+              # headroom for a full slate; core DraftKings ML/run line/total always comes first.
+              if [ "$REMAINING" -ge 80 ]; then
+                export ODDS_F5_ENABLED=1
+                echo "DraftKings F5 live pricing enabled."
+              else
+                export ODDS_F5_ENABLED=0
+                echo "DraftKings F5 fetch skipped at $REMAINING credits; preserving core game lines."
+              fi
               bash scripts/retry.sh 3 python -m mlbmodel.market.collect --data-dir _deploy_data \
                 || echo "WARNING: game odds fetch failed after retries; sharp board stays empty"
             else
@@ -108,6 +124,7 @@ jobs:
             echo "ODDS_API_KEY not set; skipping odds fetch (props + sharp stay empty)"
           fi
       - name: Fetch PrizePicks pick'em lines
+        if: ${{ false }} # DraftKings-only production line policy.
         run: |
           # PrizePicks sits behind DataDome, which answers automated clients with a
           # geo.captcha-delivery.com interstitial instead of data. As of 2026-08-07 it blocks
@@ -133,6 +150,7 @@ jobs:
             echo "PrizePicks: live fetch blocked (DataDome) — using committed snapshot"
           fi
       - name: Fetch Underdog pick'em lines
+        if: ${{ false }} # DraftKings-only production line policy.
         run: |
           # Underdog over/under lines — free, second pick'em source. Same snapshot pattern as
           # PrizePicks (datacenter IPs may be blocked): committed snapshot is the base; a live
@@ -152,6 +170,7 @@ jobs:
             echo "Underdog: live fetch blocked — using committed snapshot"
           fi
       - name: Fetch Sleeper pick'em lines
+        if: ${{ false }} # DraftKings-only production line policy.
         run: |
           # Sleeper lines/available + players/mlb (id->name) — free, third pick'em source. Same
           # snapshot pattern; a live fetch (both endpoints) upgrades it when it returns real lines.
@@ -169,6 +188,11 @@ jobs:
           else
             echo "Sleeper: live fetch blocked — using committed snapshot"
           fi
+      - name: Enforce DraftKings-only line sources
+        run: |
+          rm -f _deploy_data/prizepicks_lines.json \
+            _deploy_data/underdog_lines.json \
+            _deploy_data/sleeper_lines.json
       - name: Build static research dashboard
         env:
           MLBMODEL_CACHE_DIR: _deploy_data
@@ -205,16 +229,18 @@ jobs:
           from pathlib import Path
           html = Path('_site/index.html').read_text(encoding='utf-8')
           size_kb = len(html) // 1024
-          # A full ~15-game slate with embedded matchup breakdowns + live pick'em/market rows
-          # legitimately runs ~1.5 MB; 1400 was too tight and failed on busy slates. 1800 still
-          # catches a runaway page while leaving headroom for a max/double slate.
-          assert size_kb < 1800, f'HTML too large: {size_kb} KB'
+          # Full history is a lazy-loaded, paginated data asset so the main app stays usable.
+          assert size_kb < 5000, f'HTML too large: {size_kb} KB'
           for key in ('matchups', 'trends', 'markets', 'props', 'results', 'research'):
               assert f'id=\"v-{key}\"' in html, key
           assert 'ca-board' in html
           assert 'matchup-full-src' in html
           assert 'ca-section-head' in html
           assert 'bd-card' in html, 'slate board missing'
+          assert 'results-game-audit' in html, 'complete game grading report missing'
+          assert 'results-prop-audit' in html, 'complete prop grading report missing'
+          audit = Path('_site/assets/prediction-audit.json')
+          assert audit.exists() and audit.stat().st_size > 100, 'complete grading data missing'
           # Shared brand contract with wnba-edge-model and nfl-model. The graphite fork
           # below is what these three products silently drifted into once before.
           for key in ('#08090F', '#9A6BFF', 'DM Sans', 'Roboto Condensed'):

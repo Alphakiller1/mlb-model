@@ -97,6 +97,21 @@ def test_collect_market_plays_falls_back_to_model_fairs():
     assert plays[0]["verdict"] == "MODEL"
 
 
+def test_markets_html_distinguishes_missing_f5_from_live_game_line():
+    slate = [{"pk": 1, "away": "HOU", "home": "DET"}]
+    model_by_pk = {
+        1: [
+            {"market": "f5_ml", "side": "DET", "model": 55.0, "fair": -122, "mkt": None},
+            {"market": "ml", "side": "DET", "model": 54.0, "fair": -118, "mkt": None},
+        ]
+    }
+
+    html = markets_html(slate, {}, model_by_pk)
+    assert "F5 line unavailable" in html
+    assert "live line unavailable" in html
+    assert "no live #" not in html
+
+
 def test_markets_hold_gate_suppresses_action_labels_and_exposure():
     slate = [{"pk": 1, "away": "HOU", "home": "DET"}]
     sharp_by_pk = {

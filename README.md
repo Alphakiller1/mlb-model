@@ -119,8 +119,12 @@ Apply `migrations/0003_model_leans.sql` on the shared Supabase project. Each Pag
 records model leans (markets, pick'em, props) when `SUPABASE_URL` + `SUPABASE_KEY`
 (service role) are set as GitHub Actions secrets on this repo. The nightly
 `.github/workflows/settle.yml` job refreshes finals and grades leans; the **Results** view
-shows W-L-P, calibration buckets, and by-source hit rates. Without credentials, every view
-degrades to an honest empty state — the build never fails.
+shows W-L-P, calibration buckets, by-source hit rates, and the complete game/F5 and
+player-prop prediction audit ledgers. Settlement automatically dispatches a fresh Pages
+build, so newly graded results appear without waiting for another odds refresh or code push.
+F5 moneylines, totals, and run lines grade from stored five-inning linescores; legacy F5 rows
+previously voided as unsupported are automatically reopened and backfilled. Without
+credentials, every view degrades to an honest empty state — the build never fails.
 
 ## Governance
 

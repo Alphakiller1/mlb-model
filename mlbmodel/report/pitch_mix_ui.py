@@ -168,8 +168,9 @@ def pitch_mix_board_html(
         f"{title_block}"
         f'<p class="pitch-mix-source">{source}</p>'
         f'<div class="{board_cls}"><table class="pitch-mix-table">'
-        f"<tr><th>Pitch</th>{ba_ops_head}<th>{xwoba_head}</th>{whiff_head}"
-        f"<th>Δ K%</th><th>Δ runs</th><th>Lean</th></tr>{body}</table></div>"
+        f"<thead><tr><th>Pitch</th>{ba_ops_head}<th>{xwoba_head}</th>{whiff_head}"
+        f"<th>Δ K%</th><th>Δ runs</th><th>Lean</th></tr></thead>"
+        f"<tbody>{body}</tbody></table></div>"
         f"{legend}"
     )
 
