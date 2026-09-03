@@ -113,5 +113,12 @@ def test_model_applies_offense_depth_when_metrics_present():
         home_context=TeamContext(),
     )
     probs = model_probabilities(game, ANCHORS)
-    names = {factor.name for factor in probs.factors}
-    assert "NYY offense depth (ABQ/RCV/PALS/proj)" in names
+    # The depth composite is no longer its own multiplier -- it is summed into the single
+    # offense conversion (see metrics.combined_offense_factor) -- but it must still move
+    # the number and still be named in the attribution.
+    offense = next(f for f in probs.factors if f.name.startswith("NYY offense vs"))
+    assert "offense depth" in offense.source
+    # NYY carries above-average ABQ/RCV/PALS against a league-average 50 slate OSI, while
+    # BOS has no metrics at all, so NYY's offense factor must sit above BOS's.
+    baseline = next(f for f in probs.factors if f.name.startswith("BOS offense vs"))
+    assert offense.multiplier > baseline.multiplier

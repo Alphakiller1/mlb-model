@@ -33,8 +33,8 @@ def test_probability_reports_only_actual_model_factors():
     )
     names = {factor.name for factor in probabilities.factors}
     assert {
-        "NYY season offense",
-        "BOS season offense",
+        "NYY offense vs LHP",
+        "BOS offense vs RHP",
         "BOS starter and bullpen",
         "NYY starter and bullpen",
         "Ballpark run environment",

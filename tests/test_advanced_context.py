@@ -67,8 +67,14 @@ def test_context_inputs_are_actual_run_factors():
     probabilities = model_probabilities(game, ANCHORS)
     factors = {factor.name: factor for factor in probabilities.factors}
 
-    assert factors["NYY posted lineup vs LHP"].run_delta > 0
-    assert factors["BOS posted lineup vs RHP"].run_delta < 0
+    # The posted lineup is folded into the single offense conversion rather than applied
+    # as its own multiplier, so its effect is checked on that factor: NYY posted a lineup
+    # above its baseline (1.06) and BOS below (0.96), and both are named in the source.
+    away_offense = factors["NYY offense vs LHP"]
+    home_offense = factors["BOS offense vs RHP"]
+    assert "posted lineup" in away_offense.source
+    assert "posted lineup" in home_offense.source
+    assert away_offense.multiplier > home_offense.multiplier
     assert factors["NYY rest and travel"].run_delta < 0
     assert factors["First-pitch weather"].run_delta > 0
     assert factors["Home-plate umpire run environment"].run_delta > 0

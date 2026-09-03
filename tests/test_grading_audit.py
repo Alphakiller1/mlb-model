@@ -70,15 +70,32 @@ def test_hits_market_grades():
     assert result.realized_value == 5.0
 
 
-def test_prizepicks_fantasy_grades_with_dk_formula():
+def test_draftkings_fantasy_market_uses_the_dk_formula():
     # 18 outs*0.75 + 8K*2 + W*4 - 2ER*2 - 5H*.6 - 1BB*.6 = 13.5+16+4-4-3.6 = 25.9
-    assert fantasy_score(BOX, "prizepicks") == 25.9
+    assert fantasy_score(BOX, "fantasy") == 25.9
+    result = grade_lean_detailed(
+        {"market": "fantasy", "selection": "over", "line": 24.5, "source": "projection"},
+        pitcher_stats=BOX,
+    )
+    assert result.won is True
+    assert result.realized_value == 25.9
+
+
+def test_prizepicks_fantasy_score_does_not_use_the_dk_formula():
+    """`fantasy_score` is PrizePicks scoring and is roughly double the DK scale.
+
+    Grading it with the DraftKings formula (the bug fixed 2026-08-28) put 555 settled
+    projections on the wrong scale: realised graded at a 12.93 mean while the engine
+    projected 26.32. PrizePicks' own posted lines for that slate averaged 26.50.
+    18 outs*1 + 8K*3 - 2ER*3 + W*6 + QS*4 = 18+24-6+6+4 = 46.0
+    """
+    assert fantasy_score(BOX, "fantasy_score") == 46.0
     result = grade_lean_detailed(
         {"market": "fantasy_score", "selection": "over", "line": 24.5, "source": "prizepicks"},
         pitcher_stats=BOX,
     )
     assert result.won is True
-    assert result.realized_value == 25.9
+    assert result.realized_value == 46.0
 
 
 def test_unverified_book_fantasy_gets_reason_not_a_grade():

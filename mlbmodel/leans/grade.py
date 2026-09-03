@@ -33,7 +33,7 @@ _PROP_KEYS = {
     "hits": "h",
     "hits allowed": "h",
     "fantasy": "fantasy",
-    "fantasy_score": "fantasy",
+    "fantasy_score": "fantasy_score",
     "f5_er": "f5_er",
 }
 
@@ -51,20 +51,35 @@ _TERMINAL_REASONS = {REASON_UNSUPPORTED_MARKET, REASON_FANTASY_UNVERIFIED}
 # last reason — postponed games and name mismatches must not pend forever.
 VOID_AFTER_DAYS = 4
 
-# Pitcher fantasy-score formulas by book. PrizePicks MLB fantasy scoring follows
-# the DraftKings classic pitcher formula: IP x2.25 (0.75/out), K x2, Win x4,
-# ER x-2, Hit/BB/HBP allowed x-0.6, CG +2.5. Rare bonuses (no-hitter/CGSO +2.5/+5)
-# are not derivable from the box endpoint and are omitted (~1 game/season).
-# Underdog/Sleeper formulas are intentionally undefined until verified — grading
-# fantasy with the wrong formula is worse than not grading it.
-_FANTASY_FORMULAS = {
-    "prizepicks": {
-        "outs": 0.75, "k": 2.0, "win": 4.0, "er": -2.0,
-        "h": -0.6, "bb": -0.6, "hbp": -0.6, "cg": 2.5,
-    },
-    "projection": None,  # resolved to prizepicks below (PP_Fantasy projections)
+# Pitcher fantasy scoring differs by book, so the formula is chosen by MARKET, not by
+# source. Two distinct markets exist and they are NOT interchangeable:
+#
+#   `fantasy`       DraftKings classic: IP x2.25 (0.75/out), K x2, Win x4, ER x-2,
+#                   Hit/BB/HBP allowed x-0.6, CG +2.5.
+#   `fantasy_score` PrizePicks: Out +1, K +3, ER -3, Quality Start +4, Win +6.
+#
+# Grading both with the DraftKings formula (the behaviour before 2026-08-28, when
+# `fantasy_score` shared the `fantasy` prop key and the formula was keyed off
+# `source`) put every PrizePicks projection on the wrong scale: 555 settled rows
+# graded against a mean realised 12.93 while the projection engine — correctly —
+# produced 26.32. PrizePicks' own posted lines for the same slate averaged 26.50,
+# which is what confirms the projection side was right and the grader was wrong.
+#
+# Rare DraftKings bonuses (no-hitter/CGSO) are not derivable from the box endpoint
+# and are omitted (~1 game/season). Underdog/Sleeper formulas stay undefined until
+# verified — grading fantasy with the wrong formula is worse than not grading it.
+_DRAFTKINGS_FANTASY = {
+    "outs": 0.75, "k": 2.0, "win": 4.0, "er": -2.0,
+    "h": -0.6, "bb": -0.6, "hbp": -0.6, "cg": 2.5,
 }
-_FANTASY_FORMULAS["projection"] = _FANTASY_FORMULAS["prizepicks"]
+_PRIZEPICKS_FANTASY = {"outs": 1.0, "k": 3.0, "er": -3.0, "win": 6.0}
+# Quality start (>=6 IP and <=3 ER) is a joint condition, so it is applied separately
+# from the per-event weights. Mirrors `qs_bonus` in mlbmodel.props.model.
+_PRIZEPICKS_QUALITY_START = 4.0
+# Books whose pitcher fantasy formula we have actually verified. Underdog and Sleeper
+# also post fantasy props, but their scoring is unconfirmed, so their rows stay
+# ungraded rather than being scored on someone else's formula.
+_VERIFIED_FANTASY_SOURCES = {"prizepicks", "projection"}
 
 
 class GradeOutcome(NamedTuple):
@@ -78,9 +93,16 @@ def _prop_key(market: str) -> str | None:
     return _PROP_KEYS.get(str(market or "").strip().lower())
 
 
-def fantasy_score(pitcher_stats: dict, source: str) -> float | None:
-    """Compute a book's pitcher fantasy score from box stats; None when unverified."""
-    formula = _FANTASY_FORMULAS.get(str(source or "").lower())
+def fantasy_score(pitcher_stats: dict, prop_key: str) -> float | None:
+    """Compute a book's pitcher fantasy score from box stats; None when unverified.
+
+    ``prop_key`` selects the book formula: ``fantasy`` is DraftKings, ``fantasy_score``
+    is PrizePicks. Passing the wrong one silently rescales the result by roughly 2x.
+    """
+    formula = {
+        "fantasy": _DRAFTKINGS_FANTASY,
+        "fantasy_score": _PRIZEPICKS_FANTASY,
+    }.get(str(prop_key or "").lower())
     if not formula:
         return None
     inputs = {
@@ -102,6 +124,14 @@ def fantasy_score(pitcher_stats: dict, source: str) -> float | None:
             total += weight * float(value)
         except (TypeError, ValueError):
             return None
+    if prop_key == "fantasy_score":
+        try:
+            outs = float(pitcher_stats.get("outs") or 0)
+            earned = float(pitcher_stats.get("earned_runs") or 0)
+        except (TypeError, ValueError):
+            return None
+        if outs >= 18 and earned <= 3:
+            total += _PRIZEPICKS_QUALITY_START
     return round(total, 2)
 
 
@@ -110,8 +140,10 @@ def _prop_actual(prop_key: str, pitcher_stats: dict, source: str) -> tuple[float
     if prop_key == "f5_er":
         # First-5-innings earned runs are not exposed by the box endpoint.
         return None, REASON_UNSUPPORTED_MARKET
-    if prop_key == "fantasy":
-        value = fantasy_score(pitcher_stats, source)
+    if prop_key in {"fantasy", "fantasy_score"}:
+        if str(source or "").lower() not in _VERIFIED_FANTASY_SOURCES:
+            return None, REASON_FANTASY_UNVERIFIED
+        value = fantasy_score(pitcher_stats, prop_key)
         if value is None:
             return None, REASON_FANTASY_UNVERIFIED
         return value, None

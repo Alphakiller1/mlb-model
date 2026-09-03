@@ -12,8 +12,7 @@ from mlbmodel.baseball.context import (
     weather_run_factor,
 )
 from mlbmodel.baseball.metrics import (
-    offense_depth_factor,
-    platoon_metric_factor,
+    combined_offense_factor,
     signal_confidence_modifier,
     team_pitching_score_factor,
     trend_run_factor,
@@ -27,6 +26,90 @@ def clip(value: float, low: float, high: float) -> float:
 
 def normal_cdf(value: float) -> float:
     return 0.5 * (1 + math.erf(value / math.sqrt(2)))
+
+
+def _negative_binomial_pmf(mean: float, sd: float, ceiling: int = 30) -> list[float]:
+    """Probability of each run count 0..ceiling for an overdispersed count."""
+    mean = max(float(mean), 0.05)
+    variance = max(float(sd) ** 2, mean * 1.05)
+    shape = mean * mean / (variance - mean)
+    probability = shape / (shape + mean)
+    log_p = math.log(probability)
+    log_q = math.log1p(-probability)
+    return [
+        math.exp(
+            math.lgamma(count + shape)
+            - math.lgamma(shape)
+            - math.lgamma(count + 1)
+            + shape * log_p
+            + count * log_q
+        )
+        for count in range(ceiling + 1)
+    ]
+
+
+def margin_cover_probability(
+    line: float,
+    team_runs: float,
+    opponent_runs: float,
+    sd: float,
+) -> float:
+    """P(team margin + line > 0), convolved from both teams' run distributions.
+
+    Pricing the run line off a normal on the margin misses how discrete baseball margins
+    are — one-run games are 26.6% of the 2026 sample against the normal's 17.0%. The ±1.5
+    thresholds happen to price accurately under a normal, but only incidentally, and the
+    run line is the market most exposed to margin error (sharp run-line leans went 5-16 and
+    matchup 1-12). Convolving the same negative-binomial team distributions used for team
+    totals keeps every margin market consistent with the run distributions underneath them.
+    """
+    team = _negative_binomial_pmf(team_runs, sd)
+    opponent = _negative_binomial_pmf(opponent_runs, sd)
+    cover = 0.0
+    for scored, p_scored in enumerate(team):
+        if p_scored <= 0.0:
+            continue
+        for allowed, p_allowed in enumerate(opponent):
+            if scored - allowed + line > 0:
+                cover += p_scored * p_allowed
+    return clip(cover, 0.0, 1.0)
+
+
+def negative_binomial_sf(line: float, mean: float, sd: float) -> float:
+    """P(runs > line) for an overdispersed count, evaluated exactly by summation.
+
+    Run totals are strongly right-skewed — the 2026 league total has mean 9.005 against a
+    median of 8.0 — so pricing them with a symmetric normal centred on the mean overstates
+    the Over at every line. Measured against 1,830 games the normal was wrong by up to
+    +6.2 points on game totals and +6.7 on team totals, always in the same direction, and
+    that bias is visible in the ledger: Over leans settled 41.4% and Under leans 56.8%.
+    A negative binomial matched to the same mean and variance cuts the mean absolute
+    pricing error from 0.0450 to 0.0078 (totals) and 0.0570 to 0.0086 (team totals), and
+    leaves no directional bias.
+
+    Implemented by direct summation rather than scipy so the package keeps its existing
+    dependency set; run totals are small enough that the sum is exact and cheap.
+    """
+    mean = max(float(mean), 0.05)
+    variance = max(float(sd) ** 2, mean * 1.05)
+    shape = mean * mean / (variance - mean)
+    probability = shape / (shape + mean)
+    ceiling = int(math.floor(line))
+    if ceiling < 0:
+        return 1.0
+    log_p = math.log(probability)
+    log_q = math.log1p(-probability)
+    cumulative = 0.0
+    for count in range(ceiling + 1):
+        log_pmf = (
+            math.lgamma(count + shape)
+            - math.lgamma(shape)
+            - math.lgamma(count + 1)
+            + shape * log_p
+            + count * log_q
+        )
+        cumulative += math.exp(log_pmf)
+    return clip(1.0 - cumulative, 0.0, 1.0)
 
 
 @dataclass
@@ -200,26 +283,47 @@ def arsenal_factor(features: dict) -> float:
     return _regress(clip(float(er_factor), *settings.ARSENAL_FACTOR_CLIP))
 
 
-def platoon_factor(context: TeamContext, baseline_osi: float | None) -> float:
-    if context.platoon_osi is None or baseline_osi is None:
-        return 1.0
-    return clip(1 + (context.platoon_osi - baseline_osi) * 0.003, 0.94, 1.06)
+# `platoon_factor` was removed 2026-08-30. It compared the team's vs-hand OSI against the
+# slate OSI, but the slate OSI is ALREADY that split (scrape_matchups.get_team_osi picks the
+# vs-RHP or vs-LHP table), so it measured a value against itself and returned 1.0000 with a
+# standard deviation of 0.0001 across a slate. The handedness read now lives inside
+# metrics.combined_offense_factor, once.
+
+
+def _offense_source(parts: list[tuple[str, float]]) -> str:
+    """Name the contributors behind a combined offense factor, largest first."""
+    ranked = sorted(parts, key=lambda item: -abs(item[1]))
+    named = ", ".join(f"{name} {delta:+.1f}" for name, delta in ranked if abs(delta) >= 0.05)
+    return f"MLBMA offense index ({named})" if named else "MLBMA offense index"
 
 
 def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilities:
     league = anchors["league_runs"]
-    away_off = offense_factor(gd.away_osi)
-    home_off = offense_factor(gd.home_osi)
-    away_depth, _ = offense_depth_factor(gd.away_context, gd.away_osi)
-    home_depth, _ = offense_depth_factor(gd.home_context, gd.home_osi)
-    away_platoon = platoon_factor(gd.away_context, gd.away_osi)
-    home_platoon = platoon_factor(gd.home_context, gd.home_osi)
-    away_metric_platoon = platoon_metric_factor(gd.away_context, gd.home_hand)
-    home_metric_platoon = platoon_metric_factor(gd.home_context, gd.away_hand)
     away_trend = trend_run_factor(gd.trend_features, "away")
     home_trend = trend_run_factor(gd.trend_features, "home")
     away_lineup = float(gd.away_lineup_features.get("factor") or 1.0)
     home_lineup = float(gd.home_lineup_features.get("factor") or 1.0)
+    # Everything measuring the same lineup's quality is combined in index space and
+    # converted once. See metrics.combined_offense_factor for why compounding them was
+    # inflating the model's spread.
+    away_off, away_offense_parts = combined_offense_factor(
+        gd.away_context,
+        gd.away_osi,
+        gd.home_hand,
+        lineup_factor=away_lineup
+        if gd.away_lineup_features.get("status") in {"confirmed", "projected"}
+        else 1.0,
+        trend_factor=away_trend,
+    )
+    home_off, home_offense_parts = combined_offense_factor(
+        gd.home_context,
+        gd.home_osi,
+        gd.away_hand,
+        lineup_factor=home_lineup
+        if gd.home_lineup_features.get("status") in {"confirmed", "projected"}
+        else 1.0,
+        trend_factor=home_trend,
+    )
     away_injury = float(gd.away_injury_features.get("factor") or 1.0)
     home_injury = float(gd.home_injury_features.get("factor") or 1.0)
     travel = gd.live_context.get("travel") or {}
@@ -265,61 +369,14 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         return updated
 
     exp_away = apply_side(
-        league, away_off, name=f"{gd.away} season offense", side=gd.away,
-        markets="Away runs / Total / ML", confidence="medium",
-        source="MLBMA team offense strength",
-    )
-    exp_home_pre_hfa = apply_side(
-        league, home_off, name=f"{gd.home} season offense", side=gd.home,
-        markets="Home runs / Total / ML", confidence="medium",
-        source="MLBMA team offense strength",
-    )
-    exp_away = apply_side(
-        exp_away, away_depth, name=f"{gd.away} offense depth (ABQ/RCV/PALS/proj)",
+        league, away_off, name=f"{gd.away} offense vs {gd.home_hand}HP",
         side=gd.away, markets="Away runs / Total / ML", confidence="medium",
-        source="MLBMA composite offense metrics + recent form",
-        include=away_depth != 1.0,
+        source=_offense_source(away_offense_parts),
     )
     exp_home_pre_hfa = apply_side(
-        exp_home_pre_hfa, home_depth, name=f"{gd.home} offense depth (ABQ/RCV/PALS/proj)",
+        league, home_off, name=f"{gd.home} offense vs {gd.away_hand}HP",
         side=gd.home, markets="Home runs / Total / ML", confidence="medium",
-        source="MLBMA composite offense metrics + recent form",
-        include=home_depth != 1.0,
-    )
-    exp_away = apply_side(
-        exp_away, away_platoon, name=f"{gd.away} offense vs {gd.home_hand}HP",
-        side=gd.away, markets="Away runs / pitcher props", confidence="medium",
-        source="MLBMA team handedness split", include=away_platoon != 1.0,
-    )
-    exp_home_pre_hfa = apply_side(
-        exp_home_pre_hfa, home_platoon, name=f"{gd.home} offense vs {gd.away_hand}HP",
-        side=gd.home, markets="Home runs / pitcher props", confidence="medium",
-        source="MLBMA team handedness split", include=home_platoon != 1.0,
-    )
-    exp_away = apply_side(
-        exp_away, away_metric_platoon, name=f"{gd.away} platoon metrics vs {gd.home_hand}HP",
-        side=gd.away, markets="Away runs / pitcher props", confidence="medium",
-        source="MLBMA ABQ/RCV/OBR handedness splits",
-        include=away_metric_platoon != 1.0,
-    )
-    exp_home_pre_hfa = apply_side(
-        exp_home_pre_hfa, home_metric_platoon,
-        name=f"{gd.home} platoon metrics vs {gd.away_hand}HP",
-        side=gd.home, markets="Home runs / pitcher props", confidence="medium",
-        source="MLBMA ABQ/RCV/OBR handedness splits",
-        include=home_metric_platoon != 1.0,
-    )
-    exp_away = apply_side(
-        exp_away, away_lineup, name=f"{gd.away} posted lineup vs {gd.home_hand}HP",
-        side=gd.away, markets="Away runs / pitcher props", confidence="high",
-        source="MLB lineup + MLBMA batter split value",
-        include=gd.away_lineup_features.get("status") in {"confirmed", "projected"},
-    )
-    exp_home_pre_hfa = apply_side(
-        exp_home_pre_hfa, home_lineup, name=f"{gd.home} posted lineup vs {gd.away_hand}HP",
-        side=gd.home, markets="Home runs / pitcher props", confidence="high",
-        source="MLB lineup + MLBMA batter split value",
-        include=gd.home_lineup_features.get("status") in {"confirmed", "projected"},
+        source=_offense_source(home_offense_parts),
     )
     exp_away = apply_side(
         exp_away, away_injury, name=f"{gd.away} unavailable hitters",
@@ -342,18 +399,6 @@ def model_probabilities(gd: GameData, anchors: dict[str, float]) -> Probabilitie
         exp_home_pre_hfa, home_travel, name=f"{gd.home} rest and travel",
         side=gd.home, markets="Home runs / Total / ML", confidence="low",
         source="MLB schedule + venue distance/timezone", include=home_travel != 1.0,
-    )
-    exp_away = apply_side(
-        exp_away, away_trend, name=f"{gd.away} situational trends",
-        side=gd.away, markets="Away runs / Total / ML", confidence="low",
-        source="MLBMA trend detectors (form, pen fatigue, park)",
-        include=away_trend != 1.0,
-    )
-    exp_home_pre_hfa = apply_side(
-        exp_home_pre_hfa, home_trend, name=f"{gd.home} situational trends",
-        side=gd.home, markets="Home runs / Total / ML", confidence="low",
-        source="MLBMA trend detectors (form, pen fatigue, park)",
-        include=home_trend != 1.0,
     )
     exp_away = apply_side(
         exp_away, away_pitch, name=f"{gd.home} starter and bullpen",
@@ -499,7 +544,7 @@ def market_probability(
     if market == "total":
         if line is None:
             raise ValueError("total requires a line")
-        p_over = 1 - normal_cdf((line - probs.exp_total) / anchors["total_sd"])
+        p_over = negative_binomial_sf(line, probs.exp_total, anchors["total_sd"])
         return (p_over, f"Over {line:g}") if side.lower() == "over" else (
             1 - p_over,
             f"Under {line:g}",
@@ -509,7 +554,7 @@ def market_probability(
             raise ValueError("team total requires a line")
         team = _resolve_side_team(side, gd)
         expected = probs.exp_home_runs if team == gd.home else probs.exp_away_runs
-        p_over = 1 - normal_cdf((line - expected) / anchors["team_sd"])
+        p_over = negative_binomial_sf(line, expected, anchors["team_sd"])
         direction = (ou or "over").lower()
         return (p_over, f"{team} TT Over {line:g}") if direction == "over" else (
             1 - p_over,
@@ -519,8 +564,13 @@ def market_probability(
         if line is None:
             raise ValueError("run line requires a line")
         team = _resolve_side_team(side, gd)
-        margin = probs.exp_margin if team == gd.home else -probs.exp_margin
-        p_cover = 1 - normal_cdf((-line - margin) / anchors["margin_sd"])
+        if team == gd.home:
+            team_runs, opponent_runs = probs.exp_home_runs, probs.exp_away_runs
+        else:
+            team_runs, opponent_runs = probs.exp_away_runs, probs.exp_home_runs
+        p_cover = margin_cover_probability(
+            line, team_runs, opponent_runs, anchors["team_sd"]
+        )
         return p_cover, f"{team} {line:+g}"
     raise ValueError(f"unsupported market: {market}")
 

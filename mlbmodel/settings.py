@@ -161,13 +161,44 @@ SIGNAL_EDGE_SCALE = MODEL_SENSITIVITIES["signal_edge_scale"]
 SIGNAL_EDGE_CAP = MODEL_SENSITIVITIES["signal_edge_cap"]
 SIGNAL_HIGH_CONVERGENCE = CONVERGENCE_THRESHOLD
 
+# ── Park factors — MEASURED and shrunk, not assumed ─────────────────────────
+# Each park's factor is its home total divided by the same club's road total (which
+# controls for the team's own scoring level), shrunk toward 1.0 with a 180-game prior.
+#
+# The prior weight was chosen by holdout, not taste. Fitting on the first 70% of 2026 by
+# date and scoring the rest:
+#
+#   no park factor at all          RMSE 4.4209
+#   previous hardcoded table       RMSE 4.4355   <-- WORSE than applying nothing
+#   measured, shrunk (prior 180)   RMSE 4.4146
+#
+# The previous table was not merely imprecise, it was anti-predictive: it correlated 0.200
+# with measured 2026 park behaviour and got several parks backwards (PIT listed 0.95 and
+# measured 1.24; TEX listed 1.08 and measured 0.87; LAD listed 1.01 and measured 0.84).
+#
+# Each park is now shrunk by its OWN reliability (empirical Bayes) rather than by one
+# global prior, which is both better on holdout (4.4129 vs 4.4146, same train/test split)
+# and better behaved for the outliers.
+#
+# The measurement that matters most here is the between-park variance: tau^2 = 0.0014,
+# about 3.7% in log space. The RAW 2026 spread runs from COL 1.167 to LAD 0.835, but once
+# the sampling noise of ~60 home games is removed, almost all of that spread is noise —
+# which is why every park lands within 0.96–1.05 no matter which shrinkage method is used.
+#
+# KNOWN LIMITATION, and do not "fix" it by inflating these numbers: Coors is a genuine
+# ~1.30 park over multi-season samples, and one season cannot recover that. The cost is
+# visible against the market — on 2026-08-31 the model priced BAL@COL at 8.80 against a
+# market total of 11.00, the single largest disagreement on the slate. The market is
+# pricing decades of park history that this table does not have. The real fix is a
+# multi-season park source, NOT a bigger single-season estimate. Re-measure with
+# scripts/fit_park_factors.py rather than hand-editing.
 PARK_FACTORS = {
-    "COL": 1.38, "BOS": 1.12, "CIN": 1.10, "TEX": 1.08, "PHI": 1.07,
-    "NYY": 1.06, "CHC": 1.05, "MIL": 1.04, "ATL": 1.03, "HOU": 1.02,
-    "LAD": 1.01, "NYM": 1.00, "STL": 1.00, "MIN": 0.99, "DET": 0.99,
-    "TOR": 0.98, "BAL": 0.98, "ARI": 0.97, "SFG": 0.97, "SEA": 0.96,
-    "CLE": 0.96, "PIT": 0.95, "WSN": 0.95, "KCR": 0.95, "MIA": 0.94,
-    "TBR": 0.94, "LAA": 0.93, "SDP": 0.92, "CHW": 0.91, "ATH": 0.90,
+    "PIT": 1.053, "ATH": 1.047, "COL": 1.043, "KCR": 1.023, "NYY": 1.022,
+    "ATL": 1.019, "WSN": 1.016, "SFG": 1.012, "PHI": 1.011, "CIN": 1.006,
+    "NYM": 1.004, "ARI": 1.003, "HOU": 1.003, "CLE": 1.003, "BOS": 0.996,
+    "TOR": 0.996, "DET": 0.994, "SEA": 0.993, "MIL": 0.992, "STL": 0.990,
+    "MIA": 0.988, "CHC": 0.984, "TBR": 0.982, "CHW": 0.982, "MIN": 0.969,
+    "LAA": 0.966, "TEX": 0.966, "SDP": 0.966, "BAL": 0.965, "LAD": 0.963,
 }
 
 TEAM_NAME_TO_ABBR = {

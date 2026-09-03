@@ -47,6 +47,32 @@ def _percent(value) -> float | None:
     return number * 100 if number <= 1.5 else number
 
 
+# Pseudo-counts for the calibrated season anchors in `settings`, split by what the anchor
+# measures, because the two kinds behave differently over a season.
+#
+# SHAPE (the standard deviations, home win rate) is structural and close to constant, and
+# the constants were measured on 1,597 games. A short window must not move them: at 188
+# games it carries 188/(188+600) = 24% of the weight. Letting a two-week window overwrite
+# them outright is what made the model overconfident.
+#
+# LEVEL (runs per team) genuinely drifts with the calendar — measured 2026 monthly means
+# run 9.74 (Mar) -> 9.11 (Apr) -> 8.56 (May) -> 8.86 (Jul) -> 8.67 (Aug) per game against a
+# 9.01 season mean. Anchoring the level to the season constant therefore over-projects
+# totals in the cool months, which is visible in the ledger as Over leans settling 41%
+# and Under leans 57%. A forward test over 1,830 games picked a trailing window as the
+# better level estimate, so here the prior is deliberately light and the window leads.
+ANCHOR_PRIOR_WEIGHT_SHAPE = 600.0
+ANCHOR_PRIOR_WEIGHT_LEVEL = 50.0
+
+
+def _shrink_anchor(sample: float, prior: float, n: float, weight: float) -> float:
+    """Blend a rolling-window estimate toward its calibrated season constant."""
+    if not math.isfinite(sample) or n <= 0:
+        return prior
+    share = n / (n + weight)
+    return round(prior + (sample - prior) * share, 4)
+
+
 def canonical_game_pk(game_date: str, away: str, home: str, game_number: int = 1) -> int:
     suffix = "" if game_number == 1 else f"|{game_number}"
     payload = f"{game_date}|{away}|{home}{suffix}".encode()
@@ -146,15 +172,43 @@ class DataRepository:
             home = games[games["home_away"] == "home"]
             if home.empty:
                 return anchors
-            anchors["home_winp"] = round(float(home["result"].eq("W").mean()), 4)
+            # Shrunk toward the settings constants, never replaced outright.
+            # `game_results.csv` is a short rolling window (188 games / 376 team rows as of
+            # 2026-08) while those constants were calibrated on 1,597 completed games.
+            # Overwriting them silently undid that calibration on every run: the window put
+            # MARGIN_SD at 4.413 against a measured 4.597, and HOME_BASE_WINP at 0.569
+            # against a measured 0.5335. Both sit inside one standard error of the
+            # calibrated value — i.e. noise — and both move the model toward MORE
+            # confidence, which manufactures edge on exactly the games it is most sure
+            # about. That is the failure the 2026-08-12 recalibration was written to stop.
+            games_n = float(len(home))
+            teams_n = float(len(games))
+            shape = ANCHOR_PRIOR_WEIGHT_SHAPE
+            anchors["home_winp"] = _shrink_anchor(
+                float(home["result"].eq("W").mean()), settings.HOME_BASE_WINP, games_n, shape
+            )
             away = games[games["home_away"] == "away"]
-            anchors["away_winp"] = round(float(away["result"].eq("W").mean()), 4)
-            anchors["league_runs"] = round(float(games["team_runs"].mean()), 3)
+            anchors["away_winp"] = _shrink_anchor(
+                float(away["result"].eq("W").mean()), settings.AWAY_BASE_WINP, games_n, shape
+            )
+            anchors["league_runs"] = _shrink_anchor(
+                float(games["team_runs"].mean()),
+                settings.LEAGUE_RUNS_PER_TEAM,
+                teams_n,
+                ANCHOR_PRIOR_WEIGHT_LEVEL,
+            )
             total = home["team_runs"] + home["opp_runs"]
-            anchors["total_sd"] = round(float(total.std()), 3)
-            anchors["team_sd"] = round(float(games["team_runs"].std()), 3)
-            anchors["margin_sd"] = round(
-                float((home["team_runs"] - home["opp_runs"]).std()), 3
+            anchors["total_sd"] = _shrink_anchor(
+                float(total.std()), settings.TOTAL_RUNS_SD, games_n, shape
+            )
+            anchors["team_sd"] = _shrink_anchor(
+                float(games["team_runs"].std()), settings.TEAM_RUNS_SD, teams_n, shape
+            )
+            anchors["margin_sd"] = _shrink_anchor(
+                float((home["team_runs"] - home["opp_runs"]).std()),
+                settings.MARGIN_SD,
+                games_n,
+                shape,
             )
         except (KeyError, TypeError, ValueError):
             return anchors
@@ -163,6 +217,38 @@ class DataRepository:
             for key, value in anchors.items()
             if not isinstance(value, float) or math.isfinite(value)
         }
+
+    def _registry_hands(self) -> dict[str, str]:
+        """Starter name -> 'L'/'R' from player_registry.csv."""
+        cached = getattr(self, "_registry_hand_cache", None)
+        if cached is not None:
+            return cached
+        hands: dict[str, str] = {}
+        registry = self.load("player_registry.csv")
+        if registry is not None and "throws" in registry.columns:
+            name_column = "full_name" if "full_name" in registry.columns else "name"
+            if name_column in registry.columns:
+                for _, row in registry.iterrows():
+                    hand = str(row.get("throws") or "").strip().upper()[:1]
+                    if hand in ("L", "R"):
+                        hands[normalize_name(row.get(name_column))] = hand
+        self._registry_hand_cache = hands
+        return hands
+
+    def _starter_hand(self, name, slate_value) -> str:
+        """Resolve starter handedness, preferring the registry over the slate column.
+
+        The slate's `*_Hand` columns were uniformly 'R' league-wide for the whole 2026
+        season, because the MLB schedule endpoint returns a probablePitcher carrying only
+        id/fullName/link and never hydrates pitchHand. Every platoon split in this model
+        therefore read a constant. The registry is the trustworthy source, so it wins here
+        and the slate column is only a fallback.
+        """
+        registry_hand = self._registry_hands().get(normalize_name(name))
+        if registry_hand in ("L", "R"):
+            return registry_hand
+        fallback = str(slate_value or "").strip().upper()[:1]
+        return fallback if fallback in ("L", "R") else "R"
 
     def _team_profiles(self) -> tuple[dict[str, pd.Series], float]:
         profiles = self.load("team_profiles.csv")
@@ -304,8 +390,8 @@ class DataRepository:
 
         profiles, league_pen = self._team_profiles()
         away_profile, home_profile = profiles.get(away), profiles.get(home)
-        away_hand = str(game.get("Away_Hand") or "R").upper()[:1]
-        home_hand = str(game.get("Home_Hand") or "R").upper()[:1]
+        away_hand = self._starter_hand(game.get("Away_SP"), game.get("Away_Hand"))
+        home_hand = self._starter_hand(game.get("Home_SP"), game.get("Home_Hand"))
 
         weather = {}
         live_weather = live_context.get("weather") or {}
