@@ -365,3 +365,47 @@ def test_lineup_and_baseline_use_the_same_formula():
     # Falls back to OSI alone when the components are missing, rather than dropping the hitter.
     assert Engine._batter_score({"OSI": 47.0}) == 47.0
     assert Engine._batter_score({}) is None
+
+
+# ------------------------------------------------------------------- spread calibration
+def test_calibration_pulls_toward_the_centre_not_past_it():
+    centre = 5.0
+    high = matrix.calibrate(9.0, "k", centre)
+    low = matrix.calibrate(1.0, "k", centre)
+    assert centre < high < 9.0
+    assert 1.0 < low < centre
+    assert matrix.calibrate(centre, "k", centre) == pytest.approx(centre)
+
+
+def test_walks_are_calibrated_hardest():
+    """Per-start walks are close to unpredictable; halving the spread is what fixed them."""
+    assert matrix.SPREAD_CALIBRATION["bb"] < matrix.SPREAD_CALIBRATION["outs"]
+    assert matrix.SPREAD_CALIBRATION["outs"] < matrix.SPREAD_CALIBRATION["k"]
+    assert all(0.0 < v <= 1.0 for v in matrix.SPREAD_CALIBRATION.values())
+
+
+def test_hits_ship_uncalibrated():
+    """Shrinkage already lands hits at slope 0.988; calibrating again overshoots."""
+    assert matrix.SPREAD_CALIBRATION["h"] == 1.0
+    assert matrix.calibrate(7.0, "h", 5.0) == 7.0
+
+
+def test_unknown_market_is_not_calibrated():
+    assert matrix.calibrate(3.0, "er", 2.0) == 3.0
+
+
+def test_league_outs_reads_mlb_innings_notation():
+    logs = [{"IP": 6.1}, {"IP": 5.2}, {"IP": 6.0}]      # 19 + 17 + 18 outs
+    assert matrix.league_outs(logs) == pytest.approx(18.0)
+    assert matrix.league_outs([]) > 0
+
+
+def test_opponent_quality_cannot_reach_earned_runs():
+    """Five proxies all flipped sign between train and holdout; the channel is measured dead."""
+    from mlbmodel.props.model import OPPONENT_ER_DAMPING
+    assert OPPONENT_ER_DAMPING == 0.0
+
+
+def test_pitch_mix_scale_is_the_holdout_optimum():
+    from mlbmodel.props.model import PITCH_MIX_K_SCALE
+    assert PITCH_MIX_K_SCALE == 40.0

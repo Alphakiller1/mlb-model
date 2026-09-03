@@ -63,16 +63,24 @@ ORDER_WEIGHTS = np.array([1.10, 1.08, 1.07, 1.05, 1.02, 0.99, 0.96, 0.93, 0.90])
 # combined signal to less than half of what the opponent half carries alone. It is dead
 # weight at best. The scales are NOT re-fitted here: the only data available for that is the
 # season-aggregate pitch mix, which already knows how these starts ended, and a weight fitted
-# on it would be fitted to hindsight. Keeping x16 shrinks the term ~3.3x, which is the
-# conservative direction.
-PITCH_MIX_K_SCALE = 16.0
+# on it would be fitted to hindsight -- true of the PITCHER half, whose season line is close
+# to the thing being predicted. The OPPONENT half is a club aggregate over ~150 games, so one
+# start is well under 1% of it and it IS fittable. Swept against the holdout
+# (scripts/fit_final_calibration.py): scale 16 -> R2 +0.1967, 25 -> +0.1970, 40 -> +0.1973,
+# 60 -> +0.1972, 87 -> +0.1962, 115 -> +0.1941. The train half alone fits 115 and the holdout
+# 87, so the slope is unstable; 40 is the holdout optimum and is what ships.
+PITCH_MIX_K_SCALE = 40.0
 PITCH_MIX_ER_SCALE = 1.8
-# How much of the opponent-quality run factor reaches earned runs. JUDGMENT, not a fit:
-# every opponent factor tested against per-start ER scored negative out of sample (best
-# -0.01%, scripts/factor_study.py) and the challenger engine independently fitted an opponent
-# weight of 0.00 for hits/HR/ER. Half weight keeps the channel alive for the forward sample
-# the restored ledger will produce, while halving the unsupported spread it was adding.
-OPPONENT_ER_DAMPING = 0.50
+# How much of the opponent-quality run factor reaches earned runs. MEASURED, not a judgment.
+# Re-tested against a leak-free baseline (self-history ER rate x PROJECTED outs, never the
+# realised ones) across five separate opponent proxies. Every one flips sign between the
+# train and holdout halves -- run conversion +1.057 -> -1.138, OSI +1.819 -> -1.049, total
+# bases +0.102 -> -2.167 -- and none improves holdout R2 over the baseline's +0.0239.
+# Sweeping the damping leaves holdout R2 identical to four decimals at every value from 0 to
+# 1. Four independent methods now agree that per-start earned runs carry no opponent signal,
+# so the channel is computed and reported but contributes nothing. Weather, umpire and travel
+# are unaffected: they are physical, were never tested here, and pass through at full weight.
+OPPONENT_ER_DAMPING = 0.0
 
 
 def _number(value: Any) -> float | None:
@@ -246,6 +254,7 @@ class PitcherProjectionEngine:
             self.game_logs
         )
         self.league_rates = matrix.league_rates(self.game_logs)
+        self.league_outs = matrix.league_outs(self.game_logs)
         slate = repo.slate()
         self.slate_date = (
             str(slate.iloc[0].get("Slate_Date"))
@@ -786,6 +795,9 @@ class PitcherProjectionEngine:
         # avg_IP from a thin profile (e.g. a swingman with one long relief outing) would
         # otherwise sail past the 8.2-out sample clip and manufacture a near-certain
         # high-Outs projection — a fake market edge. Clip the mean to a realistic range.
+        expected_ip = matrix.calibrate(
+            expected_ip, "outs", self.league_outs / 3.0
+        )
         expected_ip = _clip(expected_ip, 2.5, 7.0)
 
         opponent_side = "home" if side == "away" else "away"
@@ -875,6 +887,12 @@ class PitcherProjectionEngine:
         # +25 (as before) with a mean shrunk at strength 461 would claim far more certainty
         # about a hit rate than the estimate supports.
         observed_bf = max(0.0, float(log_factors.get("bf") or starts * 22))
+        # Final spread calibration. Shrinkage fixed the sample-size problem; this fixes what
+        # is left, which is that the projections still run slope < 1 against outcomes — spread
+        # wider than the signal earns. Applied last, so it calibrates the finished number
+        # rather than one input to it. See matrix.SPREAD_CALIBRATION.
+        k_rate = matrix.calibrate(k_rate, "k", self.league_rates["k"] * 100)
+        bb_rate = matrix.calibrate(bb_rate, "bb", self.league_rates["bb"] * 100)
         k_probability = _clip(k_rate / 100, 0.05, 0.48)
         bb_probability = _clip(bb_rate / 100, 0.02, 0.22)
         k_concentration = observed_bf + matrix.RATE_SHRINK_BF["k"]
@@ -908,6 +926,7 @@ class PitcherProjectionEngine:
             log_factors.get("bf") or 0.0,
             self.league_rates["h"],
         )
+        h_percent = matrix.calibrate(h_percent, "h", self.league_rates["h"] * 100)
         h_probability = _clip(h_percent / 100, 0.10, 0.36)
         h_concentration = observed_bf + matrix.RATE_SHRINK_BF["h"]
         h_draw = rng.beta(

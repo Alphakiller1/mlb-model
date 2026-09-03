@@ -53,10 +53,13 @@ def main() -> None:
     before_k = engine_rate(test, "K", league_k) * bf
     shrunk_k = shrunk_rate(test, "K", league_k, mx.RATE_SHRINK_BF["k"]) * bf
     after_k = shrunk_k + mx.OPPONENT_K_WEIGHT * (test["so_all"].to_numpy() - 1.0)
+    centre_k = float(np.nanmean(after_k))
+    cal_k = centre_k + (after_k - centre_k) * mx.SPREAD_CALIBRATION["k"]
     for row in (
         report("original: season+L14, unshrunk", before_k, actual_k),
         report("+ per-market shrinkage", shrunk_k, actual_k),
-        report("+ opponent K term (shipped)", after_k, actual_k),
+        report("+ opponent K term", after_k, actual_k),
+        report("+ spread calibration (shipped)", cal_k, actual_k),
     ):
         print(f"{'K':6s} {row[0]:34s} {row[1]:+13.4f} {row[2]:8.3f} {row[3]:8.4f} {row[4]:8.4f}")
     print()
@@ -67,8 +70,11 @@ def main() -> None:
     for row in (
         report("original: season+L14, unshrunk",
                engine_rate(test, "BB", league_bb) * bf, actual_bb),
-        report("+ per-market shrinkage (shipped)",
+        report("+ per-market shrinkage",
                shrunk_rate(test, "BB", league_bb, mx.RATE_SHRINK_BF["bb"]) * bf, actual_bb),
+        report("+ spread calibration (shipped)",
+               (lambda v: float(np.nanmean(v)) + (v - float(np.nanmean(v))) * mx.SPREAD_CALIBRATION["bb"])(
+                   shrunk_rate(test, "BB", league_bb, mx.RATE_SHRINK_BF["bb"]) * bf), actual_bb),
     ):
         print(f"{'BB':6s} {row[0]:34s} {row[1]:+13.4f} {row[2]:8.3f} {row[3]:8.4f} {row[4]:8.4f}")
     print()
@@ -95,7 +101,10 @@ def main() -> None:
     )
     for row in (
         report("original: pitcher outs mean", base_o, actual_o),
-        report("+ regression & rest (shipped)", after_o, actual_o),
+        report("+ regression & rest", after_o, actual_o),
+        report("+ spread calibration (shipped)",
+               (lambda v: float(np.nanmean(v)) + (v - float(np.nanmean(v))) * mx.SPREAD_CALIBRATION["outs"])(after_o),
+               actual_o),
     ):
         print(f"{'Outs':6s} {row[0]:34s} {row[1]:+13.4f} {row[2]:8.3f} {row[3]:8.4f} {row[4]:8.4f}")
 

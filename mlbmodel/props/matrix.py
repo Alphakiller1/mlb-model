@@ -58,6 +58,27 @@ REST_OUTS_WEIGHT = -0.031
 # Slope is the tell: at 0.60 a projection is spread ~1.7x wider than its predictive content
 # supports, which is what produced double-digit "edges" against the market.
 RATE_SHRINK_BF = {"k": 113.0, "bb": 193.0, "h": 461.0}
+
+# Final spread calibration, applied after shrinkage and the matchup terms.
+#
+# Shrinkage fixes the sample-size problem but leaves the projections still slightly wider than
+# their predictive content: regressing outcome on projection gives a slope below 1, and that
+# residual over-dispersion is what keeps a board disagreeing with the market by more than it
+# has earned. `actual = a + b*projection`, so the calibrated projection is
+# `centre + b*(projection - centre)`. Fitted on the earlier 70% by date, verified on the
+# holdout (scripts/fit_final_calibration.py):
+#
+#     market   b      R2 raw -> calibrated    slope raw -> calibrated
+#     K        0.970   +0.1958 -> +0.1973       0.887 -> 0.915
+#     BB       0.490   -0.0041 -> +0.0231       0.502 -> 1.025
+#     H        1.000   (already calibrated at slope 0.988; applying 0.957 overshoots to 1.033
+#                       and costs R2, so hits ship uncalibrated)
+#     Outs     0.731   +0.1625 -> +0.1798       0.785 -> 1.075
+#
+# The BB figure looks brutal on top of a 193-batter shrinkage, and it should: per-start walk
+# totals are close to unpredictable, and halving what little spread remains is what finally
+# moves that market from negative R2 to positive.
+SPREAD_CALIBRATION = {"k": 0.970, "bb": 0.490, "h": 1.000, "outs": 0.731}
 # A pitcher with no game log at all still needs a denominator; this is a conservative floor
 # rather than an estimate, and it shrinks such an arm hard toward league.
 MIN_RATE_SAMPLE_BF = 0.0
@@ -152,6 +173,31 @@ def shrink_rate(
     weight = sample / (sample + strength)
     league_pct = league_rate * 100.0
     return league_pct + (rate_pct - league_pct) * weight
+
+
+def league_outs(game_logs: list[dict]) -> float:
+    """Mean outs recorded per start — the centre the Outs calibration regresses toward."""
+    total = 0.0
+    starts = 0
+    for row in game_logs:
+        innings = row.get("IP")
+        try:
+            number = float(innings)
+        except (TypeError, ValueError):
+            continue
+        whole = int(number)
+        partial = round((number - whole) * 10)
+        total += whole * 3 + (partial if partial in (1, 2) else 0)
+        starts += 1
+    return total / starts if starts else 15.33
+
+
+def calibrate(value: float, market: str, centre: float) -> float:
+    """Pull a projection toward the league centre by the market's fitted calibration slope."""
+    slope = SPREAD_CALIBRATION.get(market)
+    if slope is None:
+        return value
+    return centre + (value - centre) * slope
 
 
 def opponent_k_delta(

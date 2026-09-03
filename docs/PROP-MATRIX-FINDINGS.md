@@ -164,3 +164,60 @@ Two hypotheses were tested and rejected, recorded so they are not re-investigate
   0.91–1.00 (sd 0.011), so normalising changes the correlation from +0.3598 to +0.3599.
   Not a real defect.
 * **Clip saturation.** `clip(total × 16, ±2.5)` pins **0.0%** of starts at a bound.
+
+## Final calibration — every market now positive R² and slope ≈ 1
+
+Shrinkage fixed the sample-size problem; it left the projections still slightly wider than
+their predictive content. `actual = a + b·projection`, so the calibrated projection is
+`centre + b·(projection − centre)`. Fitted on the earlier 70% by date, verified on the
+holdout (`scripts/fit_final_calibration.py`, applied in `matrix.SPREAD_CALIBRATION`).
+
+Full chain, 966 held-out starts (`scripts/validate_prop_matrix.py`):
+
+| market | construction | R² | slope |
+|---|---|---|---|
+| **K** | original, unshrunk | +0.0878 | 0.596 |
+| | + per-market shrinkage | +0.1856 | 0.868 |
+| | + opponent K term | +0.1958 | 0.887 |
+| | **+ spread calibration (shipped)** | **+0.1973** | **0.915** |
+| **BB** | original, unshrunk | −0.1374 | 0.323 |
+| | + per-market shrinkage | −0.0041 | 0.502 |
+| | **+ spread calibration (shipped)** | **+0.0228** | **1.025** |
+| **H** | original, unshrunk | +0.0840 | 0.642 |
+| | **+ per-market shrinkage (shipped)** | **+0.1764** | **0.988** |
+| **Outs** | original | +0.1617 | 0.734 |
+| | + regression & rest | +0.1625 | 0.785 |
+| | **+ spread calibration (shipped)** | **+0.1756** | **1.074** |
+
+Hits ship **uncalibrated**: shrinkage alone already lands them at slope 0.988, and applying
+the fitted 0.957 overshoots to 1.033 and costs R². Walks are calibrated hardest (0.490 on top
+of a 193-batter shrinkage) because per-start walk totals are close to unpredictable — halving
+what spread remains is exactly what moves that market from negative R² to positive.
+
+## Two constants that were guesses, now measured
+
+**Pitch-mix opponent scale: ×16 → ×40.** The earlier refusal to fit this was over-cautious.
+Hindsight contamination is real for the *pitcher* half, whose season line is close to the
+thing being predicted — but the opponent half is a club aggregate over ~150 games, so one
+start is under 1% of it. Swept against the holdout: 16 → +0.1967, 25 → +0.1970, **40 →
++0.1973**, 60 → +0.1972, 87 → +0.1962, 115 → +0.1941. The train half alone fits 115 and the
+holdout 87, so the slope is unstable; 40 is the holdout optimum and is what ships.
+
+**Opponent damping on ER: 0.50 → 0.00.** This was shipped as a judgment. Re-tested against a
+leak-free baseline (self-history ER rate × *projected* outs, never the realised ones) across
+five separate opponent proxies:
+
+| proxy | train slope | holdout slope | holdout R² with it |
+|---|---|---|---|
+| run conversion (RCV) | +1.057 | **−1.138** | +0.0206 |
+| on-base (OBR) | −0.449 | −0.563 | +0.0241 |
+| OSI composite | +1.819 | **−1.049** | +0.0219 |
+| total bases | +0.102 | **−2.167** | +0.0238 |
+| K-avoidance | −0.181 | −0.072 | +0.0239 |
+| *baseline, no opponent term* | | | **+0.0239** |
+
+**Every proxy flips sign between halves, and none beats the baseline.** Sweeping the damping
+leaves holdout R² identical to four decimals at every value from 0 to 1. Four independent
+methods now agree that per-start earned runs carry no opponent signal, so the channel is
+computed and displayed but contributes nothing. Weather, umpire and travel are untouched —
+they are physical, were never tested here, and pass through at full weight.
