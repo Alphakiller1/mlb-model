@@ -237,6 +237,18 @@ def _collect_pickem(
         market = prop.lower().replace(" ", "_")
         if market == "fantasy":
             market = "fantasy_score"
+        # `model_prob` must be the probability of the SELECTION that was recorded, the way
+        # every other source stores it — otherwise a graded UNDER is scored against P(over)
+        # and the reliability curve is inverted for that whole source. Every one of the 92
+        # graded pick'em UNDER rows in the ledger carried a probability below 0.5 while the
+        # projection sat below the line, i.e. the pick was the likely side and the stored
+        # number said the opposite.
+        p_over = item.get("p_over")
+        model_probability = (
+            None if p_over is None
+            else float(p_over) if lean == "OVER"
+            else 1.0 - float(p_over)
+        )
         rows.append(
             _row(
                 slate_date=slate_date,
@@ -246,7 +258,7 @@ def _collect_pickem(
                 selection=lean.lower(),
                 line=float(item["line"]) if item.get("line") is not None else None,
                 model_value=item.get("projection"),
-                model_prob=item.get("p_over"),
+                model_prob=model_probability,
                 edge=edge_pts,
                 lean=lean_tag,
                 pitcher_name=str(item.get("pitcher") or "") or None,

@@ -47,6 +47,13 @@ REASON_BAD_VALUES = "unparseable_line_or_actual"
 
 # Reasons that can never resolve — void immediately instead of waiting.
 _TERMINAL_REASONS = {REASON_UNSUPPORTED_MARKET, REASON_FANTASY_UNVERIFIED}
+# Reasons that were TRANSIENT: the lean was gradeable, the data just had not landed yet.
+# A lean voided for one of these is re-opened on later runs, because `VOID_AFTER_DAYS`
+# otherwise makes a timing accident permanent. On 2026-09-04 this described 587 rows on the
+# 2026-08-24 slate alone — every one of them a game whose outcome the warehouse now holds,
+# across only 10 game_pks, voided purely because grading ran before the finals were ingested.
+# That is most of the game model's evidence base thrown away for a scheduling reason.
+_RECOVERABLE_REASONS = {REASON_NO_OUTCOME, REASON_NO_PITCHER_STATS}
 # Pending leans older than this (days after slate_date) are voided with their
 # last reason — postponed games and name mismatches must not pend forever.
 VOID_AFTER_DAYS = 4
@@ -324,17 +331,30 @@ def settle_leans(
     # F5 game markets were historically voided as unsupported even though the outcomes
     # table already stores first-five linescores. Re-open those audit rows automatically so
     # the corrected grader backfills them instead of leaving permanent false voids.
-    f5_regrade = read_all(
+    candidates = list(pending.rows)
+    seen_ids = {str(row.get("lean_id")) for row in candidates}
+
+    def _reopen(query: str) -> None:
+        result = read_all(query)
+        if result.error:
+            return
+        for row in result.rows:
+            lean_id = str(row.get("lean_id"))
+            if lean_id not in seen_ids:
+                seen_ids.add(lean_id)
+                candidates.append(row)
+
+    _reopen(
         "model_leans?settled=eq.true&void=eq.true&ungraded_reason=eq.unsupported_market"
         "&market=in.(f5_ml,f5_total,f5_runline)&select=*"
     )
-    candidates = list(pending.rows)
-    if not f5_regrade.error:
-        seen_ids = {str(row.get("lean_id")) for row in candidates}
-        candidates.extend(
-            row for row in f5_regrade.rows
-            if str(row.get("lean_id")) not in seen_ids
-        )
+    # And anything voided for a reason that was only ever a timing problem. If the data still
+    # is not there the row simply voids again, so re-attempting costs nothing.
+    _reopen(
+        "model_leans?settled=eq.true&void=eq.true&ungraded_reason=in.("
+        + ",".join(sorted(_RECOVERABLE_REASONS))
+        + ")&select=*"
+    )
 
     outcomes = read_all(
         "game_outcomes?select=game_pk,home_runs,away_runs,home_f5_runs,away_f5_runs,"

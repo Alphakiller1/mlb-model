@@ -591,3 +591,49 @@ def test_only_outs_needed_inflating():
     assert exported == {"OUTS_SIGMA_INFLATION"}, (
         "inflating a market whose sigma already matches would make it under-confident"
     )
+
+
+# ------------------------------------------------------------- ledger integrity
+def test_pickem_stores_the_probability_of_the_pick_not_of_the_over():
+    """Every graded pick'em UNDER in the ledger stored P(over) — 92 of 92 rows.
+
+    A graded UNDER was then scored against the probability of the opposite side, inverting
+    the reliability curve for that whole source. `model_prob` must mean the same thing here
+    as it does for every other source: the probability that the recorded selection wins.
+    """
+    from mlbmodel.leans.record import _collect_pickem
+    rows = _collect_pickem("2026-09-04", [
+        {"lean": "UNDER", "book": "underdog", "prop": "walks", "line": 1.5,
+         "projection": 0.95, "p_over": 0.293, "pitcher": "A"},
+        {"lean": "OVER", "book": "underdog", "prop": "strikeouts", "line": 5.5,
+         "projection": 7.6, "p_over": 0.778, "pitcher": "B"},
+    ])
+    by_side = {r["selection"]: r for r in rows}
+    assert by_side["under"]["model_prob"] == pytest.approx(1 - 0.293)
+    assert by_side["over"]["model_prob"] == pytest.approx(0.778)
+    # The projection sits below the line, so the UNDER must be the likely side.
+    assert by_side["under"]["model_prob"] > 0.5
+
+
+def test_pickem_probability_survives_a_missing_p_over():
+    from mlbmodel.leans.record import _collect_pickem
+    rows = _collect_pickem("2026-09-04", [
+        {"lean": "UNDER", "book": "sleeper", "prop": "outs", "line": 15.5,
+         "projection": 14.0, "p_over": None, "edge_pts": 12.0, "pitcher": "C"},
+    ])
+    assert rows[0]["model_prob"] is None
+
+
+def test_transient_void_reasons_are_recoverable_and_terminal_ones_are_not():
+    """A lean voided because the final had not landed yet must be re-gradeable.
+
+    VOID_AFTER_DAYS otherwise turns a scheduling accident into permanent data loss: on
+    2026-09-04 that described 587 rows on the 2026-08-24 slate, across just 10 game_pks whose
+    outcomes the warehouse already held.
+    """
+    from mlbmodel.leans import grade
+    assert grade.REASON_NO_OUTCOME in grade._RECOVERABLE_REASONS
+    assert grade.REASON_NO_PITCHER_STATS in grade._RECOVERABLE_REASONS
+    # Terminal reasons describe markets that can never grade; re-opening them would churn.
+    assert not (grade._RECOVERABLE_REASONS & grade._TERMINAL_REASONS)
+    assert grade.REASON_UNSUPPORTED_MARKET in grade._TERMINAL_REASONS
