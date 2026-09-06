@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from mlbmodel import settings
 from mlbmodel.baseball.model import (
     fair_price,
-    market_probability,
+    market_outcome_probability,
     model_probabilities,
     normal_cdf,
     offense_factor,
@@ -34,6 +34,7 @@ from mlbmodel.baseball.simulation import simulate_game
 from mlbmodel.market.oddsmath import prob_to_american
 from mlbmodel.market.quotes import OddsBoard, load_board
 from mlbmodel.market.value import assess_value
+from mlbmodel.market.settlement import conditional_win_probability
 from mlbmodel.quant.promotion_gate import promotion_verdict
 from mlbmodel.report.html_fmt import (
     edge_grade,
@@ -281,7 +282,10 @@ def _signal_boost(gd, market: str, side) -> float:
 
 
 def _market_row(market, side, line, ou, gd, probs, anchors, quote, promotion):
-    probability, description = market_probability(market, side, line, gd, probs, anchors, ou)
+    win, push, description = market_outcome_probability(
+        market, side, line, gd, probs, anchors, ou
+    )
+    probability = conditional_win_probability(win, push)
     probability = max(0.02, min(0.98, probability))
     assessment = assess_value(
         probability,
@@ -289,6 +293,7 @@ def _market_row(market, side, line, ou, gd, probs, anchors, quote, promotion):
         quote.vigfree_probability if quote else None,
         promotion_status=promotion,
         signal_edge_boost=_signal_boost(gd, market, side),
+        push_probability=push,
     )
     tone = {
         "BET": "pos",
@@ -303,6 +308,7 @@ def _market_row(market, side, line, ou, gd, probs, anchors, quote, promotion):
         "side": str(side),
         "line": line,
         "model": round(probability * 100, 1),
+        "push_probability": round(push, 6),
         "fair": assessment.fair_odds,
         "mkt": quote.best_odds if quote else None,
         "book": quote.best_book if quote else None,

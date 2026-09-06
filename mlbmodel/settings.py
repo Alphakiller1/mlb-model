@@ -48,7 +48,7 @@ def default_data_dir() -> Path:
 DATA_DIR = default_data_dir()
 CACHE_DIR = Path(os.getenv("MLBMODEL_CACHE_DIR", DATA_DIR))
 
-MODEL_VERSION = os.getenv("BET_MODEL_VERSION", "v3-genesis-202607")
+MODEL_VERSION = os.getenv("BET_MODEL_VERSION", "v3-matrix-20260906")
 METRIC_VERSION = os.getenv("MLBMA_METRIC_VERSION", LINEAGE_VERSION)
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")

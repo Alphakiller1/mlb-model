@@ -25,6 +25,10 @@ a wager instruction, and nothing here promises profit.**
   silently omitted.
 - **Markets.** Book-level paired de-vig; raw implied probabilities are never labeled
   vig-free. Sharp-vs-soft divergence is observed point-in-time with executable entry prices.
+  Full-game totals, team totals, run lines and pitcher props separate exact-line pushes
+  from wins and losses. Their fair prices use win probability conditional on no push;
+  expected value includes refunded stakes. See `docs/MATRIX-UPDATE-2026-09-06.md` for
+  the workload correction to the prop matrix and the limits of existing validation.
 - **Value states.** `BET` can only be produced by a strategy that has passed the
   promotion gate (walk-forward out-of-sample lower bound, Deflated Sharpe, PBO,
   minimum sample). Unpromoted strategies cap at `MONITOR`/`WATCH`.

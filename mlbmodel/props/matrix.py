@@ -32,6 +32,7 @@ What is deliberately NOT here matters as much, and is recorded in
 from __future__ import annotations
 
 from datetime import date, datetime
+import math
 
 # Fitted 2026-09-03 on 2,980 point-in-time starts (2026-04-11..08-30).
 OPPONENT_K_WEIGHT = 2.567
@@ -163,6 +164,26 @@ def _clip(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
+def _nonnegative(value: object) -> float | None:
+    """Missing or malformed observations are not zero-event observations."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) and number >= 0 else None
+
+
+def _innings_outs(value: object) -> int | None:
+    number = _nonnegative(value)
+    if number is None:
+        return None
+    whole = int(number)
+    partial = round((number - whole) * 10)
+    if partial not in (0, 1, 2) or not math.isclose(number, whole + partial / 10):
+        return None
+    return whole * 3 + partial
+
+
 def opponent_strikeout_rates(game_logs: list[dict]) -> tuple[dict[str, float], float]:
     """Strikeouts per batter faced by the club being pitched to, plus the league rate.
 
@@ -176,12 +197,9 @@ def opponent_strikeout_rates(game_logs: list[dict]) -> tuple[dict[str, float], f
     league_bf = 0.0
     for row in game_logs:
         team = str(row.get("opponent_team") or "").upper().strip()
-        try:
-            strikeouts = float(row.get("K"))
-            batters = float(row.get("batters_faced"))
-        except (TypeError, ValueError):
-            continue
-        if not team or batters <= 0:
+        strikeouts = _nonnegative(row.get("K"))
+        batters = _nonnegative(row.get("batters_faced"))
+        if not team or strikeouts is None or batters is None or batters <= 0 or strikeouts > batters:
             continue
         bucket = totals.setdefault(team, [0.0, 0.0])
         bucket[0] += strikeouts
@@ -200,23 +218,19 @@ def opponent_strikeout_rates(game_logs: list[dict]) -> tuple[dict[str, float], f
 def league_rates(game_logs: list[dict]) -> dict[str, float]:
     """Pooled league K/BB/H per batter faced — the prior every thin sample regresses to."""
     totals = {"k": 0.0, "bb": 0.0, "h": 0.0}
-    batters = 0.0
+    batters = {key: 0.0 for key in totals}
     for row in game_logs:
-        try:
-            faced = float(row.get("batters_faced"))
-        except (TypeError, ValueError):
+        faced = _nonnegative(row.get("batters_faced"))
+        if faced is None or faced <= 0:
             continue
-        if faced <= 0:
-            continue
-        batters += faced
         for key, column in (("k", "K"), ("bb", "BB"), ("h", "H")):
-            try:
-                totals[key] += float(row.get(column))
-            except (TypeError, ValueError):
-                pass
-    if batters <= 0:
-        return {"k": 0.219, "bb": 0.082, "h": 0.225}
-    return {key: value / batters for key, value in totals.items()}
+            events = _nonnegative(row.get(column))
+            if events is not None and events <= faced:
+                totals[key] += events
+                batters[key] += faced
+    defaults = {"k": 0.219, "bb": 0.082, "h": 0.225}
+    return {key: value / batters[key] if batters[key] else defaults[key]
+            for key, value in totals.items()}
 
 
 def shrink_rate(
@@ -246,15 +260,11 @@ def league_er_per_out(game_logs: list[dict]) -> float:
     earned = 0.0
     outs = 0.0
     for row in game_logs:
-        innings = row.get("IP")
-        try:
-            number = float(innings)
-            runs = float(row.get("ER"))
-        except (TypeError, ValueError):
+        recorded = _innings_outs(row.get("IP"))
+        runs = _nonnegative(row.get("ER"))
+        if recorded is None or runs is None:
             continue
-        whole = int(number)
-        partial = round((number - whole) * 10)
-        outs += whole * 3 + (partial if partial in (1, 2) else 0)
+        outs += recorded
         earned += runs
     return earned / outs if outs > 0 else 0.156
 
@@ -293,14 +303,10 @@ def league_outs(game_logs: list[dict]) -> float:
     total = 0.0
     starts = 0
     for row in game_logs:
-        innings = row.get("IP")
-        try:
-            number = float(innings)
-        except (TypeError, ValueError):
+        recorded = _innings_outs(row.get("IP"))
+        if recorded is None:
             continue
-        whole = int(number)
-        partial = round((number - whole) * 10)
-        total += whole * 3 + (partial if partial in (1, 2) else 0)
+        total += recorded
         starts += 1
     return total / starts if starts else 15.33
 

@@ -27,7 +27,11 @@ def assess_value(
     *,
     promotion_status: str,
     signal_edge_boost: float = 0.0,
+    push_probability: float = 0.0,
 ) -> ValueAssessment:
+    """Price conditional win probability; EV includes refunded push outcomes."""
+    if not 0.0 <= push_probability <= 1.0:
+        raise ValueError("Push probability must be between zero and one")
     fair = prob_to_american(model_probability)
     if executable_odds is None or market_probability is None:
         return ValueAssessment(
@@ -37,7 +41,9 @@ def assess_value(
 
     edge = model_probability - market_probability + signal_edge_boost
     decimal = american_to_decimal(executable_odds)
-    ev = model_probability * (decimal - 1) - (1 - model_probability)
+    ev = (1 - push_probability) * (
+        model_probability * (decimal - 1) - (1 - model_probability)
+    )
     implausible = edge >= settings.IMPLAUSIBLE_EDGE
     raw_state = (
         "REVIEW" if implausible

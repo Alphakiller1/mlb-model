@@ -18,6 +18,7 @@ from mlbmodel.baseball.metrics import (
     trend_run_factor,
 )
 from mlbmodel.market.oddsmath import prob_to_american
+from mlbmodel.market.settlement import conditional_win_probability
 
 
 def clip(value: float, low: float, high: float) -> float:
@@ -28,24 +29,29 @@ def normal_cdf(value: float) -> float:
     return 0.5 * (1 + math.erf(value / math.sqrt(2)))
 
 
-def _negative_binomial_pmf(mean: float, sd: float, ceiling: int = 30) -> list[float]:
-    """Probability of each run count 0..ceiling for an overdispersed count."""
+def _negative_binomial_pmf(mean: float, sd: float) -> list[float]:
+    """Run PMF with less than 1e-12 omitted mass, normalized for convolution."""
     mean = max(float(mean), 0.05)
     variance = max(float(sd) ** 2, mean * 1.05)
     shape = mean * mean / (variance - mean)
     probability = shape / (shape + mean)
     log_p = math.log(probability)
     log_q = math.log1p(-probability)
-    return [
-        math.exp(
+    masses = []
+    cumulative = 0.0
+    for count in range(10000):
+        mass = math.exp(
             math.lgamma(count + shape)
             - math.lgamma(shape)
             - math.lgamma(count + 1)
             + shape * log_p
             + count * log_q
         )
-        for count in range(ceiling + 1)
-    ]
+        masses.append(mass)
+        cumulative += mass
+        if cumulative >= 1.0 - 1e-12:
+            return [value / cumulative for value in masses]
+    raise ValueError("Run distribution did not converge")
 
 
 def margin_cover_probability(
@@ -63,16 +69,26 @@ def margin_cover_probability(
     matchup 1-12). Convolving the same negative-binomial team distributions used for team
     totals keeps every margin market consistent with the run distributions underneath them.
     """
+    return margin_outcome_probabilities(line, team_runs, opponent_runs, sd)[0]
+
+
+def margin_outcome_probabilities(
+    line: float, team_runs: float, opponent_runs: float, sd: float,
+) -> tuple[float, float]:
+    """Unconditional (cover, push) probabilities for a run-line contract."""
     team = _negative_binomial_pmf(team_runs, sd)
     opponent = _negative_binomial_pmf(opponent_runs, sd)
     cover = 0.0
+    push = 0.0
     for scored, p_scored in enumerate(team):
         if p_scored <= 0.0:
             continue
         for allowed, p_allowed in enumerate(opponent):
             if scored - allowed + line > 0:
                 cover += p_scored * p_allowed
-    return clip(cover, 0.0, 1.0)
+            elif scored - allowed + line == 0:
+                push += p_scored * p_allowed
+    return clip(cover, 0.0, 1.0), clip(push, 0.0, 1.0)
 
 
 def negative_binomial_sf(line: float, mean: float, sd: float) -> float:
@@ -527,7 +543,7 @@ def _resolve_side_team(side: str, gd: GameData) -> str:
     raise ValueError(f"side must be {gd.away}, {gd.home}, home, or away")
 
 
-def market_probability(
+def market_outcome_probability(
     market: str,
     side: str,
     line: float | None,
@@ -535,18 +551,23 @@ def market_probability(
     probs: Probabilities,
     anchors: dict[str, float],
     ou: str | None = None,
-) -> tuple[float, str]:
+) -> tuple[float, float, str]:
+    """Unconditional win probability, push probability, and contract label."""
     market = market.lower()
     if market == "ml":
         team = _resolve_side_team(side, gd)
         probability = probs.p_home_win if team == gd.home else probs.p_away_win
-        return probability, f"{team} ML"
+        return probability, 0.0, f"{team} ML"
     if market == "total":
         if line is None:
             raise ValueError("total requires a line")
         p_over = negative_binomial_sf(line, probs.exp_total, anchors["total_sd"])
-        return (p_over, f"Over {line:g}") if side.lower() == "over" else (
-            1 - p_over,
+        push = (
+            negative_binomial_sf(line - 1, probs.exp_total, anchors["total_sd"]) - p_over
+            if float(line).is_integer() else 0.0
+        )
+        return (p_over, push, f"Over {line:g}") if side.lower() == "over" else (
+            max(0.0, 1 - p_over - push), push,
             f"Under {line:g}",
         )
     if market == "team_total":
@@ -555,9 +576,13 @@ def market_probability(
         team = _resolve_side_team(side, gd)
         expected = probs.exp_home_runs if team == gd.home else probs.exp_away_runs
         p_over = negative_binomial_sf(line, expected, anchors["team_sd"])
+        push = (
+            negative_binomial_sf(line - 1, expected, anchors["team_sd"]) - p_over
+            if float(line).is_integer() else 0.0
+        )
         direction = (ou or "over").lower()
-        return (p_over, f"{team} TT Over {line:g}") if direction == "over" else (
-            1 - p_over,
+        return (p_over, push, f"{team} TT Over {line:g}") if direction == "over" else (
+            max(0.0, 1 - p_over - push), push,
             f"{team} TT Under {line:g}",
         )
     if market == "runline":
@@ -568,11 +593,20 @@ def market_probability(
             team_runs, opponent_runs = probs.exp_home_runs, probs.exp_away_runs
         else:
             team_runs, opponent_runs = probs.exp_away_runs, probs.exp_home_runs
-        p_cover = margin_cover_probability(
+        p_cover, push = margin_outcome_probabilities(
             line, team_runs, opponent_runs, anchors["team_sd"]
         )
-        return p_cover, f"{team} {line:+g}"
+        return p_cover, push, f"{team} {line:+g}"
     raise ValueError(f"unsupported market: {market}")
+
+
+def market_probability(
+    market: str, side: str, line: float | None, gd: GameData,
+    probs: Probabilities, anchors: dict[str, float], ou: str | None = None,
+) -> tuple[float, str]:
+    """Win probability conditional on no push, comparable to paired market odds."""
+    win, push, label = market_outcome_probability(market, side, line, gd, probs, anchors, ou)
+    return conditional_win_probability(win, push), label
 
 
 def fair_price(probability: float) -> int:

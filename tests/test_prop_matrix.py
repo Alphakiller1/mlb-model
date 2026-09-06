@@ -298,6 +298,35 @@ def test_pitch_mix_reports_which_baseline_it_used():
     assert result["baseline_source"] == "team"
 
 
+@pytest.mark.parametrize("innings", [2.5, 5.3, 7.0])
+@pytest.mark.parametrize("opponent_delta", [-0.1, 0.1, 0.2])
+def test_opponent_k_count_effect_survives_the_projected_workload(innings, opponent_delta):
+    from types import SimpleNamespace
+    from mlbmodel.baseball.model import TeamContext
+    from mlbmodel.props.model import PitcherProjectionEngine
+    engine = PitcherProjectionEngine(_StubRepo({"sp_profiles.csv": [{
+        "pitcher_name": "Test Arm", "pitcher_team": "AAA", "pitcher_id": 7,
+        "starts": 20, "avg_IP": innings, "K_pct": 22, "BB_pct": 8,
+        "ERA": 4.2, "FIP": 4.2, "xFIP": 4.2,
+    }]}))
+    game = SimpleNamespace(live_context={}, home_context=TeamContext(), away_context=TeamContext(),
+                           home_osi=50, away_osi=50, mlb_game_pk=123, game_pk=123)
+    kwargs = dict(team="AAA", opponent="BBB", pitcher_name="Test Arm",
+                  pitcher_hand="R", side="away")
+    neutral = engine.project(game, **kwargs)
+    engine.opponent_k_rates = {"BBB": engine.league_k_rate * (1 + opponent_delta)}
+    adjusted = engine.project(game, **kwargs)
+    count_delta = matrix.OPPONENT_K_WEIGHT * opponent_delta
+    bf = adjusted["matrix"]["projected_batters_faced"]
+    # Preserve the existing +/-3 percentage-point guardrail and final K calibration.
+    expected_delta = max(-0.03 * bf, min(0.03 * bf, count_delta)) * matrix.SPREAD_CALIBRATION["k"]
+    assert adjusted["matrix"]["opponent_k_applied_strikeouts"] == pytest.approx(expected_delta, abs=0.0005)
+    assert adjusted["matrix"]["projected_batters_faced"] == neutral["matrix"]["projected_batters_faced"]
+    # Independent simulation check: the sampled K means recover the fitted count delta,
+    # even when workload is far from the five-inning league centre.
+    assert adjusted["projections"]["K"]["mean"] - neutral["projections"]["K"]["mean"] == pytest.approx(expected_delta, abs=0.07)
+
+
 def test_pitch_detail_has_no_fabricated_ops():
     """`lineup_ops` was the opponent's xwOBA under an OPS label, duplicating the next column."""
     result = _engine()._pitch_matchup("Ace Arm", "AAA", {"players": []})
@@ -358,6 +387,39 @@ def test_league_rates_come_from_the_log():
     assert rates["h"] == pytest.approx(0.22)
     fallback = matrix.league_rates([])
     assert 0.15 < fallback["k"] < 0.30
+
+
+def test_league_priors_use_each_markets_observed_denominator():
+    rates = matrix.league_rates([
+        {"batters_faced": 100, "K": 20, "BB": 10, "H": 25},
+        {"batters_faced": 100, "K": 30, "BB": None, "H": float("nan")},
+        {"batters_faced": float("inf"), "K": 10, "BB": 5, "H": 20},
+    ])
+    assert rates == pytest.approx({"k": 0.25, "bb": 0.10, "h": 0.25})
+    # A genuinely observed zero belongs in the denominator; missing data does not.
+    assert matrix.league_rates([{"batters_faced": 100, "BB": 0}])["bb"] == 0
+    assert matrix.league_rates([{"batters_faced": 100}])["bb"] == 0.082
+
+
+@pytest.mark.parametrize("bad", [None, "", float("nan"), float("inf"), -1])
+def test_opponent_prior_ignores_invalid_observations(bad):
+    rates, league = matrix.opponent_strikeout_rates([
+        {"opponent_team": "AAA", "K": 100, "batters_faced": 500},
+        {"opponent_team": "AAA", "K": bad, "batters_faced": 500},
+        {"opponent_team": "BBB", "K": 100, "batters_faced": bad},
+    ])
+    assert rates == {"AAA": 0.2}
+    assert league == 0.2
+
+
+def test_league_innings_priors_ignore_bad_rows_and_keep_zero_out_starts():
+    rows = [{"IP": 6.1, "ER": 3}, {"IP": 0.0, "ER": 2}]
+    rows.extend({"IP": bad, "ER": 9} for bad in
+                (None, float("nan"), float("inf"), -1, 5.3, 5.25))
+    assert matrix.league_outs(rows) == pytest.approx(19 / 2)
+    assert matrix.league_er_per_out(rows) == pytest.approx(5 / 19)
+    # Unknown ER must remove both sides of the ER rate, not count as a shutout.
+    assert matrix.league_er_per_out(rows + [{"IP": 7, "ER": float("nan")}]) == pytest.approx(5 / 19)
 
 
 # ------------------------------------------------------------------ ER opponent-stack damping

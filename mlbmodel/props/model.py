@@ -793,8 +793,6 @@ class PitcherProjectionEngine:
         baseline_ip = _number(profile.get("avg_IP")) or 5.3
         if log_factors.get("recent_ip") is not None:
             baseline_ip = baseline_ip * 0.65 + log_factors["recent_ip"] * 0.35
-        expected_bf = max(12.0, _clip(baseline_ip, 2.5, 7.0) * 4.25)
-        k_rate += _clip(opponent_k_strikeouts / expected_bf * 100, -3.0, 3.0)
 
         # --- fitted matrix: regression/progression and rest, both on the Outs channel ---
         # This is where the REGRESSION / PROGRESSION state finally moves a number. It has
@@ -930,6 +928,14 @@ class PitcherProjectionEngine:
         # +25 (as before) with a mean shrunk at strength 461 would claim far more certainty
         # about a hit rate than the estimate supports.
         observed_bf = max(0.0, float(log_factors.get("bf") or starts * 22))
+        # The matrix coefficient is in strikeouts per START, not percentage points.
+        # Use the actual projected BF distribution after workload calibration, environment,
+        # clipping and rounding. The obsolete baseline_ip * 4.25 denominator silently
+        # amplified the coefficient for short outings and attenuated it for long ones.
+        expected_bf = float(np.mean(bf_samples))
+        opponent_k_rate_delta = _clip(opponent_k_strikeouts / expected_bf * 100, -3.0, 3.0)
+        k_rate_without_opponent = k_rate
+        k_rate += opponent_k_rate_delta
         # Final spread calibration. Shrinkage fixed the sample-size problem; this fixes what
         # is left, which is that the projections still run slope < 1 against outcomes — spread
         # wider than the signal earns. Applied last, so it calibrates the finished number
@@ -1040,6 +1046,15 @@ class PitcherProjectionEngine:
                     round(opponent_k_index, 3) if opponent_k_index is not None else None
                 ),
                 "opponent_k_strikeouts": round(opponent_k_strikeouts, 3),
+                "projected_batters_faced": round(expected_bf, 3),
+                # Expected count effect after final calibration and probability caps;
+                # unlike a realised Monte Carlo difference this has no K-sampling noise.
+                "opponent_k_applied_strikeouts": round(
+                    expected_bf * (k_probability - _clip(
+                        matrix.calibrate(k_rate_without_opponent, "k", self.league_rates["k"] * 100)
+                        / 100, 0.05, 0.48
+                    )), 3
+                ),
                 "regression_outs": round(regression_outs, 3),
                 "era_gap_outs": round(era_gap_outs, 3),
                 "er_rate_per_out": round(er_rate, 4),

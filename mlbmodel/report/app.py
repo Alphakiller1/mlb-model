@@ -388,7 +388,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None)
         slate_date=str(sd or ""),
         meta_lines=[
             f'Slate <b>{e(sd or "—")}</b>',
-            "Model <b>v1-expected-runs</b>",
+            f"Model <b>{e(settings.MODEL_VERSION)}</b>",
             f'Sync <b>{e(str((sync or {}).get("status") or "—"))}</b>',
         ],
     )

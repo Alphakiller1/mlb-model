@@ -22,6 +22,7 @@ from mlbmodel.market.oddsmath import (
     prob_to_american,
 )
 from mlbmodel.market.value import assess_value
+from mlbmodel.market.settlement import conditional_win_probability
 
 API_MARKETS = {
     "pitcher_strikeouts": "K",
@@ -323,7 +324,8 @@ def market_report(
         # first two moments. On a half-point line push is zero; on a whole number it is not,
         # and the under must not silently absorb it.
         p_over, p_push = p_over_exact(quote.line, projection)
-        model_probability = p_over if quote.side == "over" else 1 - p_over - p_push
+        p_win = p_over if quote.side == "over" else max(0.0, 1 - p_over - p_push)
+        model_probability = conditional_win_probability(p_win, p_push)
         # Where the book's line has been measured to out-forecast this model, the projection
         # still shows but cannot be sold as value — see matrix.MARKET_OUTFORECASTS_MODEL.
         actionable = matrix.market_is_actionable(quote.prop)
@@ -332,6 +334,7 @@ def market_report(
             quote.best_odds,
             quote.no_vig_probability,
             promotion_status=promotion_status,
+            push_probability=p_push,
         )
         reports.append(
             {
@@ -342,6 +345,7 @@ def market_report(
                 "best_book": quote.best_book,
                 "books": quote.book_count,
                 "model_probability": round(model_probability, 4),
+                "push_probability": round(p_push, 6),
                 "market_probability": quote.no_vig_probability,
                 "market_fair_odds": prob_to_american(quote.no_vig_probability),
                 "hold": (
