@@ -1,11 +1,35 @@
-# Design Contract — MLB Model (Purple · Black Desk)
+# Design Contract — MLB Model (Chase desk)
 
 Version 2.1.0 · 2026-07-23  
-**Supersedes** v2.0.0 steel-accent desk tokens.
+**Status: Current** (WP6, 2026-09-08)
+
+**Supersedes** v1.0.0 (`governance/DESIGN-CONTRACT.md`) and the graphite-fork
+`docs/redesign/DESIGN-CONTRACT.md`. MLBMA research boards keep their own contract in
+`mlbma-pipeline`. This file governs `mlb_model_app.html` and the model desk.
+
+## Chase alignment (binding — 2026-09-08)
+
+Shipped surfaces MUST use the Chase identity, not the historical IBM Plex / Barlow
+block below:
+
+| Role | Value |
+|------|--------|
+| Canvas | `#08090F` |
+| Brand violet | `#9A6BFF` |
+| Display | Roboto Condensed |
+| UI / body | DM Sans |
+| Tokens file | `mlbmodel/report/static/chase_tokens.css` (shared four-model seed) |
+
+IBM Plex Sans/Mono, Barlow Condensed, `#07060C`, and `#B794FF` are **historical** and
+forbidden on rendered HTML (see deploy-pages smoke).
+
+The token CSS that follows is the 2026-07-23 v2.1 snapshot, kept for provenance.
+
+---
 
 MLBMA research boards keep their own contract. This file governs `mlb_model_app.html` and redesign mockups.
 
-## Tokens
+## Tokens (historical v2.1.0 — do not ship)
 
 ```css
 :root {

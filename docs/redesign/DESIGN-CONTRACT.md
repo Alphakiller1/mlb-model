@@ -1,11 +1,22 @@
 # Design Contract — MLB Model (Purple · Black Desk)
 
 Version 2.2.0 · 2026-07-23  
-**Supersedes** v2.1.0 muddy purple-black tokens.
+**Status: Superseded** (2026-09-08 WP6)
 
-MLBMA research boards keep their own contract. This file governs `mlb_model_app.html` and redesign mockups.
+This graphite-fork contract (`#B794FF`, IBM Plex, Barlow, `#0A0A0B`) is retained for
+history. It is **not** the visual law for shipped MLB Model surfaces.
 
-## Tokens
+**Current:** [`../../governance/DESIGN-CONTRACT-V2-DESK.md`](../../governance/DESIGN-CONTRACT-V2-DESK.md)
+(Chase-aligned: Roboto Condensed / DM Sans / `#08090F` / `#9A6BFF`).
+
+**Superseded** v2.1.0 muddy purple-black tokens as a redesign experiment. Do not implement
+new UI from this file.
+
+---
+
+MLBMA research boards keep their own contract. This file historically governed `mlb_model_app.html` and redesign mockups.
+
+## Tokens (historical v2.2.0 graphite fork — do not ship)
 
 ```css
 :root {
