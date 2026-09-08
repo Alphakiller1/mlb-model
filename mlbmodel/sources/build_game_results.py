@@ -133,9 +133,14 @@ def main() -> None:
     orows = list({r["game_pk"]: r for r in orows}.values())
     writer = SupabaseWriter()
     if writer.url and writer.key:
-        writer.upsert("games", grows, "game_pk")
-        writer.upsert("game_outcomes", orows, "game_pk")
-        print(f"upserted games={len(grows)} game_outcomes={len(orows)}")
+        try:
+            writer.upsert("games", grows, "game_pk")
+            writer.upsert("game_outcomes", orows, "game_pk")
+            print(f"upserted games={len(grows)} game_outcomes={len(orows)}")
+        except RuntimeError as exc:
+            # CSV is already on disk. A Cloudflare 522 must not abort settle —
+            # the next scheduled run retries the warehouse write.
+            print(f"warehouse write skipped after retries: {exc}")
     else:
         print("warehouse write skipped: SUPABASE_URL/SUPABASE_KEY not configured")
 
