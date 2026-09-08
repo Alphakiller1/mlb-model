@@ -86,25 +86,40 @@ def shell_css() -> str:
 
 def shell_js() -> str:
     return (
-        "function show(k){document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));"
-        "document.getElementById('v-'+k).classList.add('on');"
-        "document.querySelectorAll('.sidebar .nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===k));"
+        "function show(k,keep){var view=document.getElementById('v-'+k);if(!view)return;"
+        "var already=view.classList.contains('on');"
+        "if(!already){document.querySelectorAll('.view').forEach(function(v){v.classList.remove('on');});"
+        "view.classList.add('on');window.scrollTo(0,0);}"
+        "document.querySelectorAll('.sidebar .nav button').forEach(function(b){"
+        "b.classList.toggle('on',b.dataset.v===k);});"
         "if(location.hash!=='#'+k)history.replaceState(null,'','#'+k);"
-        "window.scrollTo(0,0);}"
+        # Sidebar Matchups is the way back to the slate. openGame passes keep=true so it
+        # does not undrill the report it is about to show.
+        "if(k==='matchups'&&!keep)closeMatchup();}"
         "function switchGame(g){document.querySelectorAll('.matchup-report').forEach(function(x){"
         "var on=x.getAttribute('data-game')===g;"
         "if(on){x.removeAttribute('hidden');}else{x.setAttribute('hidden','');}"
         "if(on){var body=x.querySelector('.matchup-body');var tpl=x.querySelector('template.matchup-full-src');"
         "if(body&&tpl&&body.querySelector('.matchup-summary'))body.innerHTML=tpl.innerHTML;}"
-        "});const s=document.getElementById('gameSelect');"
-        "if(s)s.value=g;}"
-        # The board and the breakdown now live in one section, so opening a game swaps the
-        # detail panel and scrolls to it rather than switching views out from under the board.
-        "function openGame(g){show('matchups');switchGame(g);"
-        "var d=document.getElementById('matchupDetail');"
-        "if(d)d.scrollIntoView({behavior:'smooth',block:'start'});}"
-        "function jumpMatchupStep(el,step){var root=el.closest('.matchup-report')||document;"
+        "});var s=document.getElementById('gameSelect');"
+        "if(s)s.value=g;"
+        "var lab=document.getElementById('matchupDetailLabel');"
+        "if(lab)lab.textContent=String(g||'').replace('@',' @ ');}"
+        "function closeMatchup(){var v=document.getElementById('v-matchups');"
+        "if(v)v.classList.remove('is-drilled');window.scrollTo(0,0);}"
+        "function openMatchup(){var v=document.getElementById('v-matchups');"
+        "if(v)v.classList.add('is-drilled');window.scrollTo(0,0);}"
+        # Opening a card used to call show('matchups'), which always window.scrollTo(0,0)
+        # and retriggered the view animation, then smooth-scrolled to #matchupDetail sitting
+        # under the full slate. The scroll lost the fight — the board stayed on screen and
+        # the breakdown looked like a no-op. Drill in: hide the board, show that game.
+        "function openGame(g){show('matchups',true);switchGame(g);openMatchup();}"
+        "function jumpMatchupStep(el,step){"
+        "var root=(el&&el.closest&&el.closest('.matchup-report'))"
+        "||document.getElementById('matchupDetail')||document;"
         "var t=root.querySelector('[data-step=\"'+step+'\"]');"
+        "if(!t&&el&&el.getAttribute){var href=el.getAttribute('href')||'';"
+        "if(href.charAt(0)==='#')t=root.querySelector('[id=\"'+href.slice(1)+'\"]');}"
         "if(t)t.scrollIntoView({behavior:'smooth',block:'start'});return false;}"
         "function switchPropPitcher(i){document.querySelectorAll('[data-prop-detail]').forEach(function(p){"
         "if(p.getAttribute('data-prop-detail')===String(i)){p.removeAttribute('hidden');}else{p.setAttribute('hidden','');}});"

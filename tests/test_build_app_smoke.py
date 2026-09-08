@@ -43,7 +43,7 @@ def test_build_app_renders_all_views():
     assert "sidebar" in html
     assert 'data-v="matchups"' in html
     assert "sortable" in html
-    assert "function show(k)" in html
+    assert "function show(k,keep)" in html
     assert "location.hash" in html
     assert "pitcher-prop-deck" in html.split("v-props")[1].split("</section>")[0]
     assert "prop-engine-table" in html
@@ -61,6 +61,11 @@ def test_build_app_renders_all_views():
     assert 'data-step="m-splits"' in html
     assert 'data-step="m-risks"' in html
     assert "jumpMatchupStep" in html
+    assert "function closeMatchup" in html
+    assert "function openMatchup" in html
+    assert "is-drilled" in html
+    assert "matchup-back" in html
+    assert 'onchange="openGame(this.value)"' in html
     assert "desk-verdict" in html
 
 

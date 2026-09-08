@@ -17,4 +17,8 @@ def test_build_app_structure_markers():
     assert "sortable" in html
     assert "function switchGame" in html
     assert "function jumpMatchupStep" in html
+    assert "function closeMatchup" in html
+    assert "show('matchups',true)" in html
     assert "matchup-full-src" in html
+    assert "#v-matchups.is-drilled" in html
+    assert "#v-matchups:not(.is-drilled) > .matchup-detail" in html
