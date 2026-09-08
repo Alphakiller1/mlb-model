@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import statistics
 import urllib.parse
 import urllib.request
@@ -13,6 +14,8 @@ from zoneinfo import ZoneInfo
 from mlbmodel import settings
 from mlbmodel.market import usage
 from mlbmodel.market.oddsmath import american_to_implied, devig_two_way
+
+log = logging.getLogger(__name__)
 
 ET = ZoneInfo("America/New_York")
 
@@ -220,8 +223,25 @@ def fetch_events(*, cache_path: Path | None = None) -> tuple[list[dict], str]:
             _merge_f5_markets(events)
         except Exception:
             pass
-    fetched = datetime.now(timezone.utc).isoformat(timespec="seconds")
     path = cache_path or settings.CACHE_DIR / "odds_latest.json"
+
+    # An empty response must never replace a good cache. A bookmaker filter the
+    # key cannot serve returns 200 with `bookmakers: []` on every event - a
+    # Fanatics-only pull on this key returns 26 MLB events and zero prices - and
+    # writing that blanks the board while reporting a fresh timestamp. README
+    # safety invariant: failed data reads produce visible no-action states.
+    # Keeps the PREVIOUS fetched_at so the cache ages honestly instead of
+    # looking freshly refreshed.
+    if not events:
+        cached_events, cached_fetched = load_cached_events(path)
+        if cached_events:
+            log.warning(
+                "odds fetch returned 0 events; keeping %s cached events from %s",
+                len(cached_events), cached_fetched or "an unknown time",
+            )
+            return cached_events, cached_fetched
+
+    fetched = datetime.now(timezone.utc).isoformat(timespec="seconds")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"fetched_at": fetched, "events": events}), encoding="utf-8")
     return events, fetched
