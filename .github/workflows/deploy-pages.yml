@@ -292,7 +292,7 @@ jobs:
           # below is what these three products silently drifted into once before.
           for key in ('#08090F', '#9A6BFF', 'DM Sans', 'Roboto Condensed'):
               assert key in html, key
-          for forked in ('#B794FF', 'IBM Plex'):
+          for forked in ('#B794FF', 'IBM Plex', '#BA008E', 'Barlow'):
               assert forked not in html, f'off-brand token resurfaced: {forked}'
           icons = list(Path('_site/assets/icons').glob('*.svg'))
           assert len(icons) >= 8, f'expected vendored icons, got {len(icons)}'
