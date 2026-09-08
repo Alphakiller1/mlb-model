@@ -18,6 +18,8 @@ jobs:
         run: python -c "import mlbmodel.report.app; import mlbmodel.market.collect"
       - name: pytest (Constitution invariants)
         run: pytest -q
+      - name: published Chase tokens vs vendor seed
+        run: python scripts/check_published_tokens.py
       - name: checkout mlbma-pipeline (CSS source)
         uses: actions/checkout@v6
         with:

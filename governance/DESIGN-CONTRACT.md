@@ -1,9 +1,17 @@
 # Design Contract — Chase Analytics / MLB MODEL
 
-Version 1.0.0 · 2026-06-26. The **required** visual spec for every MLB MODEL surface. Tokens are
-extracted verbatim from the approved Chase Analytics ecosystem site (`chase-analytics-ecosystem/
-index.html :root`) — **not invented**. The unified product must feel like a more capable evolution
-of the Sharp Money Tracker + Chase Analytics, not a new redesign.
+**Status: Superseded** (2026-09-08 WP6)
+
+This v1.0.0 Inter / teal / `#070b12` contract is retained for history. It is **not**
+the visual law for shipped MLB Model surfaces.
+
+**Current:** [`DESIGN-CONTRACT-V2-DESK.md`](./DESIGN-CONTRACT-V2-DESK.md) (Chase-aligned amendment:
+Roboto Condensed / DM Sans / `#08090F` / `#9A6BFF`).
+
+---
+
+Version 1.0.0 · 2026-06-26. Historical required spec from the approved Chase Analytics ecosystem site (`chase-analytics-ecosystem/
+index.html :root`) — **not invented**. Kept as provenance; do not implement new UI from this file.
 
 ## Design tokens (canonical — copy, don't fork per page)
 

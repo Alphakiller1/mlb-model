@@ -96,3 +96,5 @@ def test_build_app_does_not_redefine_brand_tokens():
     assert "#9A6BFF" in html          # canonical violet brand
     assert "#B794FF" not in html      # the forked graphite violet
     assert "IBM Plex" not in html     # the forked type stack
+    assert "Barlow" not in html      # the forked display face
+    assert "#BA008E" not in html      # SCL pink

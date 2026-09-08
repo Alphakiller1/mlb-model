@@ -274,11 +274,25 @@ jobs:
           assert 'results-prop-audit' in html, 'complete prop grading report missing'
           audit = Path('_site/assets/prediction-audit.json')
           assert audit.exists() and audit.stat().st_size > 100, 'complete grading data missing'
+          board = Path('_site/board.json')
+          build = Path('_site/build.json')
+          record = Path('_site/record.json')
+          assert board.exists() and build.exists() and record.exists(), 'slate JSON bundle missing'
+          import json
+          payload = json.loads(board.read_text(encoding='utf-8'))
+          assert payload.get('schema') == 'mlb-model/board/1'
+          assert payload.get('may_bet') is False
+          assert 'priced_markets' in payload and 'flagged_tiles' in payload
+          manifest = json.loads(build.read_text(encoding='utf-8'))
+          assert 'generated_at' in manifest and 'odds' in manifest and 'issues' in manifest
+          ledger = json.loads(record.read_text(encoding='utf-8'))
+          assert ledger.get('may_bet') is False
+          assert 'games_graded' in ledger and 'unmet_gates' in ledger
           # Shared brand contract with wnba-edge-model and nfl-model. The graphite fork
           # below is what these three products silently drifted into once before.
           for key in ('#08090F', '#9A6BFF', 'DM Sans', 'Roboto Condensed'):
               assert key in html, key
-          for forked in ('#B794FF', 'IBM Plex'):
+          for forked in ('#B794FF', 'IBM Plex', '#BA008E', 'Barlow'):
               assert forked not in html, f'off-brand token resurfaced: {forked}'
           icons = list(Path('_site/assets/icons').glob('*.svg'))
           assert len(icons) >= 8, f'expected vendored icons, got {len(icons)}'
