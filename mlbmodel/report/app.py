@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import logging
 import os
 from pathlib import Path
@@ -75,7 +76,8 @@ log = logging.getLogger(__name__)
 __all__ = ["_NAV", "_props", "build_app", "main"]
 
 
-def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None):
+def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None,
+              bundle_dir=None):
     repo = DataRepository(data_dir)
     reader = SupabaseReader()
     cache_dir = Path(data_dir) if data_dir else settings.CACHE_DIR
@@ -285,6 +287,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None)
 
     # Always retain local, gradeable projections even when Supabase credentials
     # are unavailable.  This is intentionally independent of lean thresholds.
+    local_grade = {"graded": 0, "pending": 0, "voided": 0}
     if sd:
         local_grade = grade_local_predictions(cache_dir)
         local_written = record_local_predictions(cache_dir, str(sd)[:10], model_by_pk, pkmap, flat_props)
@@ -406,7 +409,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None)
         '</div>'
         '</footer>'
     )
-    return (
+    html = (
         f'<!DOCTYPE html><html lang=en><head><meta charset=utf-8>'
         f'<meta name=viewport content="width=device-width,initial-scale=1">'
         f'<title>MLB Model — Chase Analytics</title>'
@@ -420,6 +423,29 @@ def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None)
         f'</div></div>'
         f'<script>{shell_js()}</script></body></html>'
     )
+    if bundle_dir:
+        from mlbmodel.report.board_mlb import build_board as _build_board
+        from mlbmodel.report.export import write_bundle
+
+        board_obj = _build_board(slate, sd, reports_by_key or {}, sharp_by_pk, sync)
+        lean_rows: list[dict] = []
+        snapshot = cache_dir / "model_leans_latest.json"
+        if snapshot.exists():
+            try:
+                lean_rows = json.loads(snapshot.read_text(encoding="utf-8")).get("rows") or []
+            except (OSError, json.JSONDecodeError, AttributeError):
+                lean_rows = []
+        write_bundle(
+            Path(bundle_dir),
+            board=board_obj,
+            gate=gate,
+            sync=sync,
+            data_dir=cache_dir,
+            slate_date=str(sd or "")[:10] or None,
+            ledger=local_grade,
+            leans=lean_rows,
+        )
+    return html
 
 
 def main():  # pragma: no cover
@@ -437,6 +463,7 @@ def main():  # pragma: no cover
             fetch=not args.no_fetch,
             data_dir=args.data_dir,
             audit_asset_dir=out.parent / "assets",
+            bundle_dir=out.parent,
         ),
         encoding="utf-8",
     )
