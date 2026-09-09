@@ -99,7 +99,7 @@ def test_build_app_does_not_redefine_brand_tokens():
     html = build_app(GAME, fetch=False, data_dir=DATA)
     assert "#08090F" in html          # canonical deep-navy page ground
     assert "#9A6BFF" in html          # canonical violet brand
-    assert "#B794FF" not in html      # the forked graphite violet
+    assert "--ca-violet-200" in html  # TIER-1 light violet (#B794FF)
     assert "IBM Plex" not in html     # the forked type stack
     assert "Barlow" not in html      # the forked display face
     assert "#BA008E" not in html      # SCL pink
