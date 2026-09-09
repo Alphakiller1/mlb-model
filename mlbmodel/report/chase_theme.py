@@ -35,6 +35,23 @@ def _strip_font_imports(css: str) -> str:
   return _FONT_IMPORT_RE.sub("", css)
 
 
+def _tokens_bundle() -> str:
+    """TIER-1 primitives plus local aliases. Never rely on CSS @import inside <style>."""
+    aliases = (_STATIC / "chase_tokens.css").read_text(encoding="utf-8")
+    aliases = re.sub(
+        r'@import\s+url\([^)]*chase-tokens-v1\.css[^)]*\)\s*;',
+        "",
+        aliases,
+        flags=re.IGNORECASE,
+    )
+    v1 = _STATIC / "chase-tokens-v1.css"
+    parts = []
+    if v1.is_file():
+        parts.append(_strip_font_imports(v1.read_text(encoding="utf-8")))
+    parts.append(_strip_font_imports(aliases))
+    return "\n".join(parts)
+
+
 @lru_cache(maxsize=1)
 def brand_css() -> str:
     """Fonts + design tokens — the identity layer every entry point loads FIRST.
@@ -45,8 +62,7 @@ def brand_css() -> str:
     loaded after it may map its own local names onto these tokens, but must never redefine
     a token to a different literal value.
     """
-    tokens = _strip_font_imports((_STATIC / "chase_tokens.css").read_text(encoding="utf-8"))
-    return _FONT_IMPORT + tokens
+    return _FONT_IMPORT + _tokens_bundle()
 
 
 @lru_cache(maxsize=1)
@@ -64,7 +80,7 @@ def theme_css() -> str:
 
     theme = _strip_font_imports((_STATIC / "theme.css").read_text(encoding="utf-8"))
     backgrounds = (_STATIC / "mlbma_backgrounds.css").read_text(encoding="utf-8")
-    tokens = _strip_font_imports((_STATIC / "chase_tokens.css").read_text(encoding="utf-8"))
+    tokens = _tokens_bundle()
     components = _strip_font_imports(
         (_STATIC / "chase_components.css").read_text(encoding="utf-8")
     )
