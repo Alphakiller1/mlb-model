@@ -59,9 +59,32 @@ def _iter_tiles(board: Board):
                 yield card, group, tile
 
 
+def _book_line(odds, away: str, home: str) -> dict | None:
+    """The slate's own sportsbook line for one game: total and both moneylines.
+
+    Carried so downstream readers (the chase-analytics Model Center) plot the
+    market beside the projection; the NFL and CFB boards already export theirs.
+    """
+    if odds is None:
+        return None
+    home_ml = odds.quote(away, home, "ml", home)
+    away_ml = odds.quote(away, home, "ml", away)
+    total = odds.modal_total(away, home)
+    if home_ml is None and away_ml is None and total is None:
+        return None
+    book = (home_ml or away_ml).best_book if (home_ml or away_ml) else None
+    return {
+        "name": "DraftKings" if str(book or "").lower() == "draftkings" else (book or None),
+        "total": total,
+        "home_moneyline": home_ml.best_odds if home_ml else None,
+        "away_moneyline": away_ml.best_odds if away_ml else None,
+    }
+
+
 def payload(
     board: Board,
     *,
+    odds=None,
     gate: dict | None = None,
     slate_date: str | None = None,
     generated_at: datetime | None = None,
@@ -100,6 +123,7 @@ def payload(
                 "headline": card.headline,
                 "picks": card.picks,
                 "gems": card.gems,
+                "book": _book_line(odds, card.away.abbr, card.home.abbr),
             }
             for card in board.cards
         ],
@@ -219,6 +243,7 @@ def write_bundle(
     site_dir: Path,
     *,
     board: Board,
+    odds=None,
     gate: dict | None = None,
     sync: dict | None = None,
     data_dir: Path | None = None,
@@ -231,7 +256,7 @@ def write_bundle(
     site_dir = Path(site_dir)
     site_dir.mkdir(parents=True, exist_ok=True)
     board_path = write(
-        payload(board, gate=gate, slate_date=slate_date),
+        payload(board, odds=odds, gate=gate, slate_date=slate_date),
         site_dir / "board.json",
     )
     build_path = write(
