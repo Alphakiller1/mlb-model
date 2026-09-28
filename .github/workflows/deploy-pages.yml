@@ -118,9 +118,12 @@ jobs:
               bash scripts/retry.sh 3 python -m mlbmodel.market.collect --data-dir _deploy_data \
                 || echo "WARNING: game odds fetch failed after retries; sharp board stays empty"
             else
-              echo "Skipping game-line fetch — only $REMAINING credits left (preserving budget)."
-              echo "Using committed odds snapshot in _deploy_data; do not fail Pages on missing BET/MONITOR tags."
+              echo "Skipping the paid game-line fetch — only $REMAINING credits left (preserving budget)."
+              echo "Reading DraftKings game lines from ESPN's scoreboard instead (free)."
               echo "ODDS_LIVE_FETCH_SKIPPED=1" >> "$GITHUB_ENV"
+              # ODDS_API_MIN_REMAINING makes the collector refuse the paid call, so it
+              # takes the ESPN path in quotes.fetch_events.
+              ODDS_API_MIN_REMAINING=1000 bash scripts/retry.sh 2 python -m mlbmodel.market.collect --data-dir _deploy_data                 || echo "WARNING: ESPN DraftKings lines unavailable; sharp board stays empty"
             fi
 
             # Prop calls are billed by market per game. The collector filters to this exact

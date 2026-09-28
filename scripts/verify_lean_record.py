@@ -69,7 +69,10 @@ def require_actionable_gate(data_dir: Path, slate: str) -> bool:
     """
     if _env_flag("LEAN_VERIFY_REQUIRE_PRICED_MARKETS") is False:
         return False
-    if _env_flag("ODDS_LIVE_FETCH_SKIPPED") is True and priced_event_count(data_dir, slate) == 0:
+    # A skipped paid fetch prices the slate from ESPN's DraftKings lines (or not at
+    # all); leans are recorded either way, but an edge count is not a health signal
+    # on a short or free-priced slate.
+    if _env_flag("ODDS_LIVE_FETCH_SKIPPED") is True:
         return False
     if _env_flag("LEAN_VERIFY_REQUIRE_PRICED_MARKETS") is True:
         return True
@@ -83,6 +86,15 @@ def main() -> int:
     if not slate:
         print("verify_lean_record skipped: no slate date")
         return 0
+    sync_path = data_dir / "mlbma_sync.json"
+    if sync_path.exists():
+        try:
+            games = json.loads(sync_path.read_text(encoding="utf-8")).get("game_count")
+        except (OSError, ValueError):
+            games = None
+        if games == 0:
+            print(f"verify_lean_record skipped: no games on the {slate} slate")
+            return 0
 
     from mlbmodel.storage.supabase import SupabaseReader
 
@@ -142,6 +154,13 @@ def _verify_rows(
     min_matchup = int(os.getenv("LEAN_VERIFY_MIN_MATCHUP", "6"))
 
     if not rows:
+        # A slate with no priced game lines (a spent Odds API key and no ESPN
+        # quote, or an off day) has nothing to lean against; publishing the
+        # projections is right, freezing the site on yesterday is not.
+        if priced_games == 0:
+            print(f"WARNING: no model_leans rows for slate {slate} ({origin}) and no priced "
+                  "game lines for it; publishing projections only")
+            return 0
         print(f"ERROR: no model_leans rows for slate {slate} ({origin})")
         return 1
     if len(prop_rows) < min_props:

@@ -55,3 +55,17 @@ def _block_live_warehouse_access():
         for key, value in env_originals.items():
             if value is not None:
                 os.environ[key] = value
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _offline_espn(monkeypatch):
+    """ESPN's scoreboard is the free fallback book source; tests never reach it.
+
+    A test that exercises the fallback patches ``espn_lines.events`` itself.
+    """
+    from mlbmodel.market import espn_lines
+
+    monkeypatch.setattr(espn_lines, "events", lambda slate_date=None: [])
