@@ -61,3 +61,20 @@ def test_the_board_export_carries_each_games_book_line():
     line = _book_line(odds, "PHI", "ATL")
     assert line == {"name": "DraftKings", "total": 6.5, "home_moneyline": -204, "away_moneyline": 170}
     assert _book_line(None, "PHI", "ATL") is None
+
+
+def test_the_board_export_carries_starter_prop_projections():
+    from mlbmodel.report.export import _player_projection
+
+    dist = {"mean": 5.8, "p10": 3.0, "p50": 6.0, "p90": 9.0, "sd": 2.1, "pmf": {"5": 0.2, "6": 0.3}}
+    row = _player_projection({
+        "pitcher": "Zack Wheeler", "pitcher_id": 554430, "team": "PHI", "opponent": "ATL",
+        "side": "away", "hand": "R", "projection_trust": "trusted", "expected_ip": 6.1,
+        "projections": {"K": dist, "Fantasy": dist},
+        "market_report": [{"prop": "K", "side": "Over", "line": 6.5, "best_odds": -115,
+                           "best_book": "draftkings", "model_probability": 0.41,
+                           "market_probability": 0.52, "edge": -0.11, "state": "NO EDGE"}],
+    })
+    assert row["player_name"] == "Zack Wheeler" and set(row["stats"]) == {"K"}
+    assert row["stats"]["K"]["pmf"]["6"] == 0.3 and row["lines"][0]["line"] == 6.5
+    assert _player_projection({"pitcher": "X", "projections": {}}) is None
