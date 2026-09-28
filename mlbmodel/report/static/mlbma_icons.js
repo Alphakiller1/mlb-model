@@ -8,7 +8,7 @@
 (function(global) {
   'use strict';
 
-  var ICON_VER = '20260606c';
+  var ICON_VER = '20260612a';
   var ICON_BASE = 'assets/icons/';
   var MICRO_PX = 18;
 
@@ -26,6 +26,65 @@
     up: 'neon-trend-up',
     down: 'neon-trend-down'
   };
+
+  /**
+   * Crisp inline-SVG poster marks (violet neon). These replaced the generated PNG
+   * marks, which rendered soft at badge sizes — vectors stay sharp at any DPI.
+   * Bodies are 24x24 line art with light violet fills for poster mass.
+   */
+  var V = '#9A6BFF';
+  var V_FILL = 'rgba(154,107,255,.12)';
+  var NEON_SVG = {
+    'neon-diamond-field':
+      '<path d="M4.6 8.2A10.8 10.8 0 0 1 19.4 8.2" stroke-opacity=".45"/>'
+      + '<path d="M12 4.6 19.4 12 12 19.4 4.6 12Z" fill="' + V_FILL + '"/>'
+      + '<path d="M12 8.8 15.2 12 12 15.2 8.8 12Z"/>'
+      + '<circle cx="12" cy="12" r="1" fill="' + V + '" stroke="none"/>',
+    'neon-baseball':
+      '<circle cx="12" cy="12" r="8.4" fill="' + V_FILL + '"/>'
+      + '<path d="M6.2 6.4c2 1.6 3.2 3.4 3.2 5.6s-1.2 4-3.2 5.6"/>'
+      + '<path d="M17.8 6.4c-2 1.6-3.2 3.4-3.2 5.6s1.2 4 3.2 5.6"/>',
+    'neon-bat':
+      '<path d="M13.2 10.8 19.6 4.4" stroke-width="3.4"/>'
+      + '<path d="M4.9 19.1l8.3-8.3"/>'
+      + '<circle cx="4.7" cy="19.3" r="1" fill="' + V + '" stroke="none"/>'
+      + '<circle cx="7.6" cy="7.4" r="2.3" fill="' + V_FILL + '"/>',
+    'neon-stadium':
+      '<path d="M3.4 9.8 12 5.4l8.6 4.4" stroke-opacity=".6"/>'
+      + '<path d="M4.6 10.8v3.4c0 3 3.3 5.3 7.4 5.3s7.4-2.3 7.4-5.3v-3.4" fill="' + V_FILL + '"/>'
+      + '<path d="M12 12.4l2.6 2.5-2.6 2.5-2.6-2.5Z"/>',
+    'neon-weather-field':
+      '<path d="M7.2 9.6a4.5 4.5 0 0 1 8.8-1.2 3.4 3.4 0 0 1-1 6.6H8.8A3.2 3.2 0 0 1 7.2 9.6Z" fill="' + V_FILL + '"/>'
+      + '<path d="M5.4 18.2h6.2"/><path d="M14 18.2h3"/>'
+      + '<path d="M7.6 20.8h5.4" stroke-opacity=".55"/>',
+    'neon-vs':
+      '<path d="M5.2 4.6 7.6 9.4l-2 .9 3.2 4.9" stroke-opacity=".6"/>'
+      + '<path d="M18.8 19.4 16.4 14.6l2-.9-3.2-4.9" stroke-opacity=".6"/>'
+      + '<text x="12" y="15.6" text-anchor="middle" font-size="10.5" font-weight="900" font-style="italic" font-family="inherit" fill="' + V + '" stroke="none">VS</text>',
+    'neon-trend-up':
+      '<path d="M4 19.6h16" stroke-opacity=".45"/>'
+      + '<rect x="5.2" y="13.8" width="2.7" height="5.8" rx=".7" fill="' + V_FILL + '"/>'
+      + '<rect x="10.6" y="10.6" width="2.7" height="9" rx=".7" fill="' + V_FILL + '"/>'
+      + '<rect x="16" y="7.4" width="2.7" height="12.2" rx=".7" fill="' + V_FILL + '"/>'
+      + '<path d="M4.6 9.8 10.4 5.8l3.8 2.4 5.4-3.9"/>'
+      + '<path d="M16.4 4h3.2v3.2"/>',
+    'neon-trend-down':
+      '<path d="M4 19.6h16" stroke-opacity=".45"/>'
+      + '<rect x="5.2" y="7.4" width="2.7" height="12.2" rx=".7" fill="' + V_FILL + '"/>'
+      + '<rect x="10.6" y="10.6" width="2.7" height="9" rx=".7" fill="' + V_FILL + '"/>'
+      + '<rect x="16" y="13.8" width="2.7" height="5.8" rx=".7" fill="' + V_FILL + '"/>'
+      + '<path d="M4.6 4.6 10.4 8.6l3.8-2.4 5.4 3.9"/>'
+      + '<path d="M19.6 6.9v3.2h-3.2" transform="translate(0,0)"/>'
+  };
+
+  function neonSvgHtml(file, size) {
+    var body = NEON_SVG[file];
+    if (!body) return '';
+    return '<svg class="ca-icon-img ca-icon-img--mark" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" '
+      + 'fill="none" stroke="' + V + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" '
+      + 'style="filter:drop-shadow(0 0 3.5px rgba(154,107,255,.45))" aria-hidden="true" focusable="false">'
+      + body + '</svg>';
+  }
 
   /** All section marks map to the 8 neon line-art icons (replace, never stack). */
   var MARK_ICONS = {
@@ -220,6 +279,8 @@
     var file = markFile(name);
     if (!file) return '';
     var size = px || 46;
+    var svg = neonSvgHtml(file, size);
+    if (svg) return svg;
     return '<img class="ca-icon-img ca-icon-img--mark" src="' + markAssetUrl(file) + '" '
       + 'alt="" width="' + size + '" height="' + size + '" loading="lazy" decoding="async" '
       + 'draggable="false">';
@@ -274,7 +335,8 @@
   }
 
   function mountReplacedIcon(el, node, name) {
-    if (node.tagName === 'IMG' && isMarkIcon(name)) {
+    var tag = String(node.tagName || '').toUpperCase();
+    if ((tag === 'IMG' || tag === 'SVG') && isMarkIcon(name)) {
       var toolIcon = el.closest('.ca-tool-card__icon');
       var circle = el.closest('.ca-icon-circle');
       var sectionIcon = el.closest('.ca-section-head .ca-icon, .ca-icon');
