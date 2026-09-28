@@ -38,3 +38,17 @@ def test_another_book_never_takes_espn_lines(monkeypatch, tmp_path):
         pass
     else:
         raise AssertionError("a non-DraftKings board must not be priced from ESPN's DraftKings lines")
+
+
+def test_complete_free_lines_skip_the_paid_call(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "ODDS_API_KEY", "live-key")
+    monkeypatch.setattr(settings, "ODDS_BOOKMAKERS", "draftkings")
+    monkeypatch.setattr(settings, "ODDS_F5_ENABLED", False)
+    monkeypatch.setattr(espn_lines, "events", lambda slate_date=None: [ESPN_EVENT])
+
+    def paid(**kwargs):
+        raise AssertionError("paid call")
+
+    monkeypatch.setattr(quotes, "_fetch_odds_api_events", paid)
+    events, _ = quotes.fetch_events(cache_path=tmp_path / "o.json", needed={("PHI", "ATL")})
+    assert events == [ESPN_EVENT]
