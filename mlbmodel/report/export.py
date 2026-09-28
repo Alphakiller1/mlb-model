@@ -81,10 +81,50 @@ def _book_line(odds, away: str, home: str) -> dict | None:
     }
 
 
+# Starter props published to downstream readers, in display order.
+PROP_STATS = ("K", "Outs", "H", "BB", "ER")
+
+
+def _player_projection(pitcher: dict) -> dict | None:
+    """One starter's projected prop distributions and any priced lines.
+
+    The distribution carries its PMF so a reader can price any line (P(over
+    5.5 K)) from the shape the simulation drew, not a normal refit.
+    """
+    projections = pitcher.get("projections") or {}
+    if not projections or not pitcher.get("pitcher"):
+        return None
+    stats = {stat: projections[stat] for stat in PROP_STATS if projections.get(stat)}
+    if not stats:
+        return None
+    lines = [
+        {key: row.get(key) for key in (
+            "prop", "side", "line", "best_odds", "best_book", "model_probability",
+            "market_probability", "edge", "state")}
+        for row in (pitcher.get("market_report") or []) if row.get("prop") in PROP_STATS
+    ]
+    return {
+        "player_name": pitcher.get("pitcher"),
+        "player_id": pitcher.get("pitcher_id"),
+        "position": "SP",
+        "team": pitcher.get("team"),
+        "opponent": pitcher.get("opponent"),
+        "side": pitcher.get("side"),
+        "hand": pitcher.get("hand"),
+        "trust": pitcher.get("projection_trust"),
+        "confidence": pitcher.get("confidence"),
+        "expected_ip": pitcher.get("expected_ip"),
+        "lineup_status": pitcher.get("lineup_status"),
+        "stats": stats,
+        "lines": lines,
+    }
+
+
 def payload(
     board: Board,
     *,
     odds=None,
+    pitchers: list[dict] | None = None,
     gate: dict | None = None,
     slate_date: str | None = None,
     generated_at: datetime | None = None,
@@ -112,6 +152,9 @@ def payload(
         "gems": board.gems,
         "priced_markets": priced,
         "flagged_tiles": flagged,
+        "player_projections": [
+            row for row in (_player_projection(p) for p in (pitchers or [])) if row
+        ],
         "games": [
             {
                 "key": card.key,
@@ -244,6 +287,7 @@ def write_bundle(
     *,
     board: Board,
     odds=None,
+    pitchers: list[dict] | None = None,
     gate: dict | None = None,
     sync: dict | None = None,
     data_dir: Path | None = None,
@@ -256,7 +300,7 @@ def write_bundle(
     site_dir = Path(site_dir)
     site_dir.mkdir(parents=True, exist_ok=True)
     board_path = write(
-        payload(board, odds=odds, gate=gate, slate_date=slate_date),
+        payload(board, odds=odds, pitchers=pitchers, gate=gate, slate_date=slate_date),
         site_dir / "board.json",
     )
     build_path = write(
