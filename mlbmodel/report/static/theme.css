@@ -1,26 +1,20 @@
 :root {
-  /* Single token source is mlbma_design_system.css. It is loaded BEFORE this file on
-     every page, so surface/text/border/brand/font tokens (--bg, --card, --border,
-     --text*, --v-light, --v-grad, --v-bg, --border-violet, --display, --mono, …) are
-     consumed from there — do NOT redefine them here.
-     This block holds only the tokens that are still UNIQUE to theme.css:
-     the violet ramp, the d-* grade scale, the metal gradients, and the --sans alias.
-     Migrate these into the design system as it absorbs them; never add new globals here. */
-  --v: #9A6BFF;
-  --v-mid: #7C4DFF;
-  --v-deep: #5B2BE0;
-  --v-heading: #6D28D9;
-  --v-grad-soft: linear-gradient(135deg, rgba(124, 77, 255, 0.13), rgba(91, 43, 224, 0.07));
-  --v-glow: rgba(124, 77, 255, 0.32);
-  --edge-grad: linear-gradient(90deg, #3B82F6 0%, #7C4DFF 50%, #EC4899 100%);
-  --d-elite: #3CCB7F;
-  --d-good: #86D76F;
-  --d-mid: #E8C24A;
-  --d-weak: #F0935B;
-  --d-poor: #F2545B;
-  --metal-silver: linear-gradient(180deg, #FFFFFF 0%, #E9EAF0 38%, #9DA0AE 56%, #D7D9E2 72%, #FFFFFF 100%);
-  --metal-violet: linear-gradient(180deg, #C4B0FF 0%, #7C4DFF 55%, #5B2BE0 100%);
-  --sans: "DM Sans", -apple-system, system-ui, sans-serif;
+  /* TIER 2 alias layer — no raw colors. Unique names that lived only here. */
+  --v: var(--ca-violet-500);
+  --v-mid: var(--ca-violet-600);
+  --v-deep: var(--ca-violet-700);
+  --v-heading: var(--ca-violet-800);
+  --v-grad-soft: var(--ca-grad-brand-soft);
+  --v-glow: var(--ca-violet-a-32);
+  --edge-grad: var(--ca-grad-edge);
+  --d-elite: var(--ca-green-500);
+  --d-good: var(--ca-green-400);
+  --d-mid: var(--ca-amber-500);
+  --d-weak: var(--ca-red-400);
+  --d-poor: var(--ca-red-500);
+  --metal-silver: var(--ca-grad-metal-silver);
+  --metal-violet: var(--ca-grad-metal-violet);
+  --sans: var(--ca-font-ui);
 }
 
 html, body {
@@ -36,10 +30,8 @@ body:not(.opening-dashboard):not(.platform-dashboard):not(.ca-bg-outfield):not(.
 }
 
 body:not(.opening-dashboard):not(.platform-dashboard):not(.ca-bg-outfield):not(.ca-bg-catcher):not(.ca-bg-plate):not(.ca-bg-compare):not(.team-profile-page):not(.bullpen-profile-page):not(.batter-profile-page):not(.pitcher-profile-page) {
-  background-image:
-    radial-gradient(ellipse 90% 60% at 78% -8%, rgba(124, 77, 255, 0.14), transparent 58%),
-    radial-gradient(ellipse 70% 50% at 6% 102%, rgba(91, 43, 224, 0.08), transparent 60%);
-  background-color: var(--bg);
+  background: var(--bg);
+  background-image: none;
 }
 
 body::before,
@@ -54,8 +46,9 @@ body::after,
 .ca-card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 22px;
+  box-shadow: none;
 }
 
 .ca-card.is-active {
@@ -136,6 +129,9 @@ body::after,
 .chip.c-weak,  .val-chip.c-weak  { color: #FB923C; }
 .chip.c-poor,  .val-chip.c-poor  { color: #F87171; }
 .chip.c-na,    .val-chip.c-na    { color: #6E7383; font-size: 14px; }
+.chip.c-oor-hard, .val-chip.c-oor-hard { color: #60A5FA; }
+.chip.c-oor-mid,  .val-chip.c-oor-mid  { color: #8B93A7; }
+.chip.c-oor-soft, .val-chip.c-oor-soft { color: #A78BFA; }
 
 /* ---- Profile banners: large graded text values (not filled chips) ---- */
 :is(.tp-team-banner__stats, .pp-hero-stats, .bp-hero-banner-shell, #bullpenSnapshot)
@@ -282,7 +278,6 @@ body::after,
 
 .section-title {
   font-family: var(--display);
-  font-variation-settings: "wdth" 125;
   letter-spacing: -0.015em;
   color: var(--v-heading);
 }
@@ -291,7 +286,6 @@ h1:not(.ca-page-title):not(.ca-profile-hero__title),
 h2, h3, .platform-title, .ca-section-title {
   font-family: var(--display);
   font-weight: 800;
-  font-variation-settings: "wdth" 125;
   letter-spacing: -0.015em;
   color: var(--v-heading);
 }
@@ -624,7 +618,6 @@ h1:not(.ca-page-title):not(.ca-profile-hero__title) {
   letter-spacing: -0.02em;
   line-height: 1.02;
   color: var(--text);
-  font-variation-settings: "wdth" 125;
 }
 .ca-profile-hero__sub {
   margin-top: 8px;
