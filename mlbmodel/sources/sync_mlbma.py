@@ -212,10 +212,15 @@ def merge_pipeline_slate(
         merged = dict(schedule_row)
         for column in MATCHUP_COLUMNS:
             value = pipeline_row.get(column)
+            missing_starter = (
+                column in {"Away_SP", "Home_SP"}
+                and str(value or "").strip().lower() in {"", "--", "tbd", "undecided"}
+            )
             if (
                 column not in IDENTITY_COLUMNS
                 and column not in SCHEDULE_AUTHORITATIVE_COLUMNS
                 and value not in (None, "", "--")
+                and not missing_starter
             ):
                 merged[column] = value
         merged_rows.append(merged)

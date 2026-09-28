@@ -18,6 +18,7 @@ import argparse
 import csv
 import datetime as dt
 import json
+import unicodedata
 import urllib.request
 import zlib
 from pathlib import Path
@@ -74,6 +75,24 @@ def sp_index(rows: list[dict]) -> dict:
     return idx
 
 
+def _normalize_name(value: str) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    return " ".join(text.lower().replace(".", "").split())
+
+
+def _profile_for_name(rows: list[dict], name: str, team: str) -> dict:
+    matches = [
+        row for row in rows
+        if _normalize_name(row.get("pitcher_name", "")) == _normalize_name(name)
+    ]
+    team_matches = [
+        row for row in matches
+        if str(row.get("pitcher_team") or "").upper() == team
+    ]
+    return (team_matches or matches or [{}])[0]
+
+
 def team_osi(rows: list[dict]) -> dict:
     """team -> {home_osi, away_osi, osi}."""
     idx = {}
@@ -126,10 +145,29 @@ def et_time(game_date_utc: str) -> str:
     return d.strftime("%I:%M %p ET").lstrip("0")
 
 
-def build_rows(out: Path, date_iso: str, games: list[dict] | None = None) -> list[dict]:
-    sp = sp_index(read_csv(out / "sp_profiles.csv"))
+def build_rows(
+    out: Path,
+    date_iso: str,
+    games: list[dict] | None = None,
+    rotowire_pitchers: dict | None = None,
+) -> list[dict]:
+    sp_rows = read_csv(out / "sp_profiles.csv")
+    sp = sp_index(sp_rows)
     tm = team_osi(read_csv(out / "team_profiles.csv"))
     games = fetch_schedule(date_iso) if games is None else games
+
+    pairings = {
+        (abbr(g["teams"]["away"]["team"]["name"]), abbr(g["teams"]["home"]["team"]["name"]))
+        for g in games
+    }
+    if rotowire_pitchers is None:
+        try:
+            from mlbmodel.sources.live_context import fetch_rotowire_pitchers
+
+            rotowire_pitchers = fetch_rotowire_pitchers(pairings, date_iso)
+        except Exception:
+            rotowire_pitchers = {}
+    pairing_occurrences: dict[tuple[str, str], int] = {}
 
     probable_ids = [
         (g["teams"][side].get("probablePitcher") or {}).get("id")
@@ -145,8 +183,31 @@ def build_rows(out: Path, date_iso: str, games: list[dict] | None = None) -> lis
         aa, ha = abbr(a), abbr(h)
         ap = g["teams"]["away"].get("probablePitcher", {}) or {}
         hp = g["teams"]["home"].get("probablePitcher", {}) or {}
-        asp = sp.get(str(ap.get("id", "")), {})
-        hsp = sp.get(str(hp.get("id", "")), {})
+        pairing = (aa, ha)
+        pairing_index = pairing_occurrences.get(pairing, 0)
+        pairing_occurrences[pairing] = pairing_index + 1
+        cards = (rotowire_pitchers or {}).get(pairing) or []
+        card = cards[pairing_index] if pairing_index < len(cards) else {}
+
+        def with_rotowire_fallback(probable: dict, side: str, team: str) -> tuple[dict, dict]:
+            if probable.get("fullName"):
+                return probable, sp.get(str(probable.get("id", "")), {})
+            fallback = card.get(side) or {}
+            name = str(fallback.get("pitcher") or "").strip()
+            if not name:
+                return probable, {}
+            profile = _profile_for_name(sp_rows, name, team)
+            resolved = {
+                "id": profile.get("pitcher_id"),
+                "fullName": profile.get("pitcher_name") or name,
+                "pitchHand": fallback.get("hand"),
+                "designation": fallback.get("designation"),
+                "source": "Rotowire",
+            }
+            return resolved, profile
+
+        ap, asp = with_rotowire_fallback(ap, "away", aa)
+        hp, hsp = with_rotowire_fallback(hp, "home", ha)
         game_number = int(g.get("gameNumber") or 1)
         rows.append({
             "Game_PK": game_pk(date_iso, aa, ha, game_number),
@@ -156,8 +217,12 @@ def build_rows(out: Path, date_iso: str, games: list[dict] | None = None) -> lis
             "Time": et_time(g["gameDate"]),
             "Away": aa, "Home": ha,
             "Away_SP": ap.get("fullName", "TBD"), "Home_SP": hp.get("fullName", "TBD"),
-            "Away_Hand": api_hand.get(str(ap.get("id", "")), asp.get("hand", "R")),
-            "Home_Hand": api_hand.get(str(hp.get("id", "")), hsp.get("hand", "R")),
+            "Away_Hand": api_hand.get(
+                str(ap.get("id", "")), ap.get("pitchHand") or asp.get("hand", "R")
+            ),
+            "Home_Hand": api_hand.get(
+                str(hp.get("id", "")), hp.get("pitchHand") or hsp.get("hand", "R")
+            ),
             "Away_OSI": tm.get(aa, {}).get("away", ""),
             "Home_OSI": tm.get(ha, {}).get("home", ""),
             "Away_FIP": asp.get("FIP", ""), "Home_FIP": hsp.get("FIP", ""),

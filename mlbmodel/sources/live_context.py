@@ -9,11 +9,13 @@ from __future__ import annotations
 import datetime as dt
 import json
 import math
+import re
 import urllib.parse
 import urllib.request
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from mlbmodel import settings
 
@@ -31,6 +33,20 @@ _BROWSER_UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
+
+
+def _rotowire_lineups_url(slate_date: str | None = None) -> str:
+    """Select Rotowire's today/tomorrow view for the requested ET slate."""
+    if not slate_date:
+        return ROTOWIRE_LINEUPS
+    try:
+        requested = dt.date.fromisoformat(str(slate_date)[:10])
+    except ValueError:
+        return ROTOWIRE_LINEUPS
+    today = dt.datetime.now(ZoneInfo("America/New_York")).date()
+    if requested == today + dt.timedelta(days=1):
+        return f"{ROTOWIRE_LINEUPS}?date=tomorrow"
+    return ROTOWIRE_LINEUPS
 
 
 def _request_json(url: str, timeout: int = 45) -> Any:
@@ -135,6 +151,7 @@ def _official_lineup(feed: dict, side: str) -> list[dict]:
 
 def fetch_rotowire_lineups(
     slate_pairings: set[tuple[str, str]] | None = None,
+    slate_date: str | None = None,
 ) -> list[dict]:
     """Scrape Rotowire's projected/confirmed daily lineups.
 
@@ -152,7 +169,9 @@ def fetch_rotowire_lineups(
         return []
     try:
         response = requests.get(
-            ROTOWIRE_LINEUPS, headers={"User-Agent": _BROWSER_UA}, timeout=30
+            _rotowire_lineups_url(slate_date),
+            headers={"User-Agent": _BROWSER_UA},
+            timeout=30,
         )
         response.raise_for_status()
     except Exception:
@@ -203,6 +222,99 @@ def fetch_rotowire_lineups(
                     }
                 )
     return rows
+
+
+def _rotowire_pitcher_name(anchor: Any) -> str:
+    """Return Rotowire's full pitcher name, expanding abbreviated card labels.
+
+    Long names are shortened in the visible card (for example ``C. Sanchez``), while
+    the player URL retains the full slug.  Prefer that slug so downstream profile joins
+    receive the same full name they would get from MLB's probable-pitcher feed.
+    """
+    if anchor is None:
+        return ""
+    href = str(anchor.get("href") or "")
+    match = re.search(r"/player/([^/?#]+?)-\d+(?:[/?#]|$)", href)
+    if match:
+        return " ".join(part.capitalize() for part in match.group(1).split("-") if part)
+    return anchor.get_text(" ", strip=True)
+
+
+def parse_rotowire_pitchers(
+    html: str,
+    slate_pairings: set[tuple[str, str]] | None = None,
+) -> dict[tuple[str, str], list[dict[str, dict]]]:
+    """Parse Rotowire's listed pitchers, including ``PRIM`` bulk pitchers.
+
+    Values are grouped in card order so doubleheaders with the same pairing retain a
+    separate entry.  An ``Undecided`` card side is omitted rather than becoming a name.
+    """
+    try:
+        from bs4 import BeautifulSoup
+    except Exception:
+        return {}
+
+    soup = BeautifulSoup(html, "html.parser")
+    cards: dict[tuple[str, str], list[dict[str, dict]]] = defaultdict(list)
+    for card in soup.find_all("div", class_="lineup"):
+        abbrs = card.find_all("div", class_="lineup__abbr")
+        if len(abbrs) < 2:
+            continue
+        away = settings.team_abbr(
+            _ROTOWIRE_ABBR_FIX.get(abbrs[0].text.strip(), abbrs[0].text.strip())
+        )
+        home = settings.team_abbr(
+            _ROTOWIRE_ABBR_FIX.get(abbrs[1].text.strip(), abbrs[1].text.strip())
+        )
+        pairing = (away, home)
+        if slate_pairings is not None and pairing not in slate_pairings:
+            continue
+
+        pitchers: dict[str, dict] = {}
+        lists = card.find_all("ul", class_="lineup__list")
+        for side_index, unordered in enumerate(lists[:2]):
+            side = "away" if side_index == 0 else "home"
+            highlight = unordered.find("li", class_="lineup__player-highlight")
+            name_box = (
+                highlight.find("div", class_="lineup__player-highlight-name")
+                if highlight else None
+            )
+            anchor = name_box.find("a") if name_box else None
+            name = _rotowire_pitcher_name(anchor)
+            if not name:
+                continue
+            hand_el = name_box.find("span", class_="lineup__throws") if name_box else None
+            tags = {
+                tag.get_text(" ", strip=True).upper()
+                for tag in highlight.find_all("div", class_="tag")
+            }
+            pitchers[side] = {
+                "pitcher": name,
+                "hand": hand_el.get_text(" ", strip=True).upper()[:1] if hand_el else None,
+                "designation": "primary" if "PRIM" in tags else "starter",
+                "source": "Rotowire",
+            }
+        cards[pairing].append(pitchers)
+    return dict(cards)
+
+
+def fetch_rotowire_pitchers(
+    slate_pairings: set[tuple[str, str]] | None = None,
+    slate_date: str | None = None,
+) -> dict[tuple[str, str], list[dict[str, dict]]]:
+    """Fetch Rotowire pitcher listings as a fallback for MLB's missing probables."""
+    try:
+        import requests
+
+        response = requests.get(
+            _rotowire_lineups_url(slate_date),
+            headers={"User-Agent": _BROWSER_UA},
+            timeout=30,
+        )
+        response.raise_for_status()
+    except Exception:
+        return {}
+    return parse_rotowire_pitchers(response.text, slate_pairings)
 
 
 def _pipeline_lineup(rows: list[dict], team: str) -> list[dict]:
@@ -575,8 +687,17 @@ def collect(
             )
             for game in games
         }
-        pipeline_lineups = fetch_rotowire_lineups(slate_pairings)
+        pipeline_lineups = fetch_rotowire_lineups(slate_pairings, slate_date)
         lineup_source = "rotowire" if pipeline_lineups else None
+    slate_pairings = {
+        (
+            settings.team_abbr(game["teams"]["away"]["team"].get("name", "")),
+            settings.team_abbr(game["teams"]["home"]["team"].get("name", "")),
+        )
+        for game in games
+    }
+    rotowire_pitchers = fetch_rotowire_pitchers(slate_pairings, slate_date)
+    pairing_occurrences: dict[tuple[str, str], int] = defaultdict(int)
     fetched_at = dt.datetime.now(dt.timezone.utc)
     venue_cache: dict[int, dict] = {}
     try:
@@ -620,6 +741,15 @@ def collect(
         home_team = game["teams"]["home"]["team"]
         away = settings.team_abbr(away_team.get("name", ""))
         home = settings.team_abbr(home_team.get("name", ""))
+        pairing = (away, home)
+        pairing_index = pairing_occurrences[pairing]
+        pairing_occurrences[pairing] += 1
+        rotowire_card = (rotowire_pitchers.get(pairing) or [])
+        rotowire_card = (
+            rotowire_card[pairing_index]
+            if pairing_index < len(rotowire_card)
+            else {}
+        )
         try:
             feed = _request_json(f"{MLB_API}/v1.1/game/{game_pk}/feed/live")
         except (OSError, ValueError, json.JSONDecodeError):
@@ -705,10 +835,17 @@ def collect(
         for side in ("away", "home"):
             probable = game["teams"][side].get("probablePitcher") or {}
             player_id = int(probable.get("id") or 0)
+            rotowire = rotowire_card.get(side) or {}
+            pitcher = probable.get("fullName") or rotowire.get("pitcher")
             probable_pitchers[side] = {
                 "pitcher_id": player_id or None,
-                "pitcher": probable.get("fullName"),
+                "pitcher": pitcher,
                 "profile": probable_profiles.get(player_id, {}),
+                "source": "MLB Stats API" if probable.get("fullName") else rotowire.get("source"),
+                "designation": (
+                    "starter" if probable.get("fullName") else rotowire.get("designation")
+                ),
+                "hand": None if probable.get("fullName") else rotowire.get("hand"),
             }
 
         context_games[str(game_pk)] = {
