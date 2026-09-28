@@ -443,6 +443,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None,
         write_bundle(
             Path(bundle_dir),
             board=board_obj,
+            odds=board,
             gate=gate,
             sync=sync,
             data_dir=cache_dir,

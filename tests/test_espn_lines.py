@@ -52,3 +52,12 @@ def test_complete_free_lines_skip_the_paid_call(monkeypatch, tmp_path):
     monkeypatch.setattr(quotes, "_fetch_odds_api_events", paid)
     events, _ = quotes.fetch_events(cache_path=tmp_path / "o.json", needed={("PHI", "ATL")})
     assert events == [ESPN_EVENT]
+
+
+def test_the_board_export_carries_each_games_book_line():
+    from mlbmodel.report.export import _book_line
+
+    odds = quotes.build_board([ESPN_EVENT], "t")
+    line = _book_line(odds, "PHI", "ATL")
+    assert line == {"name": "DraftKings", "total": 6.5, "home_moneyline": -204, "away_moneyline": 170}
+    assert _book_line(None, "PHI", "ATL") is None
