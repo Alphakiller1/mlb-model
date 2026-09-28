@@ -198,7 +198,61 @@ def build_board(events: list[dict], fetched_at: str | None = None) -> OddsBoard:
     return OddsBoard(quotes)
 
 
-def fetch_events(*, cache_path: Path | None = None) -> tuple[list[dict], str]:
+def _espn_ok() -> bool:
+    """ESPN's scoreboard quotes DraftKings only; use it when that is the book asked for."""
+    books = [b.strip().lower() for b in str(settings.ODDS_BOOKMAKERS or "").split(",") if b.strip()]
+    return not books or "draftkings" in books
+
+
+def _espn_events(slate_date: str | None) -> list[dict]:
+    if not _espn_ok():
+        return []
+    try:
+        from mlbmodel.market import espn_lines
+
+        return espn_lines.events(slate_date)
+    except Exception as exc:  # the free fallback never breaks the paid path
+        log.warning("ESPN DraftKings lines unavailable: %s", exc)
+        return []
+
+
+def _write_cache(path: Path, events: list[dict]) -> str:
+    fetched = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"fetched_at": fetched, "events": events}), encoding="utf-8")
+    return fetched
+
+
+def fetch_events(
+    *, cache_path: Path | None = None, slate_date: str | None = None
+) -> tuple[list[dict], str]:
+    """Live game lines: the Odds API first, DraftKings via ESPN when it cannot serve.
+
+    ESPN also fills any game the paid response left out, so one missing event
+    does not leave a game unpriced.
+    """
+    path = cache_path or settings.CACHE_DIR / "odds_latest.json"
+    try:
+        events, fetched = _fetch_odds_api_events(cache_path=cache_path)
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        espn = _espn_events(slate_date)
+        if not espn:
+            raise
+        log.warning("Odds API unavailable (%s); using %s DraftKings events from ESPN", exc, len(espn))
+        print(f"  [odds] Odds API unavailable ({exc}); {len(espn)} DraftKings games from ESPN", flush=True)
+        return espn, _write_cache(path, espn)
+    have = {(settings.team_abbr(e.get("away_team", "")), settings.team_abbr(e.get("home_team", "")))
+            for e in events if e.get("bookmakers")}
+    extra = [e for e in _espn_events(slate_date)
+             if (settings.team_abbr(e["away_team"]), settings.team_abbr(e["home_team"])) not in have]
+    if extra:
+        events = list(events) + extra
+        fetched = _write_cache(path, events)
+        print(f"  [odds] {len(extra)} game(s) filled from ESPN's DraftKings lines", flush=True)
+    return events, fetched
+
+
+def _fetch_odds_api_events(*, cache_path: Path | None = None) -> tuple[list[dict], str]:
     if not settings.ODDS_API_KEY:
         raise RuntimeError("ODDS_API_KEY is not configured")
     usage.check_budget("game-lines")
@@ -320,7 +374,7 @@ def load_board(
 ) -> OddsBoard:
     if fetch:
         try:
-            events, fetched = fetch_events(cache_path=cache_path)
+            events, fetched = fetch_events(cache_path=cache_path, slate_date=slate_date)
             events = filter_events_for_slate(events, slate_date)
             return build_board(events, fetched)
         except (OSError, RuntimeError, ValueError, json.JSONDecodeError):
