@@ -85,7 +85,10 @@ def run(*, data_dir=None, fetch=True) -> tuple[list[dict], list[dict]]:
         raise RuntimeError("today_matchups.csv is unavailable")
     slate_date = str(slate.iloc[0].get("Slate_Date", ""))[:10] if len(slate) else ""
     cache_path = Path(data_dir) / "odds_latest.json" if data_dir else None
-    board = load_board(fetch=fetch, cache_path=cache_path, slate_date=slate_date or None)
+    needed = {(str(r["Away"]).upper().strip(), str(r["Home"]).upper().strip())
+              for _, r in slate.iterrows()}
+    board = load_board(fetch=fetch, cache_path=cache_path, slate_date=slate_date or None,
+                       needed=needed)
     signals, observations = [], []
     for _, row in slate.iterrows():
         away = str(row["Away"]).upper().strip()

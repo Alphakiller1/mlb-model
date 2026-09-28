@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import statistics
 import urllib.parse
 import urllib.request
@@ -224,7 +225,8 @@ def _write_cache(path: Path, events: list[dict]) -> str:
 
 
 def fetch_events(
-    *, cache_path: Path | None = None, slate_date: str | None = None
+    *, cache_path: Path | None = None, slate_date: str | None = None,
+    needed: set[tuple[str, str]] | None = None,
 ) -> tuple[list[dict], str]:
     """Live game lines: the Odds API first, DraftKings via ESPN when it cannot serve.
 
@@ -232,6 +234,18 @@ def fetch_events(
     does not leave a game unpriced.
     """
     path = cache_path or settings.CACHE_DIR / "odds_latest.json"
+    # Game lines first from ESPN (free) when they cover every game on the slate
+    # and first-five pricing - which only the paid feed carries - is off. The
+    # Odds API allowance is then kept for player props.
+    if needed and not settings.ODDS_F5_ENABLED and os.getenv(
+            "MLB_GAME_LINES_FREE_FIRST", "1").lower() not in {"0", "false", "no"}:
+        free = _espn_events(slate_date)
+        covered = {(settings.team_abbr(e["away_team"]), settings.team_abbr(e["home_team"]))
+                   for e in free}
+        if free and set(needed) <= covered:
+            print(f"  [odds] {len(free)} DraftKings games from ESPN; no paid game-line call",
+                  flush=True)
+            return free, _write_cache(path, free)
     try:
         events, fetched = _fetch_odds_api_events(cache_path=cache_path)
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
@@ -371,10 +385,12 @@ def load_board(
     fetch: bool = False,
     cache_path: Path | None = None,
     slate_date: str | None = None,
+    needed: set[tuple[str, str]] | None = None,
 ) -> OddsBoard:
     if fetch:
         try:
-            events, fetched = fetch_events(cache_path=cache_path, slate_date=slate_date)
+            events, fetched = fetch_events(cache_path=cache_path, slate_date=slate_date,
+                                           needed=needed)
             events = filter_events_for_slate(events, slate_date)
             return build_board(events, fetched)
         except (OSError, RuntimeError, ValueError, json.JSONDecodeError):
