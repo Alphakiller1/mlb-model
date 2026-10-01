@@ -112,6 +112,11 @@ class DataRepository:
         from mlbmodel.sources.sync_mlbma import resolve_slate_date
 
         manifest = self.sync_manifest()
+        # The sync already chose the slate (it knows whether today still has a
+        # game to start); a clock-only re-derivation here could disagree.
+        chosen = str(manifest.get("slate_date") or "")[:10]
+        if chosen:
+            return chosen
         pipeline_date = str(
             manifest.get("pipeline_slate_date")
             or manifest.get("Slate_Date_ET")

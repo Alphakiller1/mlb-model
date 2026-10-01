@@ -119,3 +119,18 @@ def test_resolve_slate_date_stays_today_morning():
 def test_resolve_slate_date_rolls_evening_when_pipeline_still_today():
     now = __import__("datetime").datetime(2026, 7, 6, 22, 0, tzinfo=__import__("zoneinfo").ZoneInfo("America/New_York"))
     assert resolve_slate_date(None, metadata={"Slate_Date_ET": "2026-07-06"}, now=now) == "2026-07-07"
+
+
+def test_evening_rollover_waits_for_a_game_still_to_start():
+    from mlbmodel.sources.sync_mlbma import pending_games
+    tz = __import__("zoneinfo").ZoneInfo("America/New_York")
+    now = __import__("datetime").datetime(2026, 10, 1, 17, 40, tzinfo=tz)
+    games = [{"status": {"abstractGameState": "Preview"}, "gameDate": "2026-10-02T00:00:00Z"}]
+    assert pending_games(games, now=now) == 1
+    assert resolve_slate_date(None, metadata={"Slate_Date_ET": "2026-10-01"}, now=now,
+                              today_pending=pending_games(games, now=now)) == "2026-10-01"
+    # Once it has started (or with nothing left), the board rolls.
+    live = [{"status": {"abstractGameState": "Live"}, "gameDate": "2026-10-02T00:00:00Z"}]
+    assert pending_games(live, now=now) == 0
+    assert resolve_slate_date(None, metadata={"Slate_Date_ET": "2026-10-01"}, now=now,
+                              today_pending=0) == "2026-10-02"
