@@ -63,13 +63,38 @@ def eastern_date(now: dt.datetime | None = None) -> str:
     return current.astimezone(ET).date().isoformat()
 
 
+def pending_games(games: list[dict], now: dt.datetime | None = None) -> int:
+    """Games on a schedule that have not started: scheduled or pre-game, with
+    first pitch still ahead."""
+    current = now or dt.datetime.now(dt.timezone.utc)
+    count = 0
+    for game in games or []:
+        state = str(((game.get("status") or {}).get("abstractGameState")) or "").lower()
+        if state not in ("preview", ""):
+            continue
+        try:
+            start = dt.datetime.fromisoformat(str(game.get("gameDate")).replace("Z", "+00:00"))
+        except ValueError:
+            count += 1
+            continue
+        if start > current:
+            count += 1
+    return count
+
+
 def resolve_slate_date(
     explicit: str | None = None,
     *,
     metadata: dict[str, str] | None = None,
     now: dt.datetime | None = None,
+    today_pending: int | None = None,
 ) -> str:
-    """Pick the model slate date: explicit > hub future slate > evening rollover > hub today > today."""
+    """Pick the model slate date: explicit > hub future slate > evening rollover > hub today > today.
+
+    The evening rollover waits while today still has a game to start
+    (``today_pending``): a lone 8 PM playoff game is today's slate at 5:40 PM,
+    and rolling to an off-day tomorrow published an empty board (2026-10-01).
+    """
     if explicit:
         return str(explicit)[:10]
     current = (now or dt.datetime.now(dt.timezone.utc)).astimezone(ET)
@@ -78,7 +103,7 @@ def resolve_slate_date(
     pipeline_date = str((metadata or {}).get("Slate_Date_ET") or "")[:10]
     if pipeline_date and pipeline_date > today:
         return pipeline_date
-    if current.hour >= EVENING_ROLLOVER_HOUR:
+    if current.hour >= EVENING_ROLLOVER_HOUR and not today_pending:
         return tomorrow
     if pipeline_date == today:
         return pipeline_date
@@ -242,7 +267,12 @@ def sync(out: Path, slate_date: str | None = None) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     fetched_at = dt.datetime.now(dt.timezone.utc)
     metadata = pipeline_metadata(fetch_sheet_matrix("Last_Updated"))
-    slate_date = resolve_slate_date(slate_date, metadata=metadata)
+    if slate_date is None:
+        try:
+            today_pending = pending_games(fetch_schedule(eastern_date()))
+        except Exception:  # schedule unreachable: fall back to the clock rule
+            today_pending = None
+        slate_date = resolve_slate_date(None, metadata=metadata, today_pending=today_pending)
 
     hub_updated = materialize_hub(out, fetch_hub_datasets())
     games = fetch_schedule(slate_date)
