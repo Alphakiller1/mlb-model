@@ -186,11 +186,16 @@ def _verify_rows(
     if games is not None:
         game_count, with_starters = games
         min_props = min(min_props, 2 * with_starters)
-        min_matchup = min(min_matchup, 6 * game_count)
+        # Games without both starters record no leans at all (report/app.py).
+        min_matchup = min(min_matchup, 6 * with_starters)
         if game_count < 5:
             require_actionable = False
 
     if not rows:
+        if games is not None and games[1] == 0:
+            print(f"WARNING: no model_leans rows for slate {slate} ({origin}): no game has both "
+                  "probable starters announced, so no leans are recorded yet")
+            return 0
         # A slate with no priced game lines (a spent Odds API key and no ESPN
         # quote, or an off day) has nothing to lean against; publishing the
         # projections is right, freezing the site on yesterday is not.

@@ -26,6 +26,14 @@ from mlbmodel.report.board import GEM_EDGE_PTS, GEM_STATES, Board
 
 
 SCHEMA = "mlb-model/board/1"
+STARTERS_PENDING = "Probable starters not announced; no edge until both are named."
+
+
+def _starters_pending(card) -> bool:
+    """An MLB card whose starters are not both named (its principals read TBD)."""
+    principals = getattr(card, "principals", ()) or ()
+    return bool(principals) and any(
+        str(p.name or "").strip().upper() in {"", "TBD", "TBA"} for p in principals)
 
 
 def _stamp() -> datetime:
@@ -167,6 +175,10 @@ def payload(
                 "picks": card.picks,
                 "gems": card.gems,
                 "book": _book_line(odds, card.away.abbr, card.home.abbr),
+                # board_mlb.build_card publishes no edge on these; downstream
+                # readers (the Model Center's total lean) must not derive one.
+                "starters_pending": _starters_pending(card),
+                "edge_withheld_reason": (STARTERS_PENDING if _starters_pending(card) else None),
             }
             for card in board.cards
         ],

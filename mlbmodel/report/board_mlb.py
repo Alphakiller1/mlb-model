@@ -23,6 +23,7 @@ from mlbmodel.report.board import (
     Tile,
 )
 from mlbmodel.report.decision import MKT_LABEL
+from mlbmodel.report.export import STARTERS_PENDING
 from mlbmodel.report.matchup import _headshot, _logo
 
 # Market family -> (group key, tile label). Order fixes the tile order on every card, so
@@ -36,6 +37,17 @@ _ALIASES = {
     "spread": "runline", "spreads": "runline", "run_line": "runline", "runline": "runline",
     "f5_ml": "f5_ml", "f5_total": "f5_total", "f5_runline": "f5_runline",
 }
+
+
+_UNNAMED = {"", "TBD", "TBA", "NONE", "NAN"}
+
+
+def starters_named(game: dict) -> bool:
+    """Both probable starters are named. An unannounced arm reaches the slate as
+    "TBD", and the run model then prices a generic starter against a market that
+    prices the real one: World Series G1 (2026-10-23) read Total OVER 6, +16.7pt,
+    three days before either club named its starter."""
+    return all(str(game.get(key) or "").strip().upper() not in _UNNAMED for key in ("asp", "hsp"))
 
 
 def _family(market) -> str:
@@ -229,6 +241,10 @@ def _headline(best: dict[str, dict]) -> tuple[str, str]:
 def build_card(game: dict, report: dict | None, sharp_count: int = 0) -> Card:
     key = game.get("key") or f'{game["away"]}@{game["home"]}'
     markets = (report or {}).get("markets") or []
+    pending = not starters_named(game)
+    if pending:
+        # The book prices still show, as model-only tiles; none counts as a pick or gem.
+        markets = [dict(row, edge=None, reason=STARTERS_PENDING) for row in markets]
     best = _best_by_family(markets)
 
     away_runs, home_runs = _expected_runs(game.get("total"), game.get("margin"))
@@ -241,7 +257,8 @@ def build_card(game: dict, report: dict | None, sharp_count: int = 0) -> Card:
         return f"{probability * 100:.0f}% win"
 
     away_prob = (1.0 - float(home_prob)) if isinstance(home_prob, (int, float)) else None
-    headline, headline_tone = _headline(best)
+    headline, headline_tone = (("Starters not announced · no edge published", "mut") if pending
+                               else _headline(best))
 
     groups = tuple(
         group

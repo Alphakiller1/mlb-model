@@ -44,6 +44,8 @@ def test_a_one_game_slate_without_probables_needs_no_props(monkeypatch, tmp_path
     assert games == (1, 0)
     rows = _ledger_rows(actionable=0, avoid=6, projections=0)
     assert _verify_rows("2026-10-23", rows, origin="warehouse", games=games) == 0
+    # Its leans are withheld entirely until starters are named.
+    assert _verify_rows("2026-10-23", [], origin="warehouse", games=games, priced_games=1) == 0
 
 
 def test_announced_starters_still_require_their_props(tmp_path):
