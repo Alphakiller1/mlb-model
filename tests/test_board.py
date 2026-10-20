@@ -305,3 +305,29 @@ def test_principal_without_art_still_renders_a_slot():
     )
     assert "bd-face--na" in html
     assert "Sole Starter" in html
+
+
+def test_unannounced_starters_publish_no_edge():
+    """World Series G1 (2026-10-23) read Total OVER 6, +16.7pt, three days
+    before either club named its starter: the run model priced generic arms."""
+    report = {"markets": [_market("total", "OVER", 16.7, line=6.0), _market("ml", "BOS", 4.0)]}
+    for pending in (dict(asp="TBD", hsp="TBD"), dict(asp="", hsp="Garrett Crochet"),
+                    dict(asp="Tarik Skubal", hsp="tba")):
+        card = build_card(_game(**pending), report)
+        assert card.picks == 0 and card.gems == 0
+        assert card.headline == "Starters not announced · no edge published"
+        tiles = [t for g in card.groups for t in g.tiles if t.label in ("Total", "Moneyline")]
+        assert tiles and all("model only" in t.state for t in tiles)
+    named = build_card(_game(), report)
+    assert named.picks == 2 and "+16.7" in named.headline
+
+
+def test_export_flags_a_pending_game():
+    from mlbmodel.report.export import STARTERS_PENDING, payload
+
+    board = build_board([_game(asp="TBD", hsp="TBD"), dict(_game(), key="NYY@TOR", away="NYY", home="TOR")],
+                        "2026-10-23", {}, {})
+    games = {g["key"]: g for g in payload(board)["games"]}
+    pending = next(g for g in games.values() if g["starters_pending"])
+    assert pending["edge_withheld_reason"] == STARTERS_PENDING
+    assert sum(g["starters_pending"] for g in games.values()) == 1

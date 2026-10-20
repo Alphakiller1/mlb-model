@@ -267,7 +267,17 @@ def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None,
         for m in rows
         if str(m.get("market") or "").startswith("f5_")
     ]
-    matchup_markets_by_pk = dict(model_by_pk)
+    # A game without both probable starters is priced against a generic arm; its
+    # leans would enter the graded record as if the model had an opinion. The
+    # board withholds its edges (board_mlb.starters_named) and so does the ledger.
+    from mlbmodel.report.board_mlb import starters_named
+
+    pending_pks = {g["pk"] for g in slate if "pk" in g and not starters_named(g)}
+    if pending_pks:
+        print(f"model leans: {len(pending_pks)} game(s) withheld - starters not announced",
+              flush=True)
+    matchup_markets_by_pk = {pk: rows for pk, rows in model_by_pk.items() if pk not in pending_pks}
+    sharp_by_pk = {pk: rows for pk, rows in sharp_by_pk.items() if pk not in pending_pks}
     cal_result = reader.get(
         "model_leans?settled=eq.true&select=edge,won,push,source,settled&limit=2000"
     )
@@ -275,7 +285,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None,
         cal_result.rows if not cal_result.error else []
     )
     market_plays = _collect_market_plays(
-        slate, sharp_by_pk, model_by_pk, decision_thresholds
+        slate, sharp_by_pk, matchup_markets_by_pk, decision_thresholds
     )
     pickem_rows = build_pickem_rows_from_boards(pitchers, pickem_sources)
     if not pickem_rows:
@@ -369,7 +379,7 @@ def build_app(featured_game, *, fetch=True, data_dir=None, audit_asset_dir=None,
         "matchups": matchups,
         "trends": _trends(slate_reports, slate=slate),
         "markets": _markets(
-            slate, sharp_by_pk, model_by_pk, decision_thresholds, promotion_status
+            slate, sharp_by_pk, matchup_markets_by_pk, decision_thresholds, promotion_status
         ),
         "props": _props(
             pitchers, prop_prices, pp_board, ud_board, sl_board,
