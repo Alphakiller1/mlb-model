@@ -60,6 +60,29 @@ def priced_event_count(data_dir: Path, slate: str) -> int:
         return 0
 
 
+def slate_games(data_dir: Path, slate: str) -> tuple[int, int] | None:
+    """(games, games with both probable starters announced) on `slate`, from
+    today_matchups.csv; None when the file cannot say."""
+    path = data_dir / "today_matchups.csv"
+    if not path.exists():
+        return None
+    try:
+        import pandas as pd
+
+        frame = pd.read_csv(path, dtype=str).fillna("")
+    except Exception:
+        return None
+    if "Slate_Date" in frame.columns:
+        frame = frame[frame["Slate_Date"].str[:10] == slate]
+    if not {"Away_SP", "Home_SP"} <= set(frame.columns):
+        return len(frame), len(frame)
+
+    def named(value: str) -> bool:
+        return bool(value.strip()) and value.strip().upper() not in {"TBD", "TBA", "NAN", "NONE"}
+    starters = sum(1 for a, h in zip(frame["Away_SP"], frame["Home_SP"]) if named(a) and named(h))
+    return len(frame), starters
+
+
 def require_actionable_gate(data_dir: Path, slate: str) -> bool:
     """BET/MONITOR counts are only meaningful when this slate has priced game lines.
 
@@ -110,6 +133,7 @@ def main() -> int:
                 origin=str(snapshot),
                 require_actionable=require_actionable_gate(data_dir, slate),
                 priced_games=priced_event_count(data_dir, slate),
+                games=slate_games(data_dir, slate),
             )
         print("ERROR: warehouse read credentials missing — cannot verify lean tracking")
         return 1
@@ -128,6 +152,7 @@ def main() -> int:
         origin="warehouse",
         require_actionable=require_actionable_gate(data_dir, slate),
         priced_games=priced_event_count(data_dir, slate),
+        games=slate_games(data_dir, slate),
     )
 
 
@@ -138,6 +163,7 @@ def _verify_rows(
     origin: str,
     require_actionable: bool = True,
     priced_games: int | None = None,
+    games: tuple[int, int] | None = None,
 ) -> int:
     actionable_tags = {"BET", "MONITOR", "STRONG", "LEAN", "OVER", "UNDER", "EDGE"}
     actionable = [row for row in rows if str(row.get("lean") or "").upper() in actionable_tags]
@@ -152,6 +178,17 @@ def _verify_rows(
     min_actionable = int(os.getenv("LEAN_VERIFY_MIN_ACTIONABLE", "5"))
     min_props = int(os.getenv("LEAN_VERIFY_MIN_PROPS", "30"))
     min_matchup = int(os.getenv("LEAN_VERIFY_MIN_MATCHUP", "6"))
+    # The floors are sized for a full regular-season slate. A one-game World
+    # Series slate three days out (2026-10-20: TBR@MIL, no probables yet) has
+    # no starter props to project and too few games for five edges, and
+    # failing it froze the board on an empty off day. Props scale with the
+    # games whose two starters are announced; game-market leans with games.
+    if games is not None:
+        game_count, with_starters = games
+        min_props = min(min_props, 2 * with_starters)
+        min_matchup = min(min_matchup, 6 * game_count)
+        if game_count < 5:
+            require_actionable = False
 
     if not rows:
         # A slate with no priced game lines (a spent Odds API key and no ESPN

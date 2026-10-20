@@ -5,6 +5,7 @@ from scripts.verify_lean_record import (
     priced_event_count,
     require_actionable_gate,
     slate_date,
+    slate_games,
 )
 
 
@@ -30,6 +31,42 @@ def _ledger_rows(*, actionable: int = 3, avoid: int = 3, projections: int = 30):
         for _ in range(projections)
     )
     return rows
+
+
+def test_a_one_game_slate_without_probables_needs_no_props(monkeypatch, tmp_path):
+    """2026-10-20: World Series G1 (TBR@MIL) three days out, no probables -
+    14 game-level leans, 0 props, and the gate froze the board."""
+    monkeypatch.setenv("LEAN_VERIFY_MIN_PROPS", "30")
+    monkeypatch.setenv("LEAN_VERIFY_MIN_MATCHUP", "6")
+    (tmp_path / "today_matchups.csv").write_text(
+        "Slate_Date,Away,Home,Away_SP,Home_SP\n2026-10-23,TBR,MIL,,\n", encoding="utf-8")
+    games = slate_games(tmp_path, "2026-10-23")
+    assert games == (1, 0)
+    rows = _ledger_rows(actionable=0, avoid=6, projections=0)
+    assert _verify_rows("2026-10-23", rows, origin="warehouse", games=games) == 0
+
+
+def test_announced_starters_still_require_their_props(tmp_path):
+    (tmp_path / "today_matchups.csv").write_text(
+        "Slate_Date,Away,Home,Away_SP,Home_SP\n2026-10-23,TBR,MIL,Shane McClanahan,Jacob Misiorowski\n",
+        encoding="utf-8")
+    games = slate_games(tmp_path, "2026-10-23")
+    assert games == (1, 1)
+    assert _verify_rows("2026-10-23", _ledger_rows(actionable=0, avoid=6, projections=0),
+                        origin="warehouse", games=games) == 1
+    assert _verify_rows("2026-10-23", _ledger_rows(actionable=0, avoid=6, projections=2),
+                        origin="warehouse", games=games) == 0
+
+
+def test_a_full_slate_keeps_the_full_floors(monkeypatch, tmp_path):
+    monkeypatch.setenv("LEAN_VERIFY_MIN_PROPS", "30")
+    rows = "\n".join(f"2026-08-22,A{i},H{i},P{i},Q{i}" for i in range(15))
+    (tmp_path / "today_matchups.csv").write_text(
+        "Slate_Date,Away,Home,Away_SP,Home_SP\n" + rows + "\n", encoding="utf-8")
+    games = slate_games(tmp_path, "2026-08-22")
+    assert games == (15, 15)
+    assert _verify_rows("2026-08-22", _ledger_rows(actionable=5, avoid=3, projections=29),
+                        origin="warehouse", games=games) == 1
 
 
 def test_slate_date_from_sync_json(tmp_path):
